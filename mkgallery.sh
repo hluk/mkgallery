@@ -1,18 +1,18 @@
 #!/bin/sh
-# Simple Javascript/HTML image viewer
+# Simple HTML/JavaScript image browser
 #
 # usage: mkgallery.sh [gallery_name=default]
-#          gallery is created in "$GDIR/gallery_name" directory
-#          (change GDIR variable in script)
-#
-# description:
-#   View image files from current directory (recursively)
-#   in default web browser (BROWSER environment variable).
+#        - creates new gallery (named "gallery_name") in script
+#          directory; the gallery contains all images found in
+#          current directory
+#        - if BROWSER environment variable is set, the gallery
+#          is viewed using web browser $BROWSER
 #
 # features:
 # + mouse drag scrolling
 # + zooming (in/out/fit to window/fill window/actual size)
 # + keyboard navigation
+# + side panel (list of images)
 #
 
 # script directory
@@ -29,7 +29,8 @@ wget -nc -P "$DIR/files" files/ http://script.aculo.us/prototype.js http://scrip
 mkdir -p "$GDIR" &&
 ln -fsT "$PWD" "$GDIR/imgs" || exit 1
 ln -fsT "$DIR/files" "$GDIR/files" || exit 1
-FILES="`cd "$GDIR" && find imgs/ -iregex '.*\.\(jpg\|png\|gif\)' -printf '"%P",\n'|sort`"
+# generate list of images
+FILES="`cd "$GDIR" && find imgs/ -iregex '.*\.\(jpg\|png\|gif\|svg\)' -printf '"%P",\n'|sort`"
 
 # use template to create new html document
 (
@@ -47,6 +48,6 @@ then
 		disown
 	fi
 else
-	exit 1
+	echo "New gallery was created in \"$GDIR\"."
 fi
 
