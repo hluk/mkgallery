@@ -1,0 +1,30 @@
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+<link rel="stylesheet" type="text/css" href="files/style.css" />
+<script type="text/javascript" src="files/prototype.js"></script>
+<script type="text/javascript" src="files/effects.js"></script>
+<script type="text/javascript">
+//<BEGIN>
+// Replace this section with variable ls (list)
+// containing image filenames in "img/" directory.
+var ls = [
+    "face-smile-big.png",
+    "face-tired.png",
+    "stock_smiley-5.png",
+    "face-uncertain.png",
+    "face-angel.png",
+    ]
+//<END>
+</script>
+<script type="text/javascript" src="files/gallery.js"></script>
+</head>
+<body onload="onLoad()">
+    <canvas id="canvas"></canvas>
+    <form name="navigation" method="get">
+        <input type="hidden" name="zoom" value="1" />
+        <input type="hidden" name="brightness" value="0" />
+        <input type="hidden" name="n" value="0" />
+    </form>
+</body>
+</html>
