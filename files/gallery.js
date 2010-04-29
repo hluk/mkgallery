@@ -1,13 +1,15 @@
-// HTML document should include:
-//   - <script type="text/javascript" src="files/gallery.js"></script>
-//   - <body onload="onLoad()">
-//   - <canvas id="canvas></canvas>
-//   - form:
-//   <form name="navigation" method="get">
-//     <input type="hidden" name="zoom" value="1" />
-//     <input type="hidden" name="brightness" value="0" />
-//     <input type="hidden" name="n" value="0" />
-//   </form>
+/*
+ * HTML document should include:
+ *   - <script type="text/javascript" src="files/gallery.js"></script>
+ *   - <body onload="onLoad()">
+ *   - <canvas id="canvas></canvas>
+ *   - form:
+ *   <form name="navigation" method="get">
+ *     <input type="hidden" name="zoom" value="1" />
+ *     <input type="hidden" name="brightness" value="0" />
+ *     <input type="hidden" name="n" value="0" />
+ *   </form>
+ */
 
 function zoom(){//{{{
 	if (!document.all&&!document.getElementById)
@@ -26,30 +28,13 @@ function zoom(){//{{{
 
     var nw = w*zoom_factor;
     var nh = h*zoom_factor;
-    canvas.width = nw;
-    canvas.height = nh;
-    brightness();
+    img.width = nw;
+    img.height = nh;
+    //brightness();
 
     // center image in window
     newtop = (wh-nh)/2;
     canvas.style.top = newtop > 0 ? newtop : 0;
-}//}}}
-
-function brightness(){//{{{
-    // Chromium BUG(?):
-    //   function ctx.getImageData doesn't work
-    cw = canvas.width;
-    ch = canvas.height;
-
-    //if ( brightness_factor > 0 )
-        //ctx.fillStyle = "rgba(255,255,255,"+brightness_factor+")";
-    //else
-        //ctx.fillStyle = "rgba(0,0,0,"+(-brightness_factor)+")";
-
-    //ctx.globalCompositeOperatron = "copy";
-    ctx.drawImage(img,0,0,cw,ch);
-    //ctx.globalCompositeOperation = "source-atop";
-    //ctx.fillRect(0,0,cw,ch);
 }//}}}
 
 function keyDown(e){//{{{
@@ -82,16 +67,18 @@ function keyDown(e){//{{{
 
 	switch (keyname) {
 	case "Left":
-        if ( canvas.width <= window.innerWidth )
+        if ( img.width <= window.innerWidth )
 		    go(n-1);
         else
             window.scrollBy(-window.innerWidth/4,0);
 		break;
 	case "Up":
 		window.scrollBy(0,-window.innerHeight/4);
+        if ( window.pageYOffset == 0 )
+            popInfo();
 		break;
 	case "Right":
-        if ( canvas.width <= window.innerWidth )
+        if ( img.width <= window.innerWidth )
 		    go(n+1);
         else
 		    window.scrollBy(window.innerWidth/4,0);
@@ -101,6 +88,8 @@ function keyDown(e){//{{{
 		break;
 	case "PageUp":
 		window.scrollBy(0,-window.innerHeight);
+        if ( window.pageYOffset == 0 )
+            popInfo();
 		break;
 	case "PageDown":
 		window.scrollBy(0,window.innerHeight);
@@ -158,18 +147,18 @@ function keyDown(e){//{{{
 		zoom_state = 'fill';
 		zoom();
 		break;
-	case "J":
-        brightness_factor += brightness_step;
-        brightness();
-		break;
-	case "K":
-        brightness_factor -= brightness_step;
-        brightness();
-		break;
-	case "L":
-        brightness_factor = 0;
-        brightness();
-		break;
+	//case "J":
+        //brightness_factor += brightness_step;
+        //brightness();
+		//break;
+	//case "K":
+        //brightness_factor -= brightness_step;
+        //brightness();
+		//break;
+	//case "L":
+        //brightness_factor = 0;
+        //brightness();
+		//break;
 	}
 }//}}}
 
@@ -181,7 +170,7 @@ function initDragScroll() {//{{{
     document.addEventListener("mousemove",dragScroll,false);
 
     function startDragScroll(e){
-        if (e.button == 0 && e.target.id == "canvas") {
+        if (e.button == 0 && (e.target.id == "canvas" || e.target.id == "myimage")) {
             x = window.pageXOffset + e.clientX;  
             y = window.pageYOffset + e.clientY;
             e.stop();
@@ -196,6 +185,8 @@ function initDragScroll() {//{{{
         if (x) {
             window.scroll(x-e.clientX,y-e.clientY);
             e.stop();
+            if ( window.pageYOffset == 0 )
+                popInfo();
         }
     }
 }//}}}
@@ -208,14 +199,23 @@ function getUrlVars() {//{{{
 	return map;
 }//}}}
 
+function popInfo() {//{{{
+    if ( !info_hidden )
+        return;
+    info_hidden = false;
+	Effect.Appear('info',{duration:1});
+	window.setTimeout("Effect.Fade('info',{duration:0.3}); window.setTimeout(\"info_hidden = true;\",500);",3000);
+}//}}}
+
 function imgOnLoad() {//{{{
 	w = this.width;
     h = this.height;
 
 	zoom();
-    brightness(brightness_factor);
+    //brightness(brightness_factor);
 
 	window.setTimeout("Effect.Fade('resolution',{duration:1});window.setTimeout(\"Element.hide('resolution');document.getElementById('resolution').innerText = w+'x'+h; Effect.Appear('resolution', {duration:0.5});\",1000);",20);
+    popInfo();
 }//}}}
 
 function getPage(i) {//{{{
@@ -233,7 +233,7 @@ function go(i) {//{{{
 		Effect.Squish('info',{duration:5});
 		document.navigation.n.value = pg;
 		document.navigation.zoom.value = (zoom_state) ? zoom_state : zoom_factor;
-		document.navigation.brightness.value = brightness_factor;
+		//document.navigation.brightness.value = brightness_factor;
 		document.navigation.submit();
 	}
 }//}}}
@@ -252,7 +252,7 @@ function showImageInfo() {//{{{
 
 	imgtitle.id = "imgtitle";
 	var l = document.createElement('a');
-	l.href = "imgs/" + imgpath;
+	l.href = "img/" + imgpath;
 	l.appendChild(document.createTextNode(imgname));
 	imgtitle.appendChild(l);
 
@@ -274,18 +274,21 @@ function showImage() {//{{{
     img.id = "myimage";
     img.name = "myimage";
     img.onload = imgOnLoad;
+    canvas.appendChild(img);
 }//}}}
 
 function onLoad() {//{{{
     b = document.getElementsByTagName('body')[0];
     canvas = document.getElementById('canvas');
-    ctx = canvas.getContext('2d');
+    //ctx = canvas.getContext('2d');
 
     // mousewheel on canvas/image
     canvas.onmousewheel = function (e) {
       var delta = e.wheelDelta/5;
       window.scroll(window.pageXOffset,window.pageYOffset-delta);
       e.stop();
+      if ( window.pageYOffset == 0 )
+        popInfo();
     };
     
     document.body.style.overflow = 'hidden';
@@ -344,8 +347,8 @@ if ( zoom_state != "fit" && zoom_state != "fill") {
 	if (!zoom_factor)
 		zoom_factor = 1.0;
 }
-var brightness_step   = 0.05;
-var brightness_factor  = parseFloat(vars["brightness"]||"0");
+//var brightness_step   = 0.05;
+//var brightness_factor  = parseFloat(vars["brightness"]||"0");
 
 // image width and height
 var w, h;
@@ -359,4 +362,5 @@ document.addEventListener("keydown", keyDown, false);
 // html elements:
 //  body, canvas, canvas context, image
 var b, canvas, ctx, img;
+var info_hidden = true;
 

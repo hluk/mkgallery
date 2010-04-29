@@ -1,10 +1,35 @@
+* {margin: 0;font-family: Aller, Verdana, Arial, Helvetica; font-size: 16px; color: #ddd;}
+
+html,body {height: 100%}
+
+body {
+    height: 100%;
+    text-align: center;
+    /*background-color: #222;*/
+    background-image: url('bg.png'); 
+    background-repeat: repeat;
+}
+
+#info {margin: 5 10; position: absolute; top: 0; left: 0; text-shadow: #000 1px 1px 1px; z-index: 1;}
+#counter, #resolution {color: white; font-size: 0.7em; font-weight: bold; z-index: 1;}
+#imgtitle {margin: 0 5; z-index: 1; z-index: 1;}
+#loading {color: #fd0; font-size: inherit; font-weight: bold;}
+
+a, .imgitem {color: #7bf; text-decoration: none; font-weight: bold;}
+a:hover, .imgitem:hover {color: #ff0;}
+a:visited {color: #7bf;}
+a:visited:hover {color: #ff0;}
+
+#canvas {position: relative;}
+
+
 #imglist {
 position: absolute;
 width: 320px;
 height: 90%;
 top: 5%;
 left:-330px;
-background-color:rgba(0,0,0,0); 
+background-color: rgba(0,0,0,0);
 padding:10px;
 -moz-border-radius: 10px;
 -webkit-border-radius: 10px;
@@ -22,15 +47,7 @@ background-color:rgba(0,0,0,0.5);
 .imgitem, #default {overflow: hidden; text-align: left; font-size: 0.7em; display:block; padding: 6px; font-weight: bold;}
 .imgitem {cursor: pointer;}
 
-* {margin: 0;font-family: Aller, Verdana, Arial, Helvetica; font-size: 16px; color: #ddd;}
-html,body {height: 100%}
-body {height: 100%;text-align: center; background-color: #222;}
-#info {margin: 5 10; position: absolute; top: 0; left: 0; text-shadow: #000 1px 1px 1px; z-index: 1;}
-#counter, #resolution {color: white; font-size: 0.7em; font-weight: bold; z-index: 1;}
-#imgtitle {margin: 0 5; z-index: 1; z-index: 1;}
-#loading {color: #fd0; font-size: inherit; font-weight: bold;}
-a, .imgitem {color: #7bf; text-decoration: none; font-weight: bold;}
-a:hover, .imgitem:hover {color: #ff0;}
-a:visited {color: #7bf;}
-a:visited:hover {color: #ff0;}
-#canvas {position: relative;}
+.imgitem:nth-child(even), #default:nth-child(even) {
+  background: rgba(50,50,50,0.5);
+}
+

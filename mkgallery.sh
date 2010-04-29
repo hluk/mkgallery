@@ -20,7 +20,7 @@ DIR="`dirname "$0"`"
 # gallery output directory
 GDIR="$DIR/galleries/${1:-default}"
 # HTML template (list of images is inserted
-# between "//<BEGIN>" and "//<END>" lines)
+# between "//<LIST>" and "//<LIST>" lines)
 TEMP="$DIR/template.html"
 
 # "files/" should contain necessary javascript files
@@ -34,9 +34,9 @@ FILES="`cd "$GDIR" && find imgs/ -iregex '.*\.\(jpg\|png\|gif\|svg\)' -printf '"
 
 # use template to create new html document
 (
-	sed -n "1,/^\/\/<BEGIN>/{/^\/\//!{p}}" "$TEMP"
+	sed -n "1,/^\/\/<LIST>/{/^\/\//!{p}}" "$TEMP"
 	echo "var ls = [$FILES];"
-	sed -n "/^\/\/<END>/,\${/^\/\//!{p}}" "$TEMP"
+	sed -n "/^\/\/<\/LIST>/,\${/^\/\//!{p}}" "$TEMP"
 ) > "$GDIR/index.html"
 
 if [ $? -eq 0 ]
