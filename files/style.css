@@ -3,9 +3,9 @@
 html,body {height: 100%}
 
 body {
-    height: 100%;
     text-align: center;
     /*background-color: #222;*/
+    /*www.tartanmaker.com www.stripegenerator.com http://squidfingers.com/patterns/*/
     background-image: url('bg.png'); 
     background-repeat: repeat;
 }
@@ -22,32 +22,35 @@ a:visited:hover {color: #ff0;}
 
 #canvas {position: relative;}
 
-
+/* image list */
 #imglist {
-position: absolute;
-width: 320px;
-height: 90%;
-top: 5%;
-left:-330px;
-background-color: rgba(0,0,0,0);
-padding:10px;
--moz-border-radius: 10px;
--webkit-border-radius: 10px;
-z-index: 1;
-overflow: hidden;
+    position: absolute;
+    top: 30px;
+    left: 20px;
+    right: 20px;
+    background-color: rgba(0,0,0,0.7);
+    padding:10px;
+    -moz-border-radius: 16px;
+    -webkit-border-radius: 16px;
+    z-index: 1;
+    overflow: hidden;
 }
-#imglist:hover {
-left: -8px;
-max-height: 90%;
-top: 5%;
-overflow-y: auto;
-overflow-x: hidden;
-background-color:rgba(0,0,0,0.5);
+.imgitem, #default {
+    /*display: table-cell;*/
+    float: left;
+    width: 300px;
+    height: 240px;
+    text-align: left;
+    font-size: 0.7em;
+    padding: 6px;
+    margin: 6px;
+    font-weight: bold;
+    -moz-border-radius: 6px;
+    -webkit-border-radius: 6px;
+    text-align: center;
 }
-.imgitem, #default {overflow: hidden; text-align: left; font-size: 0.7em; display:block; padding: 6px; font-weight: bold;}
 .imgitem {cursor: pointer;}
-
-.imgitem:nth-child(even), #default:nth-child(even) {
-  background: rgba(50,50,50,0.5);
-}
+/*.imgitem:nth-child(even), #default:nth-child(even) {background: rgba(50,50,50,0.7);}*/
+#default {background: rgba(80,80,80,0.6);}
+.thumbnail {display: block;vertical-align:middle;margin:auto; margin-top:5px;}
 

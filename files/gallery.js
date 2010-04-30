@@ -37,6 +37,14 @@ function zoom(){//{{{
     canvas.style.top = newtop > 0 ? newtop : 0;
 }//}}}
 
+function toggleList() {//{{{
+    if ( list_hidden )
+        Effect.Appear('imglist',{duration:0.5});
+    else
+        Element.hide('imglist');
+    list_hidden = !list_hidden;
+}//}}}
+
 function keyDown(e){//{{{
 	var keycode = e.which;
 	var keyname;
@@ -114,6 +122,8 @@ function keyDown(e){//{{{
 		break;
 	case "h":
 		window.scrollBy(0,-window.innerHeight/4);
+        if ( window.pageYOffset == 0 )
+            popInfo();
 		break;
 	case "i":
 		go(n-5);
@@ -147,6 +157,10 @@ function keyDown(e){//{{{
 		zoom_state = 'fill';
 		zoom();
 		break;
+	case "e":
+        toggleList();
+		break;
+	//case "J":
 	//case "J":
         //brightness_factor += brightness_step;
         //brightness();
@@ -283,8 +297,8 @@ function onLoad() {//{{{
     //ctx = canvas.getContext('2d');
 
     // mousewheel on canvas/image
-    canvas.onmousewheel = function (e) {
-      var delta = e.wheelDelta/5;
+    document.onmousewheel = function (e) {
+      var delta = e.wheelDelta/3;
       window.scroll(window.pageXOffset,window.pageYOffset-delta);
       e.stop();
       if ( window.pageYOffset == 0 )
@@ -302,13 +316,13 @@ function onLoad() {//{{{
     var imglist = document.createElement("div");
     imglist.id = "imglist";
 
-    var from = n-6;
-    if (from <= 0)
-        from = 0;
-    else
-        imglist.appendChild(document.createTextNode("..."));
-    var l;
-    for(var i=from; i<len; ++i) {
+    //var from = n-6;
+    //if (from <= 0)
+        //from = 0;
+    //else
+        //imglist.appendChild(document.createTextNode("..."));
+    var l,thumb;
+    for(var i=0; i<len; ++i) {
         var imgname = ls[i];
         if (i != n-1) {
             l = document.createElement('div');
@@ -322,10 +336,17 @@ function onLoad() {//{{{
             l.id = "default";
             l.appendChild( document.createTextNode(imgname) );
         }
+        // thumbnail
+        thumb = document.createElement('img');
+        thumb.className = "thumbnail";
+        thumb.src = "thumbs/" + imgname.replace(/^.*[\/\\]/,'').replace(/\.[^.]*$/,'.jpg');
+        thumb.alt = "";
+        l.appendChild(thumb);
         imglist.appendChild(l);
     }
 
     b.appendChild(imglist);
+    Element.hide('imglist');
     //}}}
 }//}}}
 
@@ -363,4 +384,5 @@ document.addEventListener("keydown", keyDown, false);
 //  body, canvas, canvas context, image
 var b, canvas, ctx, img;
 var info_hidden = true;
+var list_hidden = true;
 

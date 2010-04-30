@@ -24,7 +24,7 @@ GDIR="$DIR/galleries/${1:-default}"
 TEMP="$DIR/template.html"
 
 # "files/" should contain necessary javascript files
-wget -nc -P "$DIR/files" files/ http://script.aculo.us/prototype.js http://script.aculo.us/effects.js
+wget -nc -P "$DIR/files" http://script.aculo.us/prototype.js http://script.aculo.us/effects.js
 
 mkdir -p "$GDIR" &&
 ln -fsT "$PWD" "$GDIR/imgs" || exit 1
@@ -50,4 +50,9 @@ then
 else
 	echo "New gallery was created in \"$GDIR\"."
 fi
+
+# generate thumbnails
+rm -rf "$GDIR/thumbs" &&
+mkdir "$GDIR/thumbs" &&
+echo "$FILES" | tr , ' ' | xargs mogrify -format jpg -path "$GDIR/thumbs" -thumbnail 200x200
 
