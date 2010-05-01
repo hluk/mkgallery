@@ -221,6 +221,11 @@ function popInfo() {//{{{
 	window.setTimeout("Effect.Fade('info',{duration:0.3}); window.setTimeout(\"info_hidden = true;\",500);",3000);
 }//}}}
 
+function preloadImages() {//{{{
+    for(var i = 0; i<3; ++i)
+        document.createElement('img').src = "imgs/" + encodeURIComponent(ls[n+i]);
+}//}}}
+
 function imgOnLoad() {//{{{
 	w = this.width;
     h = this.height;
@@ -230,6 +235,7 @@ function imgOnLoad() {//{{{
 
 	window.setTimeout("Effect.Fade('resolution',{duration:1});window.setTimeout(\"Element.hide('resolution');document.getElementById('resolution').innerText = w+'x'+h; Effect.Appear('resolution', {duration:0.5});\",1000);",20);
     popInfo();
+    preloadImages();
 }//}}}
 
 function getPage(i) {//{{{
