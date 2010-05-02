@@ -80,8 +80,8 @@ function listMove(x,y)//{{{
 {
     var newsel;
     var sel = document.getElementById('selected');
-    var xx = getLeft(sel)-window.pageXOffset;
-    var yy = getTop(sel)-window.pageYOffset;
+    var xx = getLeft(sel)-window.pageXOffset+sel.offsetWidth/2;
+    var yy = getTop(sel)-window.pageYOffset+sel.offsetHeight/2;
 
     // find next list item
     while(true) {
@@ -189,10 +189,17 @@ function keyDown(e)//{{{
 	case 34:
 		keyname = "PageDown";
 		break;
+	case 35:
+		keyname = "End";
+		break;
+	case 36:
+		keyname = "Home";
+		break;
 	default:
 		keyname = String.fromCharCode(keycode);
 		break;
 	}
+    //alert(keycode +";"+ keyname);
 
 	switch (keyname) {
     case "Enter":
@@ -246,13 +253,52 @@ function keyDown(e)//{{{
             listDown();
 		break;
 	case "PageUp":
-		window.scrollBy(0,-window.innerHeight);
-        if ( window.pageYOffset == 0 )
-            popInfo();
+        if ( list_hidden ) {
+            window.scrollBy(0,-window.innerHeight);
+            if ( window.pageYOffset == 0 )
+                popInfo();
+        }
+        else {
+            var d = window.pageYOffset;
+            var sel;
+            do {
+                var sel = document.getElementById("selected");
+                listUp(-window.innerHeight);
+            } while ( d-window.pageYOffset < window.innerHeight && sel != document.getElementById("selected") );
+        }
 		break;
 	case "PageDown":
-		window.scrollBy(0,window.innerHeight);
+        if ( list_hidden )
+            window.scrollBy(0,window.innerHeight);
+        else {
+            var d = window.pageYOffset;
+            var sel;
+            do {
+                var sel = document.getElementById("selected");
+                listDown(window.innerHeight);
+            } while ( window.pageYOffset-d < window.innerHeight && sel != document.getElementById("selected") );
+        }
 		break;
+    case "End":
+        if ( list_hidden )
+            window.scrollTo(0,document.body.scrollHeight);
+        else {
+            do {
+                var sel = document.getElementById("selected");
+                listDown(window.innerHeight);
+            } while ( sel != document.getElementById("selected") );
+        }
+        break;
+    case "Home":
+        if ( list_hidden )
+            window.scrollTo(0,0);
+        else {
+            do {
+                var sel = document.getElementById("selected");
+                listUp(window.innerHeight);
+            } while ( sel != document.getElementById("selected") );
+        }
+        break;
 	case "a":
 		go(len);
 		break;
@@ -457,6 +503,36 @@ function showImage()//{{{
     canvas.appendChild(img);
 }//}}}
 
+function createList()//{{{
+{
+    imglist = document.createElement("div");
+    imglist.id = "imglist";
+
+    var l,thumb;
+    for(var i=0; i<len; ++i) {
+        var imgname = ls[i];
+        l = document.createElement('div');
+        l.className = "imgitem";
+        l.onclick = function() { document.navigation.n.value = this.id; document.navigation.submit(); }
+        l.appendChild( document.createTextNode("(" + (i+1) + ") " + imgname) );
+        if (i == n-1)
+            l.id = "selected";
+        // thumbnail
+        thumb = document.createElement('img');
+        thumb.className = "thumbnail";
+        thumb.src = "thumbs/" + imgname.replace(/^.*[\/\\]/,'').replace(/\.[^.]*$/,'.jpg');
+        thumb.alt = "xxx";
+        thumb.style.display = "none";
+        // show thumbnail only if src exists
+        thumb.onload = function() { this.style.display = ""; };
+        l.appendChild(thumb);
+        imglist.appendChild(l);
+    }
+
+    b.appendChild(imglist);
+    Element.hide('imglist');
+}//}}}
+
 function onLoad()//{{{
 {
     b = document.getElementsByTagName('body')[0];
@@ -479,31 +555,7 @@ function onLoad()//{{{
 
     initDragScroll();
 
-    // selection box {{{
-    imglist = document.createElement("div");
-    imglist.id = "imglist";
-
-    var l,thumb;
-    for(var i=0; i<len; ++i) {
-        var imgname = ls[i];
-        l = document.createElement('div');
-        l.className = "imgitem";
-        l.onclick = function() { document.navigation.n.value = this.id; document.navigation.submit(); }
-        l.appendChild( document.createTextNode("(" + (i+1) + ") " + imgname) );
-        if (i == n-1)
-            l.id = "selected";
-        // thumbnail
-        thumb = document.createElement('img');
-        thumb.className = "thumbnail";
-        thumb.src = "thumbs/" + imgname.replace(/^.*[\/\\]/,'').replace(/\.[^.]*$/,'.jpg');
-        thumb.alt = "";
-        l.appendChild(thumb);
-        imglist.appendChild(l);
-    }
-
-    b.appendChild(imglist);
-    Element.hide('imglist');
-    //}}}
+    createList();
 }//}}}
 
 var len = ls.length;

@@ -54,5 +54,5 @@ fi
 # generate thumbnails
 rm -rf "$GDIR/thumbs" &&
 mkdir "$GDIR/thumbs" &&
-echo "$FILES" | tr , ' ' | xargs mogrify -format jpg -path "$GDIR/thumbs" -thumbnail 200x200
+echo "$FILES" | tr , ' ' | xargs mogrify -format jpg -path "$GDIR/thumbs" -thumbnail 300x300
 
