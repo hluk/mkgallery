@@ -35,8 +35,7 @@ a:visited:hover {color: #ff0;}
     z-index: 1;
     overflow: hidden;
 }
-.imgitem, #default {
-    /*display: table-cell;*/
+.imgitem {
     float: left;
     width: 300px;
     height: 240px;
@@ -48,9 +47,18 @@ a:visited:hover {color: #ff0;}
     -moz-border-radius: 6px;
     -webkit-border-radius: 6px;
     text-align: center;
+    text-shadow: #000 1px 1px 1px;
 }
 .imgitem {cursor: pointer;}
 /*.imgitem:nth-child(even), #default:nth-child(even) {background: rgba(50,50,50,0.7);}*/
-#default {background: rgba(80,80,80,0.6);}
-.thumbnail {display: block;vertical-align:middle;margin:auto; margin-top:5px;}
+#selected {
+    background: #d90;
+    color: #fff;
+}
+.thumbnail {
+    display: block;
+    vertical-align: middle;
+    margin: auto;
+    margin-top: 5px;
+}
 

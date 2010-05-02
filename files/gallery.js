@@ -11,7 +11,8 @@
  *   </form>
  */
 
-function zoom(){//{{{
+function zoom()//{{{
+{
 	if (!document.all&&!document.getElementById)
 		return;
 
@@ -37,19 +38,139 @@ function zoom(){//{{{
     canvas.style.top = newtop > 0 ? newtop : 0;
 }//}}}
 
-function toggleList() {//{{{
-    if ( list_hidden )
-        Effect.Appear('imglist',{duration:0.5});
-    else
-        Element.hide('imglist');
+function getTop(e)//{{{
+{
+    var result = 0;
+
+    do {
+        result += e.offsetTop;
+        e = e.offsetParent;
+    } while(e);
+
+    return result;
+}//}}}
+
+function getLeft(e)//{{{
+{
+    var result = 0;
+
+    do {
+        result += e.offsetLeft;
+        e = e.offsetParent;
+    } while(e);
+
+    return result;
+}//}}}
+
+function toggleList()//{{{
+{
+    if ( list_hidden ) {
+        imglist.style.display = "";
+        lastpos = [window.pageXOffset,window.pageYOffset];
+        window.scrollTo(0,getTop(document.getElementById("selected")));
+    }
+    else {
+        imglist.style.display = "none";
+        window.scrollTo(lastpos[0],lastpos[1]);
+    }
     list_hidden = !list_hidden;
 }//}}}
 
-function keyDown(e){//{{{
+function listMove(x,y)//{{{
+{
+    var newsel;
+    var sel = document.getElementById('selected');
+    var xx = getLeft(sel)-window.pageXOffset;
+    var yy = getTop(sel)-window.pageYOffset;
+
+    // find next list item
+    while(true) {
+        if (x) {
+            xx+=x;
+            if (xx < 0) {
+                window.scrollBy(xx,0);
+                xx = 0;
+                if (window.pageXOffset == 0)
+                    return;
+            }
+            else if (xx >= window.innerWidth) {
+                var d = window.pageXOffset;
+                window.scrollBy(x,0);
+                if ( d == window.pageXOffset )
+                    return;
+                xx-=x;
+            }
+        }
+        else if (y) {
+            yy+=y;
+            if (yy < 0) {
+                window.scrollBy(0,yy);
+                yy = 0;
+                if (window.pageYOffset == 0)
+                    return;
+            }
+            else if (yy >= window.innerHeight) {
+                var d = window.pageYOffset;
+                window.scrollBy(0,y);
+                if ( d == window.pageYOffset )
+                    return;
+                yy-=y;
+            }
+        }
+        else
+            break;
+        newsel = document.elementFromPoint(xx, yy);
+        if (newsel && newsel.className == "imgitem" && newsel.id != "selected")
+            break;
+    }
+
+    if (newsel && newsel.className == "imgitem") {
+        sel.id = "";
+        newsel.id = "selected";
+        
+        // scroll to selected
+        xx = getLeft(newsel);
+        yy = getTop(newsel);
+        var d = yy + newsel.offsetHeight - window.pageYOffset - window.innerHeight ;
+        if ( d > 0 )
+            window.scrollBy(0,d);
+        if ( yy < window.pageYOffset )
+            window.scrollTo(window.pageXOffset,yy);
+    }
+}//}}}
+
+function listUp()//{{{
+{
+    listMove(0,-5);
+}//}}}
+
+function listDown()//{{{
+{
+    listMove(0,5);
+}//}}}
+
+function listRight()//{{{
+{
+    listMove(5,0);
+}//}}}
+
+function listLeft()//{{{
+{
+    listMove(-5,0);
+}//}}}
+
+function keyDown(e)//{{{
+{
 	var keycode = e.which;
 	var keyname;
 
 	switch ( keycode ) {
+    case 13:
+        keyname = "Enter";
+        break;
+    case 27:
+        keyname = "Escape";
+        break;
 	case 37:
 		keyname = "Left";
 		break;
@@ -74,25 +195,55 @@ function keyDown(e){//{{{
 	}
 
 	switch (keyname) {
+    case "Enter":
+        if ( !list_hidden ) {
+            var sel = document.getElementById("selected");
+            var num = sel.firstChild.data;
+            var a = num.search(/\(/);
+            var b = num.search(/\)/);
+            go( num.substring(a+1, b-a) );
+            //go(nn);
+        }
+        go(n+1);
+        break;
+    case "Escape":
+        if ( !list_hidden )
+            toggleList();
+        break;
 	case "Left":
-        if ( img.width <= window.innerWidth )
-		    go(n-1);
+        if ( list_hidden ) {
+            if ( img.width <= window.innerWidth )
+                go(n-1);
+            else
+                window.scrollBy(-window.innerWidth/4,0);
+        }
         else
-            window.scrollBy(-window.innerWidth/4,0);
+            listLeft();
 		break;
 	case "Up":
-		window.scrollBy(0,-window.innerHeight/4);
-        if ( window.pageYOffset == 0 )
-            popInfo();
+        if ( list_hidden ) {
+            window.scrollBy(0,-window.innerHeight/4);
+            if ( window.pageYOffset == 0 )
+                popInfo();
+        }
+        else
+            listUp();
 		break;
 	case "Right":
-        if ( img.width <= window.innerWidth )
-		    go(n+1);
+        if ( list_hidden ) {
+            if ( img.width <= window.innerWidth )
+                go(n+1);
+            else
+                window.scrollBy(window.innerWidth/4,0);
+        }
         else
-		    window.scrollBy(window.innerWidth/4,0);
+            listRight();
 		break;
 	case "Down":
-		window.scrollBy(0,window.innerHeight/4);
+        if ( list_hidden )
+            window.scrollBy(0,window.innerHeight/4);
+        else
+            listDown();
 		break;
 	case "PageUp":
 		window.scrollBy(0,-window.innerHeight);
@@ -176,7 +327,8 @@ function keyDown(e){//{{{
 	}
 }//}}}
 
-function initDragScroll() {//{{{
+function initDragScroll()//{{{
+{
     var x,y;
 
     document.addEventListener("mousedown",startDragScroll,false);
@@ -205,7 +357,8 @@ function initDragScroll() {//{{{
     }
 }//}}}
 
-function getUrlVars() {//{{{
+function getUrlVars()//{{{
+{
 	var map = {};
 	var parts = window.location.href.replace(/[?&]+([^=&]+)=([^&]*)/gi, function(m,key,value) {
 		map[key] = value;
@@ -213,7 +366,8 @@ function getUrlVars() {//{{{
 	return map;
 }//}}}
 
-function popInfo() {//{{{
+function popInfo()//{{{
+{
     if ( !info_hidden )
         return;
     info_hidden = false;
@@ -221,12 +375,14 @@ function popInfo() {//{{{
 	window.setTimeout("Effect.Fade('info',{duration:0.3}); window.setTimeout(\"info_hidden = true;\",500);",3000);
 }//}}}
 
-function preloadImages() {//{{{
+function preloadImages()//{{{
+{
     for(var i = 0; i<3; ++i)
         document.createElement('img').src = "imgs/" + encodeURIComponent(ls[n+i]);
 }//}}}
 
-function imgOnLoad() {//{{{
+function imgOnLoad()//{{{
+{ 
 	w = this.width;
     h = this.height;
 
@@ -238,7 +394,8 @@ function imgOnLoad() {//{{{
     preloadImages();
 }//}}}
 
-function getPage(i) {//{{{
+function getPage(i)//{{{
+{
 	if (!i || i<1)
 		return 1;
 	else if (i > len)
@@ -247,7 +404,8 @@ function getPage(i) {//{{{
 		return i;
 }//}}}
 
-function go(i) {//{{{
+function go(i)//{{{
+{ 
 	var pg = getPage(i);
 	if ( pg != n ) {
 		Effect.Squish('info',{duration:5});
@@ -258,7 +416,8 @@ function go(i) {//{{{
 	}
 }//}}}
 
-function showImageInfo() {//{{{
+function showImageInfo()//{{{
+{
 	var info = document.createElement('div');
 	var counter = document.createElement('span');
 	var imgtitle = document.createElement('span');
@@ -288,7 +447,8 @@ function showImageInfo() {//{{{
 	b.appendChild(info);
 }//}}}
 
-function showImage() {//{{{
+function showImage()//{{{
+{
     img = document.createElement('img');
     img.src = "imgs/" + imgpath;
     img.id = "myimage";
@@ -297,7 +457,8 @@ function showImage() {//{{{
     canvas.appendChild(img);
 }//}}}
 
-function onLoad() {//{{{
+function onLoad()//{{{
+{
     b = document.getElementsByTagName('body')[0];
     canvas = document.getElementById('canvas');
     //ctx = canvas.getContext('2d');
@@ -319,29 +480,18 @@ function onLoad() {//{{{
     initDragScroll();
 
     // selection box {{{
-    var imglist = document.createElement("div");
+    imglist = document.createElement("div");
     imglist.id = "imglist";
 
-    //var from = n-6;
-    //if (from <= 0)
-        //from = 0;
-    //else
-        //imglist.appendChild(document.createTextNode("..."));
     var l,thumb;
     for(var i=0; i<len; ++i) {
         var imgname = ls[i];
-        if (i != n-1) {
-            l = document.createElement('div');
-            l.className = "imgitem";
-            l.id = i+1;
-            l.onclick = function() { document.navigation.n.value = this.id; document.navigation.submit(); }
-            l.appendChild( document.createTextNode(imgname) );
-        }
-        else {
-            l = document.createElement('div');
-            l.id = "default";
-            l.appendChild( document.createTextNode(imgname) );
-        }
+        l = document.createElement('div');
+        l.className = "imgitem";
+        l.onclick = function() { document.navigation.n.value = this.id; document.navigation.submit(); }
+        l.appendChild( document.createTextNode("(" + (i+1) + ") " + imgname) );
+        if (i == n-1)
+            l.id = "selected";
         // thumbnail
         thumb = document.createElement('img');
         thumb.className = "thumbnail";
@@ -388,7 +538,8 @@ document.addEventListener("keydown", keyDown, false);
 
 // html elements:
 //  body, canvas, canvas context, image
-var b, canvas, ctx, img;
+var b, canvas, ctx, img, imglist;
 var info_hidden = true;
 var list_hidden = true;
+var lastpos;
 
