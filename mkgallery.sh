@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 # Simple HTML/JavaScript image browser
 #
 # usage: mkgallery.sh [gallery_name=default]
@@ -12,16 +12,23 @@
 # + mouse drag scrolling
 # + zooming (in/out/fit to window/fill window/actual size)
 # + keyboard navigation
-# + side panel (list of images)
+# + list of images
 #
+
+# RES: thumbnail resolution
+RES=${RES:-300}
+# TITLE: gallery title (1st parameter)
+TITLE="${1:-default}"
 
 # script directory
 DIR="`dirname "$0"`"
 # gallery output directory
-GDIR="$DIR/galleries/${1:-default}"
+GDIR="$DIR/galleries/$TITLE"
 # HTML template (list of images is inserted
 # between "//<LIST>" and "//<LIST>" lines)
 TEMP="$DIR/template.html"
+# url prefix
+URL="http://127.0.0.1:8080/$TITLE/"
 
 # "files/" should contain necessary javascript files
 wget -nc -P "$DIR/files" http://script.aculo.us/prototype.js http://script.aculo.us/effects.js
@@ -34,17 +41,17 @@ FILES="`cd "$GDIR" && find imgs/ -iregex '.*\.\(jpg\|png\|gif\|svg\)' -printf '"
 
 # use template to create new html document
 (
-	sed -n "1,/^\/\/<LIST>/{/^\/\//!{p}}" "$TEMP"
-	echo "var ls = [$FILES];"
-	sed -n "/^\/\/<\/LIST>/,\${/^\/\//!{p}}" "$TEMP"
+	sed -n "1,/^\/\/REPLACE {{{/{/^\/\//!{p}}" "$TEMP"
+	echo "var ls = [$FILES]; title = '$TITLE'"
+	sed -n "/^\/\/}}}/,\${/^\/\//!{p}}" "$TEMP"
 ) > "$GDIR/index.html"
 
+# open image viewer in BROWSER (env. variable) or just print message
 if [ $? -eq 0 ]
 then
-	# open image viewer in BROWSER
 	if [ -n "$BROWSER" ]
 	then
-		"$BROWSER" "file://$GDIR/index.html" 1>/dev/null &
+		"$BROWSER" "$URL" 1>/dev/null &
 		disown
 	fi
 else
@@ -54,5 +61,5 @@ fi
 # generate thumbnails
 rm -rf "$GDIR/thumbs" &&
 mkdir "$GDIR/thumbs" &&
-echo "$FILES" | tr , ' ' | xargs mogrify -format jpg -path "$GDIR/thumbs" -thumbnail 300x300
+echo "$FILES" | tr , ' ' | xargs mogrify -format png -quality 60 -path "$GDIR/thumbs" -thumbnail "${RES}x${RES}>"
 

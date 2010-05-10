@@ -25,34 +25,32 @@ a:visited:hover {color: #ff0;}
 /* image list */
 #imglist {
     position: absolute;
-    top: 20px;
-    left: 20px;
-    right: 20px;
+    top: 0px;
+    left: 0px;
+    right: 0px;
     background-color: rgba(0,0,0,0.7);
     padding:10px;
-    -moz-border-radius: 16px;
-    -webkit-border-radius: 16px;
     z-index: 1;
-    overflow: hidden;
 }
 .imgitem {
     float: left;
-    /*width: 310px;*/
-    /*height: 320px;*/
-    text-align: left;
-    font-size: 0.7em;
     padding: 12px;
     font-weight: bold;
+    text-shadow: #000 1px 1px 1px;
+    cursor: pointer;
+    color: white;
+}
+.imgname {
+    text-align: center;
+    font-size: 0.75em;
+    color: inherit;
+}
+#selection {
     -moz-border-radius: 6px;
     -webkit-border-radius: 6px;
-    text-align: center;
-    text-shadow: #000 1px 1px 1px;
-}
-.imgitem {cursor: pointer;}
-/*.imgitem:nth-child(even), #default:nth-child(even) {background: rgba(50,50,50,0.7);}*/
-#selected {
+    position: absolute;
     background: #d90;
-    color: #fff;
+    z-index: -1;
 }
 .thumbnail {
     display: block;
