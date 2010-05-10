@@ -31,7 +31,7 @@ TEMP="$DIR/template.html"
 URL="http://127.0.0.1:8080/$TITLE/"
 
 # "files/" should contain necessary javascript files
-wget -nc -P "$DIR/files" http://script.aculo.us/prototype.js http://script.aculo.us/effects.js
+wget -nc -P "$DIR/files" http://code.jquery.com/jquery-latest.js
 
 mkdir -p "$GDIR" &&
 ln -fsT "$PWD" "$GDIR/imgs" || exit 1

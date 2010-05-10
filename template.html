@@ -3,8 +3,7 @@
 <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
 <link rel="stylesheet" type="text/css" href="files/style.css" />
 <link rel="shortcut icon" type="image/png" href="files/favicon.png" />
-<script type="text/javascript" src="files/prototype.js"></script>
-<script type="text/javascript" src="files/effects.js"></script>
+<script type="text/javascript" src="files/jquery-latest.js"></script>
 <script type="text/javascript">
 //REPLACE {{{
     // Replace this section with:
@@ -23,10 +22,14 @@
 <script type="text/javascript" src="files/gallery.js"></script>
 </head>
 <body onload="onLoad()">
+    <div id="info">
+        <span id="counter"></span>
+        <span id="imgtitle"></span>
+        <span id="resolution"></span>
+    </div>
+
     <div id="canvas"></div>
-    <form name="navigation" method="get">
-        <input type="hidden" name="zoom" value="1" />
-        <input type="hidden" name="n" value="0" />
-    </form>
+
+    <div id="imglist"></div>
 </body>
 </html>
