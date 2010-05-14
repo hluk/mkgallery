@@ -61,5 +61,5 @@ fi
 # generate thumbnails
 rm -rf "$GDIR/thumbs" &&
 mkdir "$GDIR/thumbs" &&
-echo "$FILES" | tr , ' ' | xargs mogrify -format png -quality 60 -path "$GDIR/thumbs" -thumbnail "${RES}x${RES}>"
+echo "$FILES" | tr , ' ' | xargs mogrify -format png -quality 0 -path "$GDIR/thumbs" -thumbnail "${RES}x${RES}>"
 

@@ -81,12 +81,12 @@ function createList()//{{{
     // add thumbnails
     for(var i=0; i<len; ++i) {
         var imgpath = ls[i];
-        var thumbpath = "thumbs/" + imgpath.replace(/^.*[\/\\]/,'').replace(/\.[^.]*$/,'.png');
-        var imgitem = newItem(thumbpath, imgpath, i+1);
+        var imgitem = newItem(imgpath, i+1);
         imglist.appendChild(imgitem);
     }
 
     items = document.getElementsByClassName("imgitem");
+    addThumbnails(n-1);
 
     // moving selection cursor is faster than changing style of current item
     selection = document.createElement("div");
@@ -98,7 +98,35 @@ function createList()//{{{
     selection_needs_update = true;
 }//}}}
 
-function newItem(thumbpath, imgname, i)//{{{
+function addThumbnails(i)//{{{
+{
+    if(i<0 || i>=len)
+        return;
+
+    var imgpath = ls[i];
+    var thumbpath = "thumbs/" + imgpath.replace(/^.*[\/\\]/,'').replace(/\.[^.]*$/,'.png');
+
+    // thumbnail
+    var thumb = document.createElement('img');
+    thumb.className = "thumbnail";
+    thumb.src = thumbpath;
+
+    // show thumbnail only if src exists
+    thumb.style.display = "none";
+    items[i].appendChild(thumb);
+    // recursively load thumbnails from currently viewed
+    // - flood load:
+    //      previous and next thumbnails (from current) are loaded in paralel
+    thumb.onerror = thumb.onload = function() {
+        thumbs.push(this);
+        if (i+1>=n)
+            addThumbnails(i+1);
+        if (i+1<=n)
+            addThumbnails(i-1);
+    };
+}//}}}
+
+function newItem(imgname, i)//{{{
 {
     var l = document.createElement('div');
     l.id = i;
@@ -117,24 +145,21 @@ function newItem(thumbpath, imgname, i)//{{{
     txt.className = "imgname";
     txt.appendChild( document.createTextNode(imgname) );
 
-    // thumbnail
-    var thumb = document.createElement('img');
-    thumb.className = "thumbnail";
-    thumb.src = thumbpath;
-
-    // show thumbnail only if src exists
-    thumb.style.display = "none";
-    thumb.onload = function() {
-        this.style.display = "";
-        this.parentNode.style.maxWidth = this.width > 200 ? this.width : 200;
-        updateSelection();
-    };
-
     l.appendChild(ident);
     l.appendChild(txt);
-    l.appendChild(thumb);
 
     return l;
+}//}}}
+
+function reloadThumbnails()//{{{
+{
+    var thumb;
+    while ( thumb = thumbs.pop() ) {
+        thumb.style.display = "";
+        thumb.parentNode.style.maxWidth = thumb.width > 200 ? thumb.width : 200;
+    }
+    updateSelection();
+    ensureVisible(selection);
 }//}}}
 
 function toggleList()//{{{
@@ -150,9 +175,13 @@ function toggleList()//{{{
     lastpos = lastpos2;
     imglist_hidden = !imglist_hidden;
 
-    if ( !imglist_hidden && selection_needs_update ) {
-        updateSelection();
-        ensureVisible(selection);
+    if ( !imglist_hidden ) {
+        if ( thumbs.length )
+            reloadThumbnails();
+        if ( selection_needs_update ) {
+            updateSelection();
+            ensureVisible(selection);
+        }
     }
 }//}}}
 
@@ -181,7 +210,7 @@ function selectItem(i)//{{{
     if (!imglist)
         return;
 
-    var sel = document.getElementById('selected');
+    var sel = items[selected];
     var e = items[i];
 
     if(sel)
@@ -205,7 +234,7 @@ function listUp()//{{{
     if (!imglist)
         return;
 
-    var sel = document.getElementById('selected');
+    var sel = items[selected];
     var x = getLeft(sel) - window.pageXOffset + sel.offsetWidth/2;
 
     // select next
@@ -226,7 +255,7 @@ function listDown()//{{{
     if (!imglist)
         return;
 
-    var sel = document.getElementById('selected');
+    var sel = items[selected];
     var x = getLeft(sel) - window.pageXOffset + sel.offsetWidth/2;
     var y = getTop(sel) - window.pageYOffset;
 
@@ -344,162 +373,165 @@ function keyDown(e)//{{{
 		keyname = String.fromCharCode(keycode);
     //alert(keycode +";"+ keyname);
 
-	switch (keyname) {
-    case "Enter":
-        if ( !imglist_hidden )
-            go(selected+1);
-        else
-            go(n+1);
-        break;
-    case "Escape":
-        if ( !imglist_hidden )
-            toggleList();
-        break;
-	case "Left":
-        if ( imglist_hidden ) {
+    if (imglist_hidden) {//{{{
+        switch (keyname) {
+        case "Left":
             if ( img.width <= window.innerWidth )
                 go(n-1);
             else
                 window.scrollBy(-window.innerWidth/4,0);
-        }
-        else
-            listLeft();
-		break;
-	case "Up":
-        if ( imglist_hidden ) {
-            window.scrollBy(0,-window.innerHeight/4);
-            if ( window.pageYOffset == 0 )
-                popInfo();
-        }
-        else
-            listUp();
-		break;
-	case "Right":
-        if ( imglist_hidden ) {
+            break;
+        case "Right":
             if ( img.width <= window.innerWidth )
                 go(n+1);
             else
                 window.scrollBy(window.innerWidth/4,0);
-        }
-        else
-            listRight();
-		break;
-	case "Down":
-        if ( imglist_hidden )
+            break;
+        case "Up":
+            window.scrollBy(0,-window.innerHeight/4);
+            if ( window.pageYOffset == 0 )
+                popInfo();
+            break;
+        case "Down":
             window.scrollBy(0,window.innerHeight/4);
-        else
-            listDown();
-		break;
-	case "PageUp":
-        if ( imglist_hidden ) {
+            break;
+        case "PageUp":
             window.scrollBy(0,-window.innerHeight);
             if ( window.pageYOffset == 0 )
                 popInfo();
-        }
-        else {
-            // TODO: optimize
-            var d = window.pageYOffset;
-            var sel;
-            do {
-                var sel = document.getElementById("selected");
-                listUp(-window.innerHeight);
-            } while ( d-window.pageYOffset < window.innerHeight && sel != document.getElementById("selected") );
-        }
-		break;
-	case "PageDown":
-        if ( imglist_hidden )
+            break;
+        case "PageDown":
             window.scrollBy(0,window.innerHeight);
-        else {
-            // TODO: optimize
-            var d = window.pageYOffset;
-            var sel;
-            do {
-                var sel = document.getElementById("selected");
-                listDown(window.innerHeight);
-            } while ( window.pageYOffset-d < window.innerHeight && sel != document.getElementById("selected") );
-        }
-		break;
-    case "End":
-        if ( imglist_hidden )
+            break;
+        case "End":
             window.scrollTo(0,document.body.scrollHeight);
-        else {
+            break;
+        case "Home":
+            window.scrollTo(0,0);
+            popInfo();
+            break;
+        case "a":
+            go(len);
+            break;
+        case "b":
+            window.scrollBy(0,window.innerHeight/4);
+            break;
+        case "c":
+            go(n+5);
+            break;
+        case "d":
+            go(n-1);
+            break;
+        case "Enter":
+        case "f":
+            go(n+1);
+            break;
+        case "g":
+            go(1);
+            break;
+        case "h":
+            window.scrollBy(0,-window.innerHeight/4);
+            if ( window.pageYOffset == 0 )
+                popInfo();
+            break;
+        case "i":
+            go(n-5);
+            break;
+        case "+":
+        case "k":
+            zoom_state = null;
+            if ( zoom_factor > zoom_step )
+                zoom_factor += zoom_step;
+            else
+                zoom_factor /= 0.8;
+            zoom();
+            break;
+        case "-":
+        case "m":
+            zoom_state = null;
+            if ( zoom_factor > zoom_step )
+                zoom_factor -= zoom_step;
+            else
+                zoom_factor *= 0.8;
+            zoom();
+            break;
+        case "*":
+        case "j":
+            zoom_state = null;
+            zoom_factor = 1;
+            zoom();
+            break;
+        case "/":
+        case "o":
+            zoom_state = 'fit';
+            zoom();
+            break;
+        case ".":
+        case "n":
+            zoom_state = 'fill';
+            zoom();
+            break;
+        case "e":
+            toggleList();
+            break;
+        }
+	}//}}}
+    else {//{{{
+        switch (keyname) {
+        case "Escape":
+        case "e":
+            toggleList();
+            break;
+            toggleList();
+            break;
+        case "Enter":
+            go(selected+1);
+            break;
+        case "Left":
+        case "d":
+            listLeft();
+            break;
+        case "Right":
+        case "f":
+            listRight();
+            break;
+        case "Up":
+        case "h":
+            listUp();
+            break;
+        case "Down":
+        case "b":
+            listDown();
+            break;
+        case "PageUp":
+        case "i":
+            var min_pos = selection.offsetTop-window.innerHeight;
+            var i = selected;
+            while ( --i > 0 && min_pos < items[i].offsetTop );
+            selectItem(i+1);
+            window.scrollTo( 0, getTop(selection) );
+            break;
+            break;
+        case "PageDown":
+        case "c":
+            var min_pos = selection.offsetTop+window.innerHeight;
+            var i = selected;
+            while ( ++i < len && min_pos > items[i].offsetTop );
+            selectItem(i-1);
+            window.scrollTo( 0, getTop(selection) );
+            break;
+        case "End":
+        case "a":
             selectItem(items.length-1);
             ensureVisible(selection);
-        }
-        break;
-    case "Home":
-        if ( imglist_hidden )
-            window.scrollTo(0,0);
-        else {
+            break;
+        case "Home":
+        case "g":
             selectItem(0);
             ensureVisible(selection);
+            break;
         }
-        popInfo();
-        break;
-	case "a":
-		go(len);
-		break;
-	case "b":
-		window.scrollBy(0,window.innerHeight/4);
-		break;
-	case "c":
-		go(n+5);
-		break;
-	case "d":
-		go(n-1);
-		break;
-	case "f":
-		go(n+1);
-		break;
-	case "g":
-		go(1);
-		break;
-	case "h":
-		window.scrollBy(0,-window.innerHeight/4);
-        if ( window.pageYOffset == 0 )
-            popInfo();
-		break;
-	case "i":
-		go(n-5);
-		break;
-	case "+":
-	case "k":
-		zoom_state = null;
-        if ( zoom_factor > zoom_step )
-            zoom_factor += zoom_step;
-        else
-            zoom_factor /= 0.8;
-		zoom();
-		break;
-	case "-":
-	case "m":
-		zoom_state = null;
-        if ( zoom_factor > zoom_step )
-            zoom_factor -= zoom_step;
-        else
-            zoom_factor *= 0.8;
-		zoom();
-		break;
-	case "*":
-	case "j":
-		zoom_state = null;
-		zoom_factor = 1;
-		zoom();
-		break;
-	case "/":
-	case "o":
-		zoom_state = 'fit';
-		zoom();
-		break;
-	case ".":
-	case "n":
-		zoom_state = 'fill';
-		zoom();
-		break;
-	case "e":
-        toggleList();
-		break;
-	}
+	}//}}}
 }//}}}
 
 function onMouseWheel(e) {//{{{
@@ -545,14 +577,15 @@ function initDragScroll()//{{{
 
 function updateUrl()//{{{
 {
-    var hash = "";
-    for (var key in vars) {
-        if (hash)
-            hash += "&";
-        hash += key + "=" + vars[key];
+    hash = "";
+
+    for (var key in vars)
+        hash += (hash ? "&" : "") + key + "=" + vars[key];
+
+    if ( hash != location.hash ) {
+        // if url is updated instantly cannot browse images rapidly
+        addTimeout( 'if( hash == "'+hash+'" ) location.hash = "#'+hash+'";',1000 );
     }
-    // if url is updated instantly cannot browse images rapidly
-    addTimeout( 'location.hash = "#'+hash+'";',1000 );
 }//}}}
 
 function getUrlVars()//{{{
@@ -624,9 +657,6 @@ function getPage(i)//{{{
 function go(i)//{{{
 {
 	var pg = getPage(i);
-	if ( pg == n )
-        return;
-
     if( !imglist_hidden )
         toggleList();
 
@@ -649,10 +679,17 @@ function showImage()//{{{
     if (img)
         canvas.removeChild(img);
 
-    img = document.createElement('img');
+    // TODO: SVG -- for some reason this doesn't work in Chromium
+    if (imgpath.search(/\.svg$/i) > -1) {
+        img = document.createElement("embed");
+        img.src = "imgs/" + imgpath;
+    }
+    else {
+        img = document.createElement("img");
+        img.src = "imgs/" + imgpath;
+    }
     img.id = "myimage";
     img.name = "myimage";
-    img.src = "imgs/" + imgpath;
     img.onload = imgOnLoad;
     canvas.appendChild(img);
 }//}}}
@@ -685,6 +722,9 @@ function onLoad()//{{{
     updateTitle();
 
     initDragScroll();
+
+    // refresh zoom on resize
+    b.onresize = zoom;
 }//}}}
 
 keycodes = {
@@ -727,10 +767,12 @@ document.addEventListener("keydown", keyDown, false);
 
 var imgname, imgpath;
 var b, canvas, img, preload_imgs, info, resolution;
-var imglist, items, selection, selected;
+var imglist, items, selection, selected, thumbs;
 var selection_needs_update;
 var info_hidden = true;
 var imglist_hidden = true;
 var lastpos = [0,0];
+var hash;
 var timers = new Array();
+var thumbs = new Array();
 
