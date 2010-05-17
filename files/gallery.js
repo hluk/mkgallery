@@ -36,9 +36,9 @@ function zoom()//{{{
     canvas.style.top = newtop > 0 ? newtop : 0;
 
     var newzoom = zoom_state ? zoom_state : zoom_factor;
-    if  (newzoom != vars["zoom"] ) {
+    if  ( newzoom != vars["zoom"] ) {
         vars["zoom"] = newzoom;
-        updateUrl();
+        //updateUrl();
     }
 }//}}}
 
@@ -575,7 +575,7 @@ function initDragScroll()//{{{
 }//}}}
 //}}}
 
-function updateUrl()//{{{
+function updateUrl(immediately)//{{{
 {
     hash = "";
 
@@ -583,8 +583,11 @@ function updateUrl()//{{{
         hash += (hash ? "&" : "") + key + "=" + vars[key];
 
     if ( hash != location.hash ) {
-        // if url is updated instantly cannot browse images rapidly
-        addTimeout( 'if( hash == "'+hash+'" ) location.hash = "#'+hash+'";',1000 );
+        // if url is updated immediately, user cannot browse images rapidly
+        if (immediately)
+            location.hash = "#"+hash;
+        else
+            window.setTimeout( 'if( hash == "'+hash+'" ) location.hash = "#'+hash+'";',1000 );
     }
 }//}}}
 
@@ -610,13 +613,10 @@ function popInfo()//{{{
             4000);
 }//}}}
 
-function preloadImages()//{{{
+function preloadImages(num)//{{{
 {
-    // preload 5 images at most
-    // this will hopefully save some energy on laptops with classic hard drive
-    var m = (n-1)%5+1;
     preload_imgs = [];
-    for(var i = 0; i<m; ++i) {
+    for(var i = 0; i < Math.min(num,len); ++i) {
         preload_imgs[i] = new Image();
         preload_imgs[i].src = "imgs/" + encodeURIComponent(ls[n+i]);
     }
@@ -638,10 +638,16 @@ function imgOnLoad()//{{{
                 });
     }
     popInfo();
-    preloadImages();
 
-    if ( document.getElementById("imglist") )
-        document.getElementById("imglist").style.display = "none";
+    // this will hopefully save some energy on laptops with classic hard drive
+    // -----------------------------------------------------------------------
+    // every 4th image in gallery (do nothing on first -- save memory):
+    // - preload next images
+    // - update URL
+    if (n>1 && (n%4 == 2 || !preload_imgs) ) {
+        preloadImages(4);
+        updateUrl();
+    }
 }//}}}
 
 function getPage(i)//{{{
@@ -668,7 +674,7 @@ function go(i)//{{{
     updateImageInfo();
     showImage();
     updateTitle();
-    updateUrl();
+    //updateUrl();
     selectItem(n-1);
     window.scrollTo(0,0);
 }//}}}
@@ -715,7 +721,12 @@ function onLoad()//{{{
     // mousewheel on canvas/image
     document.onmousewheel = onMouseWheel;
 
+    // no scrollbars
     document.body.style.overflow = 'hidden';
+
+    // thumbnails initially hidden
+    if ( !imglist && document.getElementById("imglist") )
+        document.getElementById("imglist").style.display = "none";
 
     updateImageInfo();
     showImage();
@@ -725,6 +736,9 @@ function onLoad()//{{{
 
     // refresh zoom on resize
     b.onresize = zoom;
+
+    // browser with sessions: update URL when browser window closed
+    b.onbeforeunload = function() { updateUrl(true); };
 }//}}}
 
 keycodes = {
