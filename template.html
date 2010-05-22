@@ -1,10 +1,15 @@
 <html>
 <head>
 <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+<link rel="stylesheet" type="text/css" href="fonts.css" />
 <link rel="stylesheet" type="text/css" href="files/style.css" />
 <link rel="shortcut icon" type="image/png" href="files/favicon.png" />
-<script type="text/javascript" src="files/jquery-latest.js"></script>
+<!--<script type="text/javascript" src="files/jquery-latest.js"></script>-->
 <script type="text/javascript">
+config = {
+    'font_test': 'Příšerně žluťoučký kůň úpěl ďábelské ódy. PŘÍŠERNĚ ŽLUŤOUČKÝ KŮŇ ÚPĚL ĎÁBELSKÉ ÓDY\nint main(int argc, char* argv[]) {\ntprintf( \"\%20s\",(argc>2)?argv[1]:"hello" );\n\treturn 1;\n}',
+    'thumbnail_font_test': "Příšerně žluťoučký kůň úpěl ďábelské ódy. PŘÍŠERNĚ ŽLUŤOUČKÝ KŮŇ ÚPĚL ĎÁBELSKÉ ÓDY",
+}
 //REPLACE {{{
     // Replace this section with:
     // - variable ls (list) containing image filenames in "img/" directory,
@@ -17,19 +22,19 @@
         "face-angel.png",
         ]
     var title = "template";
-//}}}
+//REPLACE }}}
 </script>
 <script type="text/javascript" src="files/gallery.js"></script>
 </head>
 <body onload="onLoad()">
     <div id="info">
         <span id="counter"></span>
-        <span id="imgtitle"></span>
+        <span id="itemtitle"></span>
         <span id="resolution"></span>
     </div>
 
     <div id="canvas"></div>
 
-    <div id="imglist"></div>
+    <div id="itemlist"></div>
 </body>
 </html>
