@@ -153,7 +153,7 @@ var ImageView = function(imgpath, _parent) { this.init(imgpath, _parent); };
 ImageView.prototype = {
 init: function(imgpath, _parent)//{{{
 {
-    this.path = imgpath;
+    this.path = path(imgpath);
     this._parent = _parent;
     this.zoom_factor = 1;
 },//}}}
@@ -283,6 +283,7 @@ init: function(itempath, _parent)//{{{
     this.path = itempath;
     this._parent = _parent;
     this.zoom_factor = 1;
+    this.font = this.path.replace(/[^a-zA-Z0-9_]/g,"_");
 },//}}}
 
 show: function()//{{{
@@ -290,15 +291,14 @@ show: function()//{{{
     if (this.e)
         return;
 
-    var font = this.path.replace(/.*\//gi, "").replace(".","-");
     this.e = document.createElement("div");
     this.e.src = this.path;
     this.e.className = "fontview";
     this.e.name = "view";
-    this.e.style.fontFamily = font;
 
     this.ee = document.createElement("div");
     this.ee.innerText = config['font_test'];
+    this.ee.style.fontFamily = this.font;
     this.e.appendChild(this.ee);
 
     this._parent.append(this.e);
@@ -322,7 +322,7 @@ thumbnail: function()//{{{
     var font = this.path.replace(/.*\//gi, "").replace(".","-");
     this.thumb = document.createElement("div");
     this.thumb.className = "thumbnail";
-    this.thumb.style.fontFamily = font;
+    this.thumb.style.fontFamily = this.font;
     this.thumb.style.fontSize = 16;
     this.thumb.innerText = config['thumbnail_font_test'];
 
@@ -735,7 +735,7 @@ hidden: function()//{{{
 // HELPER FUNCTIONS//{{{
 function path (filename)
 {
-    return "imgs/" + encodeURIComponent(filename);
+    return "imgs/" + filename;
 }
 function getPage (i)//{{{
 {
@@ -754,7 +754,7 @@ function go (i)//{{{
     n = vars["n"] = pg;
 
     var itemname = ls[n-1];
-    viewer.show( path(itemname) );
+    viewer.show( itemname );
     info.updateInfo(itemname,n,len);
     info.popInfo();
 

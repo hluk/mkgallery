@@ -62,7 +62,7 @@ fi
 # generate font-faces
 function cssline()
 {
-    echo "@font-face { font-family: `echo $1|tr . '-'`; src: url('imgs/$1'); }"
+    echo "@font-face { font-family: `echo $1|sed 's/[^a-zA-Z0-9_]/_/g'`; src: url('imgs/$1'); }"
 }
 
 FONTS=`echo "$FILES" | sed -n '/\.\('$FONT_FORMATS'\)",$/{s/^"//;s/",$//;p}'`
