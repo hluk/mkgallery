@@ -695,7 +695,6 @@ Info.prototype = {
 init: function(e,counter,itemtitle,resolution)//{{{
 {
     this.e = e;
-    this.e.style.display = "none";
 	this.counter = counter;
 	this.itemtitle = itemtitle;
     this.resolution = resolution;
@@ -757,13 +756,14 @@ popInfo : function ()//{{{
     if (this.info_t)
         clearTimeout(this.info_t);
     this.e.className = "focused";
+
     var t = this;
     this.info_t = setTimeout(function(){t.e.className = "";},4000);
 },//}}}
 
 hidden: function()//{{{
 {
-    return this.e.style.display == "none";
+    return this.e.className != "focused";
 },//}}}
 }
 //}}}
