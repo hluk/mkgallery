@@ -65,10 +65,8 @@ function cssline()
     echo "@font-face { font-family: `echo $1|sed 's/[^a-zA-Z0-9_]/_/g'`; src: url('imgs/$1'); }"
 }
 
-FONTS=`echo "$FILES" | sed -n '/\.\('$FONT_FORMATS'\)",$/{s/^"//;s/",$//;p}'`
-(
-    echo "$FONTS" | while L=`line`; do cssline "$L"; done
-) > "$GDIR/fonts.css"
+echo "$FILES" | sed -n '/\.\('$FONT_FORMATS'\)",$/{s/^"//;s/",$//;p}' |
+		while read font; do cssline "$font"; done > "$GDIR/fonts.css"
 
 # generate thumbnails
 rm -rf "$GDIR/thumbs" &&
@@ -77,6 +75,6 @@ IMAGES=`echo "$FILES" | sed -n '/\.\('$IMAGE_FORMATS'\)",$/{s/,$//p}'`
 N=`echo "$FILES"|wc -l`
 # decrease thumbnail size: -depth 3
 echo "$IMAGES" |
-    xargs mogrify -verbose -format png -quality 0 -type optimize -path "$GDIR/thumbs" -thumbnail "${RES}x${RES}>" |
-        awk 'BEGIN{n='$N';}/=>\//{l=int(i/n*30); s=""; j=l; while(j--) s=s"="; bar=sprintf("[%s%-"30-l"s]",s,">"); printf("Creating thumbnails: %s %d/%d%s",bar,++i,n,i==n?"\n":"\r");}'
+    xargs mogrify -monitor -format png -quality 0 -type optimize -path "$GDIR/thumbs" -thumbnail "${RES}x${RES}>" 2>&1 |
+        awk 'BEGIN{n='$N';}/^load /{l=int(i/n*30); s=""; j=l; while(j--) s=s"="; bar=sprintf("[%s%-"30-l"s]",s,">"); printf("Creating thumbnails: %s %d/%d%s",bar,++i,n,i==n?"\n":"\r");}'
 

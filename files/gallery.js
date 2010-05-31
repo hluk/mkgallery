@@ -1,32 +1,64 @@
 /*
- * HTML document should include:
- *   - <script type="text/javascript" src="files/gallery.js"></script>
- *   - <body onload="onLoad()">
- *   - <div id="canvas></canvas>
+ * HTML document should include lines:
+    <script type="text/javascript" src="THIS_FILE.js"></script>
+    <body onload="onLoad()">
+ * and optionally:
+    <div id="canvas></canvas>
+    <div id="info">
+        <span id="counter"></span>
+        <span id="itemtitle"></span>
+        <span id="resolution"></span>
+    </div>
+    <div id="itemlist"></div>
+ *
+ * \section caching Caching
+ * \par
+ * When opened (on any item) the gallery browser should use cache only to store the currently viewed item (i.e. item list is not created and no items are preloaded).
+ *
+ * \par
+ * Navigating to another image will preload images. The number of preloaded images is at most the value of config['preload_images'] (user defined; zero if not defined).
+ *
+ * \see preloadImages
+ *
+ *\par
+ * When the item list is opened for the first time, it starts to load thumbnails. User needs to reopen the item list to refresh thumbnails which weren't loaded yet.
+ *
+ * see: ItemList::toggle
+ *
  */
 
 //! \class Viewer
 //{{{
-// events:
-//   onBeforeLoad()
-//   onLoad(width,height);
-//   onError(error_msg);
-//   onZoomChanged(zoom_state)
-var Viewer = function(e) {
-    this.init(e);
+/**
+ * events
+ *
+ * \fn onUpdateStatus(msg,class_name)
+ * \brief event is triggered after changing status of view/viewer
+ * \param msg status text
+ * \param class_name class of status text ("loading", "error" or custom)
+ *
+ * \fn onLoad()
+ * \brief event is triggered after item is successfully loaded
+ *
+ * \fn onError(error_msg);
+ * \brief event is triggered after error
+ *
+ * \fn onZoomChanged(zoom_state)
+ * \brief event is triggered after zoom is changed
+ * \param zoom_state "fit", "fill" or zoom factor (float)
+ */
+var Viewer = function(e,zoom) {
+    this.init(e,zoom);
 };
 
 Viewer.prototype = {
-init: function (e)//{{{
+init: function (e,zoom)//{{{
 {
     this.e = e;
-    this.zoom_state = 1;
+    this.zoom_state = zoom ? zoom : 1;
     this.viewFactory = new ViewFactory(this);
 },//}}}
 
-/**
- * \param how "fit" (fit to window), "fill" (fill window), float (zoom factor), other (restore default zoom factor)
- */
 zoom: function (how)//{{{
 {
     if ( !this.view )
@@ -61,15 +93,6 @@ zoomChanged: function (zoom_state,zoom_factor)//{{{
 
 },//}}}
 
-preloadImages: function (num)//{{{
-{
-    this.preload_imgs = [];
-    for(var i = 0; i < Math.min(num,len); ++i) {
-        this.preload_imgs[i] = new Image();
-        this.preload_imgs[i].src = path(ls[n+i]);
-    }
-},//}}}
-
 append: function (view)//{{{
 {
     this.e.appendChild(view);
@@ -85,15 +108,21 @@ show: function (filepath)//{{{
     if (this.view)
         this.view.remove();
 
-    if (this.onBeforeLoad)
-        this.onBeforeLoad();
-    this.view = this.viewFactory.newView( filepath, this );
+    this.view = this.viewFactory.newView( filepath );
     if ( this.view )
         this.view.show();
-    else {
-        if (this.onError)
-            this.onError("Unknown format: \""+filepath+"\"");
-    }
+    else if (this.onError)
+        this.onError("Unknown format: \""+filepath+"\"");
+},//}}}
+
+width: function ()//{{{
+{
+    return this.view ? this.view.width : 0;
+},//}}}
+
+height: function ()//{{{
+{
+    return this.view ? this.view.height : 0;
 },//}}}
 }
 //}}}
@@ -127,6 +156,9 @@ newView: function(filepath) {//{{{
  * \param itempath item filename
  * \param _parent item parent (Viewer)
  *
+ * \fn type()
+ * \return an identifier of type (e.g. "image", "font")
+ *
  * \fn show()
  * \return shows view in parent
  *
@@ -139,7 +171,7 @@ newView: function(filepath) {//{{{
  *
  * \fn zoom(how)
  * \param how "fit" (fit to window), "fill" (fill window), float (zoom factor), other (restore default zoom factor)
- * 
+ *
  * \fn onZoomChange()
  * \brief event
  */
@@ -158,13 +190,18 @@ init: function(imgpath, _parent)//{{{
     this.zoom_factor = 1;
 },//}}}
 
+type: function ()//{{{
+{
+    return "image";
+},//}}}
+
 show: function()//{{{
 {
     if ( this.e )
         return;
 
-    if ( this._parent.onUpdateMessage )
-        this._parent.onUpdateMessage("loading","loading");
+    if ( this._parent.onUpdateStatus )
+        this._parent.onUpdateStatus("loading","loading");
 
     // TODO: SVG -- for some reason this doesn't work in Chromium
     if (this.path.search(/\.svg$/i) > -1) {
@@ -182,8 +219,10 @@ show: function()//{{{
         view.orig_width = this.width;
         view.orig_height = this.height;
         view._parent.zoom();
-        if ( view._parent.onUpdateMessage )
-            view._parent.onUpdateMessage(this.width+"x"+this.height);
+        if ( view._parent.onUpdateStatus )
+            view._parent.onUpdateStatus(this.width+"x"+this.height);
+        if ( view._parent.onLoad )
+            view._parent.onLoad();
     };
 
     this._parent.append(this.e);
@@ -259,16 +298,6 @@ zoom: function (how)//{{{
 
     this._parent.zoomChanged(how,this.zoom_factor);
 },//}}}
-
-width: function ()//{{{
-{
-    return this.e.width;
-},//}}}
-
-height: function ()//{{{
-{
-    return this.e.height;
-},//}}}
 }
 //}}}
 
@@ -286,6 +315,11 @@ init: function(itempath, _parent)//{{{
     this.font = this.path.replace(/[^a-zA-Z0-9_]/g,"_");
 },//}}}
 
+type: function ()//{{{
+{
+    return "font";
+},//}}}
+
 show: function()//{{{
 {
     if (this.e)
@@ -296,13 +330,22 @@ show: function()//{{{
     this.e.className = "fontview";
     this.e.name = "view";
 
-    this.ee = document.createElement("div");
-    this.ee.innerText = config['font_test'];
+    this.ee = document.createElement("textarea");
+    this.ee.style.width = "100%";
+    this.ee.style.height = "80%";
+    this.ee.style.border = "0px";
+    this.ee.style.overflow = "hidden";
+    this.ee.style.background = "rgba(0,0,0,0)";
+    this.ee.value = config['font_test'];
     this.ee.style.fontFamily = this.font;
+    this.ee.onblur = function () { config['font_test'] = this.value; };
     this.e.appendChild(this.ee);
 
     this._parent.append(this.e);
     this._parent.zoom();
+
+    if ( view._parent.onLoad )
+        view._parent.onLoad();
 },//}}}
 
 remove: function()//{{{
@@ -323,8 +366,7 @@ thumbnail: function()//{{{
     this.thumb = document.createElement("div");
     this.thumb.className = "thumbnail";
     this.thumb.style.fontFamily = this.font;
-    this.thumb.style.fontSize = 16;
-    this.thumb.innerText = config['thumbnail_font_test'];
+    this.thumb.innerHTML = config['thumbnail_font_test'];
 
     this._parent.thumbnailOnLoad(this);
 
@@ -346,7 +388,9 @@ zoom: function (how)//{{{
         z /= 1+zoom_step;
         break;
     default:
-        z = how ? parseFloat(how) : 1;
+        z = parseFloat(how);
+        if (!z)
+            z = 1;
         break;
     }
 
@@ -357,29 +401,20 @@ zoom: function (how)//{{{
 
     this._parent.zoomChanged(how,this.zoom_factor);
 },//}}}
-
-width: function ()//{{{
-{
-    return this.e.width;
-},//}}}
-
-height: function ()//{{{
-{
-    return this.e.height;
-},//}}}
 }
 //}}}
 
 //! \class ItemList
 //{{{
-var ItemList = function(e) { this.init(e); };
+var ItemList = function(e,items) { this.init(e,items); };
 
 ItemList.prototype = {
-init: function (e)//{{{
+init: function (e,items)//{{{
 {
     this.e = e;
     if (!this.e)
         return null;
+    this.ls = items;
 
     this.e.style.display = "none";
     this.lastpos = [0,0];
@@ -416,7 +451,7 @@ addThumbnails: function (items, i)//{{{
     if ( !items )
         items = this.items;
 
-    var thumb = this.viewFactory.newView( ls[i] );
+    var thumb = this.viewFactory.newView( this.ls[i] );
     thumb.id = i;
     var e = thumb.thumbnail();
     // show thumbnail only if src exists
@@ -467,9 +502,10 @@ appendItem: function (itemname, i)//{{{
 reloadThumbnails: function ()//{{{
 {
     var thumb;
+    var maxwidth = config['thumbnail_max_width'];
     while ( thumb = this.thumbs.pop() ) {
         thumb.style.display = "";
-        thumb.parentNode.style.maxWidth = thumb.width > 200 ? thumb.width : 200;
+        thumb.parentNode.style.maxWidth = thumb.width > 300 ? thumb.width : 300;
     }
     this.updateSelection();
     this.ensureCurrentVisible();
@@ -479,13 +515,13 @@ toggle: function ()//{{{
 {
     // are items loaded?
     if ( !this.items ) {
-        this.items = new Array();
+        this.items = [];
 
         for(var i=0; i<len; ++i)
-            this.appendItem(ls[i], i+1);
+            this.appendItem(this.ls[i], i+1);
 
         // add thumbnails
-        this.thumbs = new Array();
+        this.thumbs = [];
         this.addThumbnails();
 
         // moving selection cursor is faster than changing style of current item
@@ -515,8 +551,9 @@ toggle: function ()//{{{
 
 ensureCurrentVisible: function ()//{{{
 {
-    var y = getTop(this.selection);
-    var d = y + this.selection.offsetHeight - window.pageYOffset - window.innerHeight;
+    var e = this.items[this.selected];
+    var y = getTop(e);
+    var d = y + e.offsetHeight - window.pageYOffset - window.innerHeight;
     if ( d > 0 )
         window.scrollBy(0,d);
     if ( y < window.pageYOffset )
@@ -623,7 +660,7 @@ listPageDown: function ()//{{{
     var i = this.selected;
     while ( ++i < len && min_pos > this.get(i).offsetTop );
     this.selectItem(i-1);
-    window.scrollTo( 0, getTop(selection) );
+    this.ensureCurrentVisible();
 },//}}}
 
 listPageUp: function ()//{{{
@@ -632,7 +669,7 @@ listPageUp: function ()//{{{
     var i = this.selected;
     while ( --i > 0 && min_pos < this.get(i).offsetTop );
     this.selectItem(i+1);
-    window.scrollTo( 0, getTop(selection) );
+    this.ensureCurrentVisible();
 },//}}}
 }
 //}}}
@@ -683,7 +720,7 @@ updateItemTitle: function ()//{{{
 
     l = document.createElement('a');
     l.id = "link";
-	l.href = "imgs/" + this.name();
+	l.href = path( this.name() );
 	l.appendChild(document.createTextNode( this.name() ));
 	this.itemtitle.appendChild(l);
 },//}}}
@@ -717,11 +754,11 @@ updateInfo: function (itemname,i,len)//{{{
 
 popInfo : function ()//{{{
 {
-    this.e.style.display = "";
     if (this.info_t)
         clearTimeout(this.info_t);
+    this.e.className = "focused";
     var t = this;
-    this.info_t = setTimeout(function(){t.e.style.display = "none";},4000);
+    this.info_t = setTimeout(function(){t.e.className = "";},4000);
 },//}}}
 
 hidden: function()//{{{
@@ -733,10 +770,17 @@ hidden: function()//{{{
 
 
 // HELPER FUNCTIONS//{{{
-function path (filename)
+config.get = function (i,d)//{{{
+{
+    var x = this[i];
+    return (x==null) ? d : x;
+}//}}}
+
+function path (filename)//{{{
 {
     return "imgs/" + filename;
-}
+}//}}}
+
 function getPage (i)//{{{
 {
 	if (!i || i<1)
@@ -751,20 +795,24 @@ function go (i)//{{{
 {
 	var pg = getPage(i);
 
-    n = vars["n"] = pg;
-
-    var itemname = ls[n-1];
-    viewer.show( itemname );
-    info.updateInfo(itemname,n,len);
-    info.popInfo();
-
-    updateTitle();
-
     if (itemlist) {
         if( !itemlist.hidden() )
             itemlist.toggle();
-        itemlist.selectItem(n-1);
+        itemlist.selectItem(pg-1);
     }
+
+    n = vars['n'] = pg;
+
+    var itemname = ls[n-1];
+    viewer.show( itemname );
+
+    if (info ) {
+        info.updateInfo(itemname,n,len);
+        info.popInfo();
+    }
+
+    updateTitle();
+
     window.scrollTo(0,0);
 
     updateUrl();
@@ -827,6 +875,37 @@ function getLeft(e)//{{{
 
     return result;
 }//}}}
+
+function preloadImages ()//{{{
+{
+    if (preloaded == null) {
+        // don't preload images when started
+        preloaded = [];
+        return;
+    }
+
+    var maxnum = config.get('preload_images',4);
+    var num = maxnum - (n+2) % maxnum;
+
+    var new_preloaded = [];
+    for(var i = n; i < n+Math.min(num,len); ++i) {
+        // try to use already preloaded image
+        var im = preloaded[i];
+        if ( !im ) {
+            // type of item must be image
+            var filename = path(ls[i]);
+            var view = ViewFactory.prototype.newView(filename);
+            if (!view || view.type() != "image")
+                continue;
+
+            // create image (assume same size as current item)
+            im = new Image( viewer.width(), viewer.height() );
+            im.src = filename;
+        }
+        new_preloaded[i] = im;
+    }
+    preloaded = new_preloaded;
+}//}}}
 //}}}
 
 // INTERACTION//{{{
@@ -856,17 +935,22 @@ function keyDown (e)//{{{
 		keyname = String.fromCharCode(keycode);
     //alert(keycode +";"+ keyname);
 
-    if ( !itemlist || itemlist.hidden() ) {//{{{
+    // Viewer {{{
+    if ( !itemlist || itemlist.hidden() ) {
         switch (keyname) {
         case "Left":
-            if ( viewer.view.width <= window.innerWidth )
-                go(n-1);
+            if ( viewer.width() <= window.innerWidth ) {
+                if ( n != 1 )
+                    go(n-1);
+            }
             else
                 window.scrollBy(-window.innerWidth/4,0);
             break;
         case "Right":
-            if ( viewer.view.width <= window.innerWidth )
-                go(n+1);
+            if ( viewer.width() <= window.innerWidth ) {
+                if ( n != len )
+                    go(n+1);
+            }
             else
                 window.scrollBy(window.innerWidth/4,0);
             break;
@@ -894,23 +978,28 @@ function keyDown (e)//{{{
             info.popInfo();
             break;
         case "a":
-            go(len);
+            if ( n != len )
+                go(len);
             break;
         case "b":
             window.scrollBy(0,window.innerHeight/4);
             break;
         case "c":
-            go(n+5);
+            if ( n != len )
+                go(n+5);
             break;
         case "d":
-            go(n-1);
+            if ( n != 1 )
+                go(n-1);
             break;
         case "Enter":
         case "f":
-            go(n+1);
+            if ( n != len )
+                go(n+1);
             break;
         case "g":
-            go(1);
+            if ( n != 1 )
+                go(1);
             break;
         case "h":
             window.scrollBy(0,-window.innerHeight/4);
@@ -918,7 +1007,8 @@ function keyDown (e)//{{{
                 info.popInfo();
             break;
         case "i":
-            go(n-5);
+            if ( n != 1 )
+                go(n-5);
             break;
         case "+":
         case "k":
@@ -940,18 +1030,19 @@ function keyDown (e)//{{{
         case "n":
             viewer.zoom("fill");
             break;
+        case "Escape":
         case "e":
             if (itemlist)
                 itemlist.toggle();
             break;
         }
 	}//}}}
-    else {//{{{
+
+    // ItemList {{{
+    else {
         switch (keyname) {
         case "Escape":
         case "e":
-            itemlist.toggle();
-            break;
             itemlist.toggle();
             break;
         case "Enter":
@@ -1013,7 +1104,7 @@ function initDragScroll ()//{{{
     document.addEventListener("mousemove",dragScroll,false);
 
     function startDragScroll(e) {
-        if (e.button == 0 && (e.target.id == "canvas" || e.target.id == "view")) {
+        if (e.button == 0 && (e.target.id == "canvas" || e.target.className == "imageview")) {
             dragging = true;
             x = window.pageXOffset + e.clientX;
             y = window.pageYOffset + e.clientY;
@@ -1038,7 +1129,7 @@ function initDragScroll ()//{{{
 
 function createItemList(e)//{{{
 {
-    itemlist = new ItemList(e);
+    itemlist = new ItemList(e,ls);
     // item list is initially hidden
     if ( !itemlist && document.getElementById("itemlist") )
         document.getElementById("itemlist").style.display = "none";
@@ -1046,12 +1137,18 @@ function createItemList(e)//{{{
 
 function createViewer(e,info)//{{{
 {
-    viewer = new Viewer(e);
-    if (info) {
-        viewer.onUpdateMessage = function(msg,class_name) { info.updateStatus( msg, class_name ); }
-        viewer.onError = function(msg) { info.updateStatus( msg, "error" ); }
-        viewer.onZoomChanged = function(state) { if (vars["zoom"] == state) return; vars["zoom"] = state; updateUrl(); }
+    viewer = new Viewer(e,vars['zoom']);
+
+    viewer.onLoad = function() {
+        preloadImages();
     }
+
+    if (info) {
+        viewer.onUpdateStatus = function(msg,class_name) { info.updateStatus( msg, class_name ); }
+        viewer.onError = function(msg) { info.updateStatus( msg, "error" ); }
+    }
+
+    viewer.onZoomChanged = function(state) { if (vars['zoom'] == state) return; vars['zoom'] = state; updateUrl(); }
 }//}}}
 
 function onLoad()//{{{
@@ -1104,7 +1201,7 @@ var len = ls.length;
 var vars = getUrlVars();
 
 // page number
-var n = getPage( parseInt(vars["n"]) );
+var n = getPage( parseInt(vars['n']) );
 
 // zoom
 var zoom_step  = 0.125;
@@ -1112,7 +1209,8 @@ var zoom_step  = 0.125;
 // body
 var b;
 
-var itemlist, info, viewer;
 var hash;
-var timers = new Array();
+
+var itemlist, info, viewer;
+var preloaded = null;
 
