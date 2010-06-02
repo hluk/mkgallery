@@ -250,7 +250,7 @@ thumbnail: function()//{{{
     this.thumb.src = thumbpath;
 
     var view = this;
-    this.thumb.onload = function () { view._parent.thumbnailOnLoad(view); };
+    this.thumb.onerror = this.thumb.onload = function () { view._parent.thumbnailOnLoad(view); };
 
     return this.thumb;
 },//}}}
@@ -502,10 +502,12 @@ appendItem: function (itemname, i)//{{{
 reloadThumbnails: function ()//{{{
 {
     var thumb;
-    var maxwidth = config['thumbnail_max_width'];
+    var minwidth = config.get('thumbnail_min_width',100);
+    var maxwidth = config.get('thumbnail_max_width',300);
     while ( thumb = this.thumbs.pop() ) {
-        thumb.style.display = "";
-        thumb.parentNode.style.maxWidth = thumb.width > 300 ? thumb.width : 300;
+        if ( thumb.width > 0 )
+            thumb.style.display = "";
+        thumb.parentNode.style.maxWidth = Math.max( minwidth, Math.min(thumb.width,maxwidth) );
     }
     this.updateSelection();
     this.ensureCurrentVisible();
@@ -687,28 +689,78 @@ init: function() {},
 
 //! \class Info
 //{{{
-var Info = function(e,counter,itemtitle,resolution) {
-    this.init(e,counter,itemtitle,resolution);
+var Info = function(e,counter,itemtitle,resolution,progress) {
+    this.init(e,counter,itemtitle,resolution,progress);
 };
 
 Info.prototype = {
-init: function(e,counter,itemtitle,resolution)//{{{
+init: function(e,counter,itemtitle,resolution,progress)//{{{
 {
     this.e = e;
 	this.counter = counter;
 	this.itemtitle = itemtitle;
     this.resolution = resolution;
+    this.progress = progress;
 },//}}}
 
 updateCounter: function ()//{{{
 {
-    if (!this.counter)
+    if ( !this.counter )
         return;
-	this.counter.innerText = this.n + "/" + this.len;
+    this.counter.innerText = this.n + "/" + this.len;
     if (this.n == this.len)
         this.counter.className = "last";
     else
         this.counter.className = "";
+},//}}}
+
+updateProgress: function ()//{{{
+{
+    if ( !this.progress )
+        return;
+
+    var ctx = this.progress.getContext("2d");
+    var pi = 3.1415;
+    var angle = 2*pi*this.n/this.len;
+    var r = config.get('progress_radius',22);
+    var w = config.get('progress_width',8);
+    var x = r;
+    var y = r;
+
+    this.progress.setAttribute("width", r*2);
+    this.progress.setAttribute("height", r*2);
+
+    ctx.save();
+
+    ctx.clearRect(x-r,y-r,2*r,2*r);
+
+    ctx.beginPath();
+    ctx.moveTo(x, y);
+    ctx.arc(x, y, r, 0, 2*pi, false);
+    ctx.fillStyle = config.get('progress_bg',"rgba(200,200,200,0.2)");
+    ctx.fill();
+
+    ctx.beginPath();
+    ctx.moveTo(x, y);
+    ctx.arc(x, y, r, -pi/2, angle-pi/2, false);
+    ctx.fillStyle = config.get('progress_fg',"rgba(255,200,0,0.8)");
+    ctx.fill();
+
+    ctx.fillStyle = "white";
+    ctx.beginPath();
+    ctx.globalCompositeOperation = "destination-out";
+    ctx.arc(x, y, r-w, 0, 2*pi, false);
+    ctx.fill();
+
+    ctx.restore();
+
+    // move counter to center of the cicle
+    if (!this.counter)
+        return;
+
+    this.counter.style.position = "absolute";
+    this.counter.style.left = x-this.counter.offsetWidth/2;
+    this.counter.style.top = y-this.counter.offsetHeight/2;
 },//}}}
 
 updateItemTitle: function ()//{{{
@@ -748,6 +800,7 @@ updateInfo: function (itemname,i,len)//{{{
     this.itempath = encodeURIComponent( this.name() );
 
     this.updateCounter();
+    this.updateProgress();
     this.updateItemTitle();
 },//}}}
 
@@ -1171,7 +1224,8 @@ function onLoad()//{{{
         info = new Info(e,
                 document.getElementById("counter"),
                 document.getElementById("itemtitle"),
-                document.getElementById("resolution"));
+                document.getElementById("resolution"),
+                document.getElementById("progress"));
     }
 
     // viewer

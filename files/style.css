@@ -28,11 +28,10 @@ a:visited:hover {color: #ff0;}
 #info {
     margin: 5 10;
     position: absolute;
-    top: 0; left: 0;
     text-shadow: #000 1px 1px 1px;
     z-index: 1;
     opacity: 0;
-    -webkit-transition: opacity 1s ease-out;
+    -webkit-transition: opacity 1s ease-in-out;
 }
 #info:hover, #info.focused {
     opacity: 1;
@@ -43,6 +42,7 @@ a:visited:hover {color: #ff0;}
 #resolution {font-size: 0.7em; font-weight: bold;}
 #resolution.loading {color: #fd0;}
 #resolution.error   {color: #faa;}
+#progress {vertical-align: top;}
 
 /* image list */
 #itemlist {
@@ -86,7 +86,7 @@ a:visited:hover {color: #ff0;}
     position: absolute;
     background: #d90;
     z-index: -1;
-    -webkit-transition: left .2s ease-in-out, top .2s ease-in-out;
+    -webkit-transition: left .1s ease-in-out, top .1s ease-in-out, width .1s ease-in-out, height .1s ease-in-out;
 }
 #selected .thumbnail {
     color: black;
