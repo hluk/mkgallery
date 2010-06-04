@@ -38,11 +38,11 @@ a:visited:hover {color: #ff0;}
 }
 #counter, #resolution {color: white; font-size: 0.7em; font-weight: bold; z-index: 1;}
 #counter.last {color: #ff0;}
-#itemtitle {margin: 0 5; z-index: 1; z-index: 1;}
-#resolution {font-size: 0.7em; font-weight: bold;}
+#itemtitle {z-index: 1; z-index: 1; float: left;}
+#resolution {font-size: 0.7em; font-weight: bold; float: bottom; display: block; text-align: left;}
 #resolution.loading {color: #fd0;}
 #resolution.error   {color: #faa;}
-#progress {vertical-align: top;}
+#progress {float: left; margin-right: 10px;}
 
 /* image list */
 #itemlist {
