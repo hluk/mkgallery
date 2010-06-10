@@ -28,7 +28,7 @@ GDIR="$DIR/galleries/$TITLE"
 # between "//<LIST>" and "//<LIST>" lines)
 TEMP="$DIR/template.html"
 # url prefix
-URL="http://127.0.0.1:8080/$TITLE/"
+URL="http://127.0.0.1:8080/galleries/$TITLE/"
 
 IMAGE_FORMATS='jpg\|png\|gif\|svg'
 FONT_FORMATS='otf\|ttf'

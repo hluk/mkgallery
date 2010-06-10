@@ -18,7 +18,6 @@ a:visited:hover {color: #ff0;}
 #canvas {position: relative;}
 .imageview {}
 .fontview {
-    text-align: left;
     font-size: 24px;
     width: 80%;
     margin: auto;
@@ -97,5 +96,8 @@ a:visited:hover {color: #ff0;}
     margin: auto;
     margin-top: 5px;
     font-size: 22px;
+}
+.thumbnail.font {
+    -webkit-transition: color 0.3s ease-in-out;
 }
 

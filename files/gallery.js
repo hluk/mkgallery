@@ -246,7 +246,7 @@ thumbnail: function()//{{{
 
     this.thumb = document.createElement("img");
     this.thumb.src = thumbpath;
-    this.thumb.className = "thumbnail";
+    this.thumb.className = "thumbnail " + this.type();
     this.thumb.src = thumbpath;
 
     var view = this;
@@ -338,14 +338,18 @@ show: function()//{{{
     this.ee.style.background = "rgba(0,0,0,0)";
     this.ee.value = config['font_test'];
     this.ee.style.fontFamily = this.font;
-    this.ee.onblur = function () { config['font_test'] = this.value; };
+
+    // disable keyboard navigation when textarea focused
+    this.ee.onfocus = function () { document.removeEventListener("keydown", keyDown, false); };
+    this.ee.onblur = function () { config['font_test'] = this.value; document.addEventListener("keydown", keyDown, false); };
+
     this.e.appendChild(this.ee);
 
     this._parent.append(this.e);
     this._parent.zoom();
 
-    if ( view._parent.onLoad )
-        view._parent.onLoad();
+    if ( this._parent.onLoad )
+        this._parent.onLoad();
 },//}}}
 
 remove: function()//{{{
@@ -364,7 +368,7 @@ thumbnail: function()//{{{
 
     var font = this.path.replace(/.*\//gi, "").replace(".","-");
     this.thumb = document.createElement("div");
-    this.thumb.className = "thumbnail";
+    this.thumb.className = "thumbnail " + this.type();
     this.thumb.style.fontFamily = this.font;
     this.thumb.innerHTML = config['thumbnail_font_test'];
 
@@ -396,6 +400,7 @@ zoom: function (how)//{{{
 
     this.ee.style.fontSize = z+"em";
     this.height = this.e.offsetHeight;
+    this.ee.style.height = this.ee.scrollHeight;
 
     this.zoom_factor = z;
 
@@ -505,9 +510,10 @@ reloadThumbnails: function ()//{{{
     var minwidth = config.get('thumbnail_min_width',100);
     var maxwidth = config.get('thumbnail_max_width',300);
     while ( thumb = this.thumbs.pop() ) {
-        if ( thumb.width > 0 )
+        thumb.style.maxWidth = maxwidth;
+        if ( thumb.width != 0 )
             thumb.style.display = "";
-        thumb.parentNode.style.maxWidth = Math.max( minwidth, Math.min(thumb.width,maxwidth) );
+        thumb.style.maxWidth = Math.max( minwidth, Math.min(thumb.width,maxwidth) );
     }
     this.updateSelection();
     this.ensureCurrentVisible();
@@ -867,8 +873,6 @@ function go (i)//{{{
     updateTitle();
 
     window.scrollTo(0,0);
-
-    updateUrl();
 }//}}}
 
 function updateTitle ()//{{{
@@ -941,7 +945,11 @@ function preloadImages ()//{{{
     var num = maxnum - (n+2) % maxnum;
 
     var new_preloaded = [];
-    for(var i = n; i < n+Math.min(num,len); ++i) {
+    var end = Math.min(n+num,len);
+    var begin = Math.max(n-maxnum+num+1,0);
+    for(var i = begin; i < n; ++i)
+        new_preloaded[i] = preloaded[i];
+    for(var i = n; i < end; ++i) {
         // try to use already preloaded image
         var im = preloaded[i];
         if ( !im ) {
@@ -951,9 +959,13 @@ function preloadImages ()//{{{
             if (!view || view.type() != "image")
                 continue;
 
-            // create image (assume same size as current item)
-            im = new Image( viewer.width(), viewer.height() );
+            // create image
+            im = new Image();
             im.src = filename;
+
+            // since we access the disk (read the image) we can also
+            // change the url - browser saves history
+            updateUrl();
         }
         new_preloaded[i] = im;
     }
