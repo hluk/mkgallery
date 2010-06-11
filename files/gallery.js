@@ -743,7 +743,7 @@ updateProgress: function ()//{{{
     ctx.beginPath();
     ctx.moveTo(x, y);
     ctx.arc(x, y, r, 0, 2*pi, false);
-    ctx.fillStyle = config.get('progress_bg',"rgba(200,200,200,0.2)");
+    ctx.fillStyle = config.get('progress_bg',"rgba(200,200,200,0.4)");
     ctx.fill();
 
     ctx.beginPath();
