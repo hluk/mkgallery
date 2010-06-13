@@ -614,16 +614,17 @@ listUp: function ()//{{{
            // deselect current and select new
            this.selectItem(i);
            this.ensureCurrentVisible();
-           break;
+           return;
         }
     }
+    // same item is selected
+    window.scrollBy(0,-window.innerHeight/4);
 },//}}}
 
 listDown: function ()//{{{
 {
     var sel = this.items[this.selected];
     var x = getLeft(sel) - window.pageXOffset + sel.offsetWidth/2;
-    var y = getTop(sel) - window.pageYOffset;
 
     // select next
     for( var i = this.selected+1; i < this.items.length; ++i) {
@@ -633,9 +634,11 @@ listDown: function ()//{{{
            // deselect current and select new
            this.selectItem(i);
            this.ensureCurrentVisible();
-           break;
+           return;
         }
     }
+    // same item is selected
+    window.scrollBy(0,window.innerHeight/4);
 },//}}}
 
 listRight: function ()//{{{

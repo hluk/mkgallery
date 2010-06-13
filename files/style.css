@@ -84,22 +84,23 @@ a:visited:hover {color: #ff0;}
 #selection {
     -moz-border-radius: 6px;
     -webkit-border-radius: 6px;
+    border: 2px solid #777;
     position: absolute;
-    background: #d90;
+    background: #444;
     z-index: -1;
     -webkit-transition: left .1s ease-in-out, top .1s ease-in-out, width .1s ease-in-out, height .1s ease-in-out;
 }
 #selected .thumbnail {
-    color: black;
+    color: white;
 }
 .thumbnail {
     display: block;
     vertical-align: middle;
     margin: auto;
     margin-top: 5px;
-    font-size: 22px;
+    font-size: 14px;
 }
 .thumbnail.font {
-    -webkit-transition: color 0.3s ease-in-out;
+    /*-webkit-transition: color 0.3s ease-in-out;*/
 }
 

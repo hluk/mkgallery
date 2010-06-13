@@ -38,7 +38,7 @@ ln -fsT "$PWD" "$GDIR/imgs" || exit 1
 ln -fsT "$DIR/files" "$GDIR/files" || exit 1
 
 # generate list of images
-FILES="`cd "$GDIR" && find imgs/ -iregex '.*\.\('$IMAGE_FORMATS'\|'$FONT_FORMATS'\)' -printf '"%P",\n'|sort`"
+FILES="`cd "$GDIR" && find -L imgs/ -iregex '.*\.\('$IMAGE_FORMATS'\|'$FONT_FORMATS'\)' -printf '"%P",\n'|sort`"
 
 # use template to create new html document
 (
@@ -65,8 +65,8 @@ function cssline()
     echo "@font-face { font-family: `echo $1|sed 's/[^a-zA-Z0-9_]/_/g'`; src: url('imgs/$1'); }"
 }
 
-echo "$FILES" | sed -n '/\.\('$FONT_FORMATS'\)",$/{s/^"//;s/",$//;p}' |
-		while read font; do cssline "$font"; done > "$GDIR/fonts.css"
+(cd "$GDIR/imgs" && find -L -iregex '.*\.\('"$FONT_FORMATS"'\)' -printf '%P\n'|sort) |
+    while read font; do cssline "$font"; done > "$GDIR/fonts.css"
 
 # generate thumbnails
 rm -rf "$GDIR/thumbs" &&
