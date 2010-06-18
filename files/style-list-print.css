@@ -1,0 +1,50 @@
+#itemlist {
+    position: absolute;
+    top: 0px;
+    left: 0px;
+    right: 0px;
+    z-index: 1;
+    background: white;
+    vertical-align: top;
+}
+.item {
+    width: 100%;
+    text-align: left;
+    padding: 10px;
+}
+.item:hover {
+    background-color: yellow;
+}
+.itemident {
+    margin-left: 1em;
+    display: inline;
+    color: black;
+}
+.itemident:after {
+    content: ".";
+}
+.itemname {
+    /* wrap long filename */
+    white-space: pre-wrap; /* css-3 */
+    white-space: -moz-pre-wrap !important; /* Mozilla, since 1999 */
+    white-space: -pre-wrap; /* Opera 4-6 */
+    white-space: -o-pre-wrap; /* Opera 7 */
+    word-wrap: break-word; /* Internet Explorer 5.5+ */
+
+    color: black;
+    margin-left: 1em;
+    display: inline;
+}
+#selection {
+    position: absolute;
+    background-color: LightBlue;
+    z-index: -1;
+}
+.thumbnail {
+    border: 6px solid black;
+    display: block;
+    margin: auto;
+}
+.thumbnail.font {
+}
+
