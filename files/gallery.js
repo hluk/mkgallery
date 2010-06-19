@@ -83,7 +83,7 @@ zoomChanged: function (zoom_state,zoom_factor)//{{{
 
     // center item in window
     var newtop = ( window.innerHeight - this.view.height )/2;
-    this.e.style.top = newtop > 0 ? newtop : 0;
+    this.e.style.top = (newtop > 0 ? newtop : 0) + "px";
 
     if ( this.zoom_state != z ) {
         this.zoom_state = z;
@@ -204,28 +204,31 @@ show: function()//{{{
         this._parent.onUpdateStatus("loading","loading");
 
     // TODO: SVG -- for some reason this doesn't work in Chromium
-    if (this.path.search(/\.svg$/i) > -1) {
-        this.e = document.createElement("embed");
-    }
-    else {
-        this.e = document.createElement("img");
-    }
-    this.e.src = this.path;
+    //if (this.path.search(/\.svg$/i) > -1) {
+        //this.e = document.createElement("embed");
+    //}
+    //else {
+        //this.e = document.createElement("img");
+    //}
+    this.e = document.createElement("canvas");
     this.e.className = "imageview";
     this.e.name = "view";
+    this.ctx = this.e.getContext('2d');
+    this._parent.append(this.e);
 
+    this.img = document.createElement("img");
+    this.img.src = this.path;
     var view = this;
-    this.e.onload = function () {
-        view.orig_width = this.width;
-        view.orig_height = this.height;
+    this.img.onload = function () {
+        view.e.width = view.orig_width = this.naturalWidth;
+        view.e.height = view.orig_height = this.naturalHeight;
+
         view._parent.zoom();
         if ( view._parent.onUpdateStatus )
-            view._parent.onUpdateStatus(this.width+"x"+this.height);
+            view._parent.onUpdateStatus(view.orig_width+"x"+view.orig_height);
         if ( view._parent.onLoad )
             view._parent.onLoad();
     };
-
-    this._parent.append(this.e);
 },//}}}
 
 remove: function()//{{{
@@ -291,9 +294,9 @@ zoom: function (how)//{{{
         break;
     }
 
-    this.width = this.e.width = w*z;
-    this.height = this.e.height = h*z;
-
+    this.e.width = this.width = this.e.width = w*z;
+    this.e.height = this.height = this.e.height = h*z;
+    this.ctx.drawImage(this.img,0,0,this.width,this.height);
     this.zoom_factor = z;
 
     this._parent.zoomChanged(how,this.zoom_factor);
@@ -379,32 +382,41 @@ thumbnail: function()//{{{
 
 zoom: function (how)//{{{
 {
+    var orig = config.get('font_size',16);
+
     if ( !this.orig_height )
         this.orig_height = this.e.offsetHeight;
 
     var z = this.zoom_factor;
+    var zz = Math.ceil(z*orig);
 
     switch(how) {
     case "+":
-        z *= 1+zoom_step;
+        zz += 1;
+        z = zz/orig;
         break;
     case "-":
-        z /= 1+zoom_step;
+        zz -= 1;
+        z = zz/orig;
         break;
     default:
         z = parseFloat(how);
         if (!z)
             z = 1;
+        zz = Math.ceil(z*orig);
         break;
     }
 
-    this.ee.style.fontSize = z+"em";
+    this.ee.style.fontSize = zz+"pt";
     this.height = this.e.offsetHeight;
     this.ee.style.height = this.ee.scrollHeight;
 
     this.zoom_factor = z;
 
     this._parent.zoomChanged(how,this.zoom_factor);
+
+    if ( this._parent.onUpdateStatus )
+        this._parent.onUpdateStatus(this.ee.style.fontSize);
 },//}}}
 }
 //}}}
@@ -457,7 +469,7 @@ addThumbnails: function (items, i)//{{{
         items = this.items;
 
     var thumb = this.viewFactory.newView( this.ls[i] );
-    thumb.id = i;
+    thumb.dataNum = i;
     var e = thumb.thumbnail();
     // show thumbnail only if src exists
     e.style.display = "none";
@@ -468,7 +480,7 @@ thumbnailOnLoad: function(thumb)//{{{
 {
     this.thumbs.push( thumb.thumbnail() );
 
-    var i = thumb.id;
+    var i = thumb.dataNum;
     // recursively load thumbnails from currently viewed
     // - flood load:
     //      previous and next thumbnails (from current) are loaded in paralel
@@ -481,10 +493,10 @@ thumbnailOnLoad: function(thumb)//{{{
 appendItem: function (itemname, i)//{{{
 {
     var item = document.createElement('div');
-    item.id = i;
+    item.dataNum = i;
     item.className = "item";
     item.onclick = function() {
-        go(this.id);
+        go(this.dataNum);
     }
 
     // image identification
@@ -495,7 +507,9 @@ appendItem: function (itemname, i)//{{{
     // item text
     var txt = document.createElement('div');
     txt.className = "itemname";
-    txt.appendChild( document.createTextNode(itemname) );
+    // break text ideally at characters / _ - .
+    txt.appendChild( document.createTextNode(itemname.replace(/[\.\/_-]/g,'$&\u200B')) );
+    txt.style.maxWidth = config.get('thumbnail_max_width',300) + "px";
 
     item.appendChild(ident);
     item.appendChild(txt);
@@ -510,10 +524,10 @@ reloadThumbnails: function ()//{{{
     var minwidth = config.get('thumbnail_min_width',100);
     var maxwidth = config.get('thumbnail_max_width',300);
     while ( thumb = this.thumbs.pop() ) {
-        thumb.style.maxWidth = maxwidth;
+        //thumb.style.maxWidth = maxwidth;
         if ( thumb.width != 0 )
             thumb.style.display = "";
-        thumb.style.maxWidth = Math.max( minwidth, Math.min(thumb.width,maxwidth) );
+        thumb.style.maxWidth = Math.max( minwidth, Math.min(thumb.width,maxwidth) ) + "px";
     }
     this.updateSelection();
     this.ensureCurrentVisible();
@@ -557,6 +571,11 @@ toggle: function ()//{{{
     }
 },//}}}
 
+resize: function ()//{{{
+{
+    this.updateSelection();
+},//}}}
+
 ensureCurrentVisible: function ()//{{{
 {
     var e = this.items[this.selected];
@@ -594,51 +613,60 @@ selectItem: function (i)//{{{
         this.selection_needs_update = true;
     else {
         // move selection cursor
-        this.selection.style.left = getLeft(e);
-        this.selection.style.top = getTop(e);
-        this.selection.style.width = e.offsetWidth;
-        this.selection.style.height = e.offsetHeight;
+        this.selection.style.left = getLeft(e)+"px";
+        this.selection.style.top = getTop(e)+"px";
+        this.selection.style.width = e.offsetWidth+"px";
+        this.selection.style.height = e.offsetHeight+"px";
     }
 },//}}}
 
-listUp: function ()//{{{
+listVertically: function (direction)//{{{
 {
     var sel = this.items[this.selected];
     var x = getLeft(sel) - window.pageXOffset + sel.offsetWidth/2;
+    var y = Math.floor(getTop(sel) + sel.offsetHeight/2);
+    var ny
+    var dist = 99999; // smallest X distance
+    var newdist;
 
-    // select next
-    for( var i = this.selected-1; i >= 0; --i) {
+    // select item on next/previous line,
+    // item has smallest X distance from curently selected
+    var i;
+    for( i = this.selected+direction; i < this.items.length && i >= 0; i+=direction) {
         var e = this.items[i];
-        var nx = getLeft(e);
-        if ( nx <= x && nx+e.offsetWidth >= x ) {
-           // deselect current and select new
-           this.selectItem(i);
-           this.ensureCurrentVisible();
-           return;
+
+        if ( newdist == null ) {
+            ny = getTop(e) + e.offsetHeight/2;
+            if ( (direction > 0 && ny-y < 10) || (direction < 0 && y-ny < 10) )
+                continue;
         }
+        else if( ny - getTop(e) - e.offsetHeight/2 > 10 )
+            break;
+
+        var newdist = Math.abs( getLeft(e) + e.offsetWidth/2 - x );
+        if ( newdist > dist )
+            break;
+
+        dist = newdist;
     }
-    // same item is selected
-    window.scrollBy(0,-window.innerHeight/4);
+
+    // no new line encountered
+    if (newdist == null)
+        return;
+
+    // select new
+    this.selectItem(i-direction);
+    this.ensureCurrentVisible();
 },//}}}
 
 listDown: function ()//{{{
 {
-    var sel = this.items[this.selected];
-    var x = getLeft(sel) - window.pageXOffset + sel.offsetWidth/2;
+    this.listVertically(1);
+},//}}}
 
-    // select next
-    for( var i = this.selected+1; i < this.items.length; ++i) {
-        var e = this.items[i];
-        var nx = getLeft(e);
-        if ( nx <= x && nx+e.offsetWidth >= x ) {
-           // deselect current and select new
-           this.selectItem(i);
-           this.ensureCurrentVisible();
-           return;
-        }
-    }
-    // same item is selected
-    window.scrollBy(0,window.innerHeight/4);
+listUp: function ()//{{{
+{
+    this.listVertically(-1);
 },//}}}
 
 listRight: function ()//{{{
@@ -716,7 +744,7 @@ updateCounter: function ()//{{{
 {
     if ( !this.counter )
         return;
-    this.counter.innerText = this.n + "/" + this.len;
+    this.counter.textContent = this.counter.innerText = this.n + "/" + this.len;
     if (this.n == this.len)
         this.counter.className = "last";
     else
@@ -768,8 +796,8 @@ updateProgress: function ()//{{{
         return;
 
     this.counter.style.position = "absolute";
-    this.counter.style.left = x-this.counter.offsetWidth/2;
-    this.counter.style.top = y-this.counter.offsetHeight/2;
+    this.counter.style.left = (x-this.counter.offsetWidth/2)+"px";
+    this.counter.style.top = (y-this.counter.offsetHeight/2)+"px";
 },//}}}
 
 updateItemTitle: function ()//{{{
@@ -790,7 +818,7 @@ updateStatus: function (status_msg,class_name)//{{{
     if (!this.resolution)
         return;
 
-    this.resolution.innerText = status_msg;
+    this.resolution.textContent = this.resolution.innerText = status_msg;
     this.resolution.className = class_name;
     this.popInfo();
 },//}}}
@@ -813,7 +841,7 @@ updateInfo: function (itemname,i,len)//{{{
     this.updateItemTitle();
 },//}}}
 
-popInfo : function ()//{{{
+popInfo: function ()//{{{
 {
     if (this.info_t)
         clearTimeout(this.info_t);
@@ -936,7 +964,7 @@ function getLeft(e)//{{{
     return result;
 }//}}}
 
-function preloadImages ()//{{{
+function preloadImages()//{{{
 {
     if (preloaded == null) {
         // don't preload images when started
@@ -944,7 +972,7 @@ function preloadImages ()//{{{
         return;
     }
 
-    var maxnum = config.get('preload_images',4);
+    var maxnum = config.get('preload_images',2);
     var num = maxnum - (n+2) % maxnum;
 
     var new_preloaded = [];
@@ -990,6 +1018,18 @@ keycodes = {
     36: "Home"
 }
 
+function next()//{{{
+{
+    if ( n != len )
+        go(n+1);
+}//}}}
+
+function prev()//{{{
+{
+    if ( n != 1 )
+        go(n-1);
+}//}}}
+
 function keyDown (e)//{{{
 {
     if ( e.shiftKey || e.ctrlKey || e.altKey || e.metaKey )
@@ -1001,24 +1041,19 @@ function keyDown (e)//{{{
     keyname = keycodes[keycode];
     if ( !keyname )
 		keyname = String.fromCharCode(keycode);
-    //alert(keycode +";"+ keyname);
 
     // Viewer {{{
     if ( !itemlist || itemlist.hidden() ) {
         switch (keyname) {
         case "Left":
-            if ( viewer.width() <= window.innerWidth ) {
-                if ( n != 1 )
-                    go(n-1);
-            }
+            if ( viewer.width() <= window.innerWidth )
+                prev();
             else
                 window.scrollBy(-window.innerWidth/4,0);
             break;
         case "Right":
-            if ( viewer.width() <= window.innerWidth ) {
-                if ( n != len )
-                    go(n+1);
-            }
+            if ( viewer.width() <= window.innerWidth )
+                next();
             else
                 window.scrollBy(window.innerWidth/4,0);
             break;
@@ -1057,13 +1092,11 @@ function keyDown (e)//{{{
                 go(n+5);
             break;
         case "d":
-            if ( n != 1 )
-                go(n-1);
+            prev();
             break;
         case "Enter":
         case "f":
-            if ( n != len )
-                go(n+1);
+            next();
             break;
         case "g":
             if ( n != 1 )
@@ -1155,7 +1188,7 @@ function keyDown (e)//{{{
 }//}}}
 
 function onMouseWheel (e) {//{{{
-    var delta = e.wheelDelta/3;
+    var delta = e.detail ? -e.detail*2 : e.wheelDelta/3;
     window.scroll(window.pageXOffset,window.pageYOffset-delta);
     e.preventDefault();
     if ( window.pageYOffset == 0 )
@@ -1249,15 +1282,19 @@ function onLoad()//{{{
         createViewer(e,info);
 
     // refresh zoom on resize
-    b.onresize = function() { viewer.zoom(); };
+    b.onresize = function() { viewer.zoom(); itemlist.resize(); };
 
     // browser with sessions: update URL when browser window closed
     b.onbeforeunload = function() { updateUrl(true); };
 
     // keyboard
     document.addEventListener("keydown", keyDown, false);
+    document.addEventListener("keypress", keyDown, false);
+
     // mouse
-    document.onmousewheel = onMouseWheel;
+    window.onmousewheel = document.onmousewheel = onMouseWheel;
+    window.addEventListener('DOMMouseScroll', onmousewheel, false);
+
     initDragScroll();
 
     go(n);
@@ -1282,4 +1319,6 @@ var hash;
 
 var itemlist, info, viewer;
 var preloaded = null;
+
+var lasticon;
 

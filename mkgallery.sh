@@ -74,6 +74,7 @@ mkdir "$GDIR/thumbs" &&
 IMAGES=`echo "$FILES" | sed -n '/\.\('$IMAGE_FORMATS'\)",$/{s/,$//p}'`
 N=`echo "$FILES"|wc -l`
 # decrease thumbnail size: -depth 3
+# crop 20% off all sides: -shave "20%x20%"
 echo "$IMAGES" |
     xargs mogrify -monitor -format png -quality 0 -type optimize -path "$GDIR/thumbs" -thumbnail "${RES}x${RES}>" 2>&1 |
         awk 'BEGIN{n='$N';}/^load /{l=int(i/n*30); s=""; j=l; while(j--) s=s"="; bar=sprintf("[%s%-"30-l"s]",s,">"); printf("Creating thumbnails: %s %d/%d%s",bar,++i,n,i==n?"\n":"\r");}'

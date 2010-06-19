@@ -1,3 +1,9 @@
+@import url('style-list-simple.css');
+/*@import url('style-list-simpler.css');*/
+/*@import url('style-list-print.css');*/
+/*@import url('style-list-gray.css');*/
+/*@import url('style-list-zoom.css');*/
+
 * {margin: 0;font-family: Aller, Verdana, Arial, Helvetica; font-size: 16px; color: #ddd;}
 
 html,body {height: 100%;}
@@ -10,8 +16,8 @@ body {
     background-repeat: repeat;
 }
 
-a, .item {color: #7bf; text-decoration: none; font-weight: bold;}
-a:hover, .item:hover {color: #ff0;}
+a {color: #7bf; text-decoration: none; font-weight: bold;}
+a:hover {color: #ff0;}
 a:visited {color: #7bf;}
 a:visited:hover {color: #ff0;}
 
@@ -25,7 +31,7 @@ a:visited:hover {color: #ff0;}
 
 /* status */
 #info {
-    margin: 5 10;
+    margin: 10px 15px;
     position: absolute;
     text-shadow: #000 1px 1px 1px;
     z-index: 1;
@@ -37,70 +43,9 @@ a:visited:hover {color: #ff0;}
 }
 #counter, #resolution {color: white; font-size: 0.7em; font-weight: bold; z-index: 1;}
 #counter.last {color: #ff0;}
-#itemtitle {z-index: 1; z-index: 1; float: left;}
-#resolution {font-size: 0.7em; font-weight: bold; float: bottom; display: block; text-align: left;}
+#itemtitle {z-index: 1; float: left;}
+#resolution {font-size: 0.7em; font-weight: bold; display: block; text-align: left;}
 #resolution.loading {color: #fd0;}
 #resolution.error   {color: #faa;}
 #progress {float: left; margin-right: 10px;}
-
-/* image list */
-#itemlist {
-    position: absolute;
-    top: 0px;
-    left: 0px;
-    right: 0px;
-    background-color: rgba(0,0,0,0.8);
-    padding:10px;
-    z-index: 1;
-}
-.item {
-    /*float: left;*/
-    display: inline-block;
-    vertical-align: middle;
-    padding: 12px;
-    cursor: pointer;
-    color: white;
-}
-.itemident {
-    float: left;
-    font-size: 0.5em;
-}
-.itemname {
-    /* wrap long filename */
-    white-space: pre-wrap; /* css-3 */
-    white-space: -moz-pre-wrap !important; /* Mozilla, since 1999 */
-    white-space: -pre-wrap; /* Opera 4-6 */
-    white-space: -o-pre-wrap; /* Opera 7 */
-    word-wrap: break-word; /* Internet Explorer 5.5+ */
-
-    padding: 2px;
-    overflow: hidden;
-    text-align: center;
-    font-size: 0.75em;
-    font-weight: bold;
-    text-shadow: #000 1px 1px 1px;
-    color: inherit;
-}
-#selection {
-    -moz-border-radius: 6px;
-    -webkit-border-radius: 6px;
-    border: 2px solid #777;
-    position: absolute;
-    background: #444;
-    z-index: -1;
-    -webkit-transition: left .1s ease-in-out, top .1s ease-in-out, width .1s ease-in-out, height .1s ease-in-out;
-}
-#selected .thumbnail {
-    color: white;
-}
-.thumbnail {
-    display: block;
-    vertical-align: middle;
-    margin: auto;
-    margin-top: 5px;
-    font-size: 14px;
-}
-.thumbnail.font {
-    /*-webkit-transition: color 0.3s ease-in-out;*/
-}
 
