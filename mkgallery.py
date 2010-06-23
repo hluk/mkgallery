@@ -7,15 +7,18 @@ import os, sys, re, getopt, shutil, glob
 # default values:
 title="default" # html title and gallery directory name
 resolution = 300 # thumbnail resolution
-url = "http://127.0.0.1:8080/galleries/" # browser url
+url = "http://127.0.0.1:8080/galleries/%s" # browser url
+d = os.path.dirname(sys.argv[0]) # path to template
+gdir = d + "/galleries/%s";
 progress_len = 40 # progress bar length
 
 img_fmt  = re.compile('(jpg|png|gif|svg)$',re.I)
 font_fmt = re.compile('(otf|ttf)$',re.I)
-fontname_re = re.compile('[^a-zA-Z0-9_]')
+fontname_re = re.compile('[^a-zA-Z0-9_ ]')
 
 def usage():#{{{
-		print """\
+	global title, resolution, gdir, url, d
+	print """\
 usage: %s [options] [gallery_name]
 
     Creates new gallery (named "gallery_name") in script
@@ -26,13 +29,31 @@ usage: %s [options] [gallery_name]
     must have Python Imaging Library (PIL) is installed.
 
     If BROWSER environment variable is set, the gallery
-    is automatically viewed using web browser $BROWSER
+    is automatically viewed using web browser $BROWSER.
 
 options:
     -h, --help              prints this help
-    -t, --title=<title>     gallery title and directory name (default: '%s')
-    -r, --resolution=<res>  resolution for thumbnails in pixels (default: %s)"""\
-			% (sys.argv[0], title, resolution)
+    -t, --title=<title>     gallery title and directory name
+                              (default: '%s')
+    -r, --resolution=<res>  resolution for thumbnails in pixels
+                              (default: %s)
+    -d, --directory=<dir>   gallery is saved (%%s is replaced by <title>)
+                              (default: '%s')
+    -u, --url=<url>         url location for web browser (%%s is replaced by <title>)
+                              (default: '%s')
+    --template=<dir>        path to template html and support files
+                              (default: '%s')
+
+    -r 0, --resolution=0    don't generate thumbnails
+    -u "", --url=""         don't launch web browser
+
+examples:
+    cd photos && mkgallery "My Photo Gallery"
+    # generates gallery titled "My Photo Gallery" with all images from photos
+    BROWSER="" cd /usr/share/fonts && mkgallery Fonts
+    # generates gallery containing fonts installed on system
+    """\
+			% (sys.argv[0], title, resolution, gdir, url, d)
 #}}}
 
 def walkdir(root):#{{{
@@ -54,10 +75,11 @@ def launch_browser():#{{{
 #}}}
 
 def parse_args(argv):#{{{
-	global title, resolution
+	global title, resolution, gdir, url, d
 
 	try:
-		opts, args = getopt.getopt(argv[1:], "htr:", ["help", "title=", "resolution="])
+		opts, args = getopt.getopt(argv[1:], "ht:r:d:u:",
+				["help", "title=", "resolution=", "directory=", "url=","template="])
 	except getopt.GetoptError:
 		usage()
 		sys.exit(2)
@@ -74,6 +96,12 @@ def parse_args(argv):#{{{
 			sys.exit(2)
 		elif opt in ("-t", "--title"):
 			title = arg
+		elif opt in ("-d", "--directory"):
+			gdir = arg
+		elif opt in ("-u", "--url"):
+			url = arg
+		elif opt == "--template":
+			d = arg
 		elif opt in ("-r", "--resolution"):
 			try:
 				resolution = int(arg)
@@ -81,7 +109,10 @@ def parse_args(argv):#{{{
 				print ("Error: Resolution must be single number!")
 				sys.exit(2)
 
-	return title,resolution
+	gdir = gdir % title
+	url = url % title
+
+	return title,resolution,gdir,url,d
 #}}}
 
 def prepare_gallery(d,gdir):#{{{
@@ -104,6 +135,23 @@ def prepare_gallery(d,gdir):#{{{
 		raise
 #}}}
 
+def addFont(fontfile,css):#{{{
+	fontname = fontfile
+
+	try:
+		from PIL import ImageFont
+
+		font = ImageFont.truetype(fontfile,8)
+		name = font.getname()
+		fontname = name[0]+" "+name[1]+" ("+fontfile+")"
+	except:
+		pass
+
+	css.write("@font-face{font-family:"+fontname_re.sub("_",fontname)+";src:url('imgs/"+fontfile+"');}\n")
+
+	return fontname
+#}}}
+
 def prepare_html(template,itemfile,css,imgdir):#{{{
 	itemfile.write("var ls=[\n")
 	items = []
@@ -113,11 +161,10 @@ def prepare_html(template,itemfile,css,imgdir):#{{{
 		if not isimg:
 			isfont = font_fmt.search(f) != None
 		if isimg or isfont:
-			items.append(f)
 			# if file is font: create font-face line in css
 			if isfont:
-				fontname = fontname_re.sub("_",f)
-				css.write("@font-face{font-family:"+fontname+";src:url('imgs/"+f+"');}\n")
+				f = addFont(f,css);
+			items.append(f.replace("'","\\'"))
 
 	items.sort()
 	for item in items:
@@ -165,13 +212,9 @@ def create_thumbnails(imgdir,thumbdir,resolution):#{{{
 #}}}
 
 def main(argv):#{{{
-	global url, img_fmt, font_fmt, fontname_re
+	global img_fmt, font_fmt, fontname_re
 
-	title,resolution = parse_args(argv)
-
-	d = os.path.dirname(argv[0])
-	gdir = d + "/galleries/" + title;
-	url = url + title
+	title,resolution,gdir,url,d = parse_args(argv)
 
 	prepare_gallery(d,gdir)
 
@@ -186,10 +229,12 @@ def main(argv):#{{{
 	itemfile.close()
 	css.close()
 
-	launch_browser()
+	if url:
+		launch_browser()
 	
-	thumbdir = gdir+"/thumbs"
-	create_thumbnails(imgdir,thumbdir,resolution)
+	if resolution>0:
+		thumbdir = gdir+"/thumbs"
+		create_thumbnails(imgdir,thumbdir,resolution)
 
 	print("New gallery was created in: '"+gdir+"'")
 #}}}

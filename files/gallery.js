@@ -141,7 +141,7 @@ init: function(_parent) {//{{{
 newView: function(filepath) {//{{{
     if (filepath.search(/\.(png|jpg|gif)$/i) > -1)
         return new ImageView(filepath, this._parent);
-    else if (filepath.search(/\.(ttf|otf)$/i) > -1)
+    else if (filepath.search(/(ttf|otf)\)?$/i) > -1)
         return new FontView(filepath, this._parent);
     else
         return null;
@@ -315,7 +315,7 @@ init: function(itempath, _parent)//{{{
     this.path = itempath;
     this._parent = _parent;
     this.zoom_factor = 1;
-    this.font = this.path.replace(/[^a-zA-Z0-9_]/g,"_");
+    this.font = this.path.replace(/[^a-zA-Z0-9_ ]/g,"_");
 },//}}}
 
 type: function ()//{{{
