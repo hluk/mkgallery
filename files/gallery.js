@@ -245,7 +245,7 @@ thumbnail: function()//{{{
     if ( this.thumb )
         return this.thumb;
 
-    var thumbpath = "thumbs/" + this.path.replace(/^.*[\/\\]/,'').replace(/\.[^.]*$/,'.png');
+    var thumbpath = "thumbs/" + this.path.replace(/^.*[\/\\]/,'') + ".png";
 
     this.thumb = document.createElement("img");
     this.thumb.src = thumbpath;
@@ -334,17 +334,33 @@ show: function()//{{{
     this.e.name = "view";
 
     this.ee = document.createElement("textarea");
+
+    this._parent.e.style.width = "100%";
+    this._parent.e.style.height = "100%";
+    this.e.style.width = "80%";
+    this.e.style.height = "80%";
     this.ee.style.width = "100%";
-    this.ee.style.height = "80%";
+    this.ee.style.height = "100%";
     this.ee.style.border = "0px";
+
     this.ee.style.overflow = "hidden";
     this.ee.style.background = "rgba(0,0,0,0)";
     this.ee.value = config['font_test'];
     this.ee.style.fontFamily = this.font;
 
     // disable keyboard navigation when textarea focused
-    this.ee.onfocus = function () { document.removeEventListener("keydown", keyDown, false); };
-    this.ee.onblur = function () { config['font_test'] = this.value; document.addEventListener("keydown", keyDown, false); };
+    var view = this;
+    this.ee.onfocus = function () {
+        view.keydown = document.onkeydown;
+        view.keypress = document.onkeypress;
+        document.onkeydown = null;
+        document.onkeypress = null;
+    };
+    this.ee.onblur = function () {
+        config['font_test'] = this.value;
+        document.onkeydown = view.keydown;
+        document.onkeypress = view.keypress;
+    };
 
     this.e.appendChild(this.ee);
 
@@ -372,6 +388,7 @@ thumbnail: function()//{{{
     var font = this.path.replace(/.*\//gi, "").replace(".","-");
     this.thumb = document.createElement("div");
     this.thumb.className = "thumbnail " + this.type();
+    this.thumb.style.maxWidth = config.get('thumbnail_max_width',300) + "px";
     this.thumb.style.fontFamily = this.font;
     this.thumb.innerHTML = config['thumbnail_font_test'];
 
@@ -695,7 +712,7 @@ listLeft: function ()//{{{
 
 listPageDown: function ()//{{{
 {
-    var min_pos = selection.offsetTop+window.innerHeight;
+    var min_pos = this.selection.offsetTop+window.innerHeight;
     var i = this.selected;
     while ( ++i < len && min_pos > this.get(i).offsetTop );
     this.selectItem(i-1);
@@ -704,7 +721,7 @@ listPageDown: function ()//{{{
 
 listPageUp: function ()//{{{
 {
-    var min_pos = selection.offsetTop-window.innerHeight;
+    var min_pos = this.selection.offsetTop-window.innerHeight;
     var i = this.selected;
     while ( --i > 0 && min_pos < this.get(i).offsetTop );
     this.selectItem(i+1);
@@ -1008,6 +1025,7 @@ function preloadImages()//{{{
 keycodes = {
     13: "Enter",
     27: "Escape",
+    32: "Space",
     37: "Left",
     38: "Up",
     39: "Right",
@@ -1030,12 +1048,12 @@ function prev()//{{{
         go(n-1);
 }//}}}
 
-function keyDown (e)//{{{
+function keyPress (e)//{{{
 {
     if ( e.shiftKey || e.ctrlKey || e.altKey || e.metaKey )
         return;
 
-	var keycode = e.which;
+	var keycode = e.keyCode ? e.keyCode : e.which;
 	var keyname;
 
     keyname = keycodes[keycode];
@@ -1080,33 +1098,47 @@ function keyDown (e)//{{{
             window.scrollTo(0,0);
             info.popInfo();
             break;
+        case "Space":
+            if ( window.scrollY == window.scrollMaxY )
+                next();
+            else
+                window.scrollBy(0,window.innerHeight*9/10);
+            break;
+        case "1":
         case "a":
             if ( n != len )
                 go(len);
             break;
+        case "2":
         case "b":
             window.scrollBy(0,window.innerHeight/4);
             break;
+        case "3":
         case "c":
             if ( n != len )
                 go(n+5);
             break;
+        case "4":
         case "d":
             prev();
             break;
+        case "6":
         case "Enter":
         case "f":
             next();
             break;
+        case "7":
         case "g":
             if ( n != 1 )
                 go(1);
             break;
+        case "8":
         case "h":
             window.scrollBy(0,-window.innerHeight/4);
             if ( window.pageYOffset == 0 )
                 info.popInfo();
             break;
+        case "9":
         case "i":
             if ( n != 1 )
                 go(n-5);
@@ -1131,11 +1163,14 @@ function keyDown (e)//{{{
         case "n":
             viewer.zoom("fill");
             break;
+        case "5":
         case "Escape":
         case "e":
             if (itemlist)
                 itemlist.toggle();
             break;
+        default:
+            return;
         }
 	}//}}}
 
@@ -1144,51 +1179,63 @@ function keyDown (e)//{{{
         switch (keyname) {
         case "Escape":
         case "e":
+        case "5":
             itemlist.toggle();
             break;
         case "Enter":
             itemlist.submitSelected();
             break;
         case "Left":
+        case "4":
         case "d":
             itemlist.listLeft();
             break;
         case "Right":
+        case "6":
         case "f":
             itemlist.listRight();
             break;
         case "Up":
+        case "8":
         case "h":
             itemlist.listUp();
             break;
         case "Down":
+        case "2":
         case "b":
             itemlist.listDown();
             break;
         case "PageUp":
+        case "9":
         case "i":
             itemlist.listPageUp();
             break;
         case "PageDown":
+        case "3":
         case "c":
             itemlist.listPageDown();
             break;
         case "End":
+        case "1":
         case "a":
             itemlist.selectItem(itemlist.size()-1);
             itemlist.ensureCurrentVisible();
             break;
         case "Home":
+        case "7":
         case "g":
             itemlist.selectItem(0);
             itemlist.ensureCurrentVisible();
             break;
+        default:
+            return;
         }
 	}//}}}
+    e.preventDefault();
 }//}}}
 
 function onMouseWheel (e) {//{{{
-    var delta = e.detail ? -e.detail*2 : e.wheelDelta/3;
+    var delta = e.detail ? -e.detail*4 : e.wheelDelta/3;
     window.scroll(window.pageXOffset,window.pageYOffset-delta);
     e.preventDefault();
     if ( window.pageYOffset == 0 )
@@ -1256,6 +1303,11 @@ function onLoad()//{{{
 {
     var e;
 
+	if (len == 0) {
+		alert("No items in gallery!");
+		return;
+	}
+
     b = document.getElementsByTagName("body")[0];
 
     // no scrollbars
@@ -1288,8 +1340,10 @@ function onLoad()//{{{
     b.onbeforeunload = function() { updateUrl(true); };
 
     // keyboard
-    document.addEventListener("keydown", keyDown, false);
-    document.addEventListener("keypress", keyDown, false);
+    if ( navigator.userAgent.indexOf("WebKit") != -1 )
+        document.onkeydown = keyPress;
+    else
+        document.onkeypress = keyPress;
 
     // mouse
     window.onmousewheel = document.onmousewheel = onMouseWheel;
@@ -1301,7 +1355,7 @@ function onLoad()//{{{
 }//}}}
 
 // number of items in gallery
-var len = ls.length;
+var len = ls ? ls.length : 0;
 
 // variables
 var vars = getUrlVars();

@@ -33,19 +33,20 @@ URL="http://127.0.0.1:8080/galleries/$TITLE/"
 IMAGE_FORMATS='jpg\|png\|gif\|svg'
 FONT_FORMATS='otf\|ttf'
 
+# create gallery root
+(
 mkdir -p "$GDIR" &&
-ln -fsT "$PWD" "$GDIR/imgs" || exit 1
-ln -fsT "$DIR/files" "$GDIR/files" || exit 1
+ln -fsT "$PWD" "$GDIR/imgs" &&
+ln -fsT "$DIR/files" "$GDIR/files" &&
+ln -fsT "$DIR/template.html" "$GDIR/index.html"
+cp "$DIR/config.js" "$GDIR/"
+) || exit 1
 
 # generate list of images
 FILES="`cd "$GDIR" && find -L imgs/ -iregex '.*\.\('$IMAGE_FORMATS'\|'$FONT_FORMATS'\)' -printf '"%P",\n'|sort`"
 
 # use template to create new html document
-(
-	sed -n "1,/^\/\/REPLACE {{{/{/^\/\//!{p}}" "$TEMP"
-	echo "var ls = [$FILES]; title = '$TITLE'"
-    sed -n "/^\/\/REPLACE }}}/,\${/^\/\//!{p}}" "$TEMP"
-) > "$GDIR/index.html"
+echo "var ls=[$FILES]; title = '$TITLE';" > "$GDIR/items.js"
 
 # open image viewer in BROWSER (env. variable) or just print message
 if [ $? -eq 0 ]
@@ -64,7 +65,6 @@ function cssline()
 {
     echo "@font-face { font-family: `echo $1|sed 's/[^a-zA-Z0-9_]/_/g'`; src: url('imgs/$1'); }"
 }
-
 (cd "$GDIR/imgs" && find -L -iregex '.*\.\('"$FONT_FORMATS"'\)' -printf '%P\n'|sort) |
     while read font; do cssline "$font"; done > "$GDIR/fonts.css"
 
