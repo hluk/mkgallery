@@ -1,0 +1,21 @@
+@import url('style-list-print.css');
+
+* {
+    margin: 0;
+    font-family: Aller, Verdana, Arial, Helvetica;
+    font-size: 16px;
+    image-rendering: optimizeQuality;
+}
+
+body { text-align: center; }
+
+#canvas {position: relative;}
+.imageview {}
+.fontview {
+    font-size: 24px;
+    width: 80%;
+    margin: auto;
+}
+
+#info {display: none;}
+
