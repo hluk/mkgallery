@@ -904,7 +904,7 @@ function go (i)//{{{
 
     if (itemlist) {
         if( !itemlist.hidden() )
-            itemlist.toggle();
+            toggleList();
         itemlist.selectItem(pg-1);
     }
 
@@ -1019,6 +1019,17 @@ function preloadImages()//{{{
     }
     preloaded = new_preloaded;
 }//}}}
+
+function toggleList()//{{{
+{
+    if (itemlist) {
+        itemlist.toggle();
+        if ( itemlist.hidden() )
+            mode.pop();
+        else if ( mode[0] != modes.itemlist )
+            mode.push(modes.itemlist);
+    }
+}//}}}
 //}}}
 
 // INTERACTION//{{{
@@ -1047,6 +1058,7 @@ if ( navigator.userAgent.indexOf("WebKit") != -1 ) {
     keycodes[106] = "*";
     keycodes[107] = "+";
     keycodes[109] = "-";
+    keycodes[110] = ".";
     keycodes[111] = "/";
     keycodes[191] = "?";
 }
@@ -1076,7 +1088,7 @@ function keyPress (e)//{{{
 		keyname = String.fromCharCode(keycode);
 
     // DEBUG:
-    //info.updateStatus(keycode+": "+keyname);
+	//info.updateStatus(keycode+": "+keyname);
 
     // try keys in this mode or modes.any
     var try_modes = [mode[mode.length-1],modes.any];
@@ -1142,20 +1154,10 @@ function createItemList(e)//{{{
         document.getElementById("itemlist").style.display = "none";
 
     // navigation//{{{
-    addKeys(["KP5","5"], "Toggle thumbnail list", function() {
-            itemlist.toggle();
-            if ( itemlist.hidden() )
-                mode.pop();
-            else if ( mode[0] != modes.itemlist )
-                mode.push(modes.itemlist);
-        });
-    addKeys(["Escape"], "", function() {
-            itemlist.toggle();
-            mode.pop();
-        }, modes.itemlist);
-    addKeys(["Enter"], "", function() {
+    addKeys(["KP5","5"], "Toggle thumbnail list", toggleList);
+    addKeys(["Escape"], "", toggleList, modes.itemlist);
+    addKeys(["Enter"], "Go to selected item", function() {
             itemlist.submitSelected();
-            mode.pop();
         }, modes.itemlist);
     addKeys(["Left","KP4"], "Move cursor left", function() {
             itemlist.listLeft();
@@ -1287,15 +1289,14 @@ function createViewer(e,info)//{{{
     //}}}
 }//}}}
 
-function createNavigation (enext, eprev)//{{{
+function createNavigation (enext, eprev, elist)//{{{
 {
-    if (enext) {
+    if (enext)
         enext.onclick = next;
-    }
-
-    if (eprev) {
+    if (eprev)
         eprev.onclick = prev;
-    }
+    if (elist && itemlist)
+        elist.onclick = toggleList;
 
     // keyboard
     if ( navigator.userAgent.indexOf("WebKit") != -1 )
@@ -1438,7 +1439,10 @@ function onLoad()//{{{
     b.onbeforeunload = function() { updateUrl(true); };
 
     // navigation
-    createNavigation( document.getElementById("next"), document.getElementById("prev") );
+    createNavigation(
+			document.getElementById("next"),
+			document.getElementById("prev"),
+			document.getElementById("list") );
 
     go(n);
 }//}}}
