@@ -46,13 +46,7 @@ options:
 
     -r 0, --resolution=0    don't generate thumbnails
     -u "", --url=""         don't launch web browser
-
-examples:
-    cd photos && mkgallery "My Photo Gallery"
-    # generates gallery titled "My Photo Gallery" with all images from photos
-    BROWSER="" cd /usr/share/fonts && mkgallery Fonts
-    # generates gallery containing fonts installed on system
-    """\
+"""\
 			% (sys.argv[0], title, resolution, gdir, url, d)
 #}}}
 

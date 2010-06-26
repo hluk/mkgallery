@@ -22,6 +22,19 @@ body {
     background-repeat: repeat;
 }
 
+h1, h2 {
+    font-family: Aller Display;
+	font-weight: normal;
+	color: white;
+}
+h1 {
+	font-size: 2.5em;
+}
+h2 {
+	font-size: 1.5em;
+	border-bottom: 2px solid white;
+}
+
 a {color: #7bf; text-decoration: none; font-weight: bold;}
 a:hover {color: #ff0;}
 a:visited {color: #7bf;}
@@ -41,8 +54,8 @@ a:visited:hover {color: #ff0;}
 
     margin: 10px 15px;
     position: absolute;
-    text-shadow: #000 1px 1px 1px;
-    z-index: 1;
+    text-shadow: black 1px 1px 1px;
+    z-index: 2;
 
     /* box */
     /*background-color: rgba(255,255,255,0.5);*/
@@ -63,4 +76,81 @@ a:visited:hover {color: #ff0;}
 #resolution.loading {color: #fd0;}
 #resolution.error   {color: #faa;}
 #progress {float: left; margin-right: 10px;}
+
+#navigation {
+    position: fixed;
+    z-index: 1;
+    width: 100%;
+    height: 100%;
+}
+#next, #prev {
+    opacity: 0;
+    color: white;
+    font-family: Aller Display;
+    font-size: 20pt;
+    text-shadow: black 0px 0px 10px;
+    cursor: pointer;
+    padding: 20px;
+    position: fixed;
+    bottom: 0px;
+}
+#prev {left: 0px;}
+#next {right: 0px;}
+#prev:hover, #prev.focused,
+#next:hover, #next.focused {
+    opacity: 1;
+}
+
+#help {
+	opacity: 0;
+	z-index: 3;
+	position: absolute;
+	top: 0px;
+	left: 0px;
+	width: 90%;
+	margin: 5%;
+	padding: 8px;
+	background: rgba(0,0,0,0.7);
+	-moz-border-radius: 20px;
+	-webkit-border-radius: 20px;
+}
+#help .mode {
+	text-align: left;
+	display: block;
+	float: left;
+	padding: 20px;
+}
+#help .key {
+}
+#help .which {
+	display: inline;
+	display: inline-block;
+	color: black;
+	font-weight: bold;
+	width: 10ex;
+	text-align: right;
+	font-size: 0.75em;
+
+    text-shadow: white 1px 1px 2px;
+
+	margin-right: 1em;
+	margin-top: 4px;
+	padding-left: 2px;
+	padding-right: 2px;
+	text-align: center;
+
+	background: #aaa;
+	-moz-border-radius: 4px;
+	-webkit-border-radius: 4px;
+	border: 2px solid gray;
+	border-top: 2px solid white;
+	border-left: 2px solid white;
+}
+#help .desc {
+	display: inline;
+	width: 70%;
+}
+#help.focused {
+	opacity: 1;
+}
 

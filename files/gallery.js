@@ -761,7 +761,7 @@ updateCounter: function ()//{{{
 {
     if ( !this.counter )
         return;
-    this.counter.textContent = this.counter.innerText = this.n + "/" + this.len;
+    this.counter.textContent = this.counter.innerHTML = this.n + "/" + this.len;
     if (this.n == this.len)
         this.counter.className = "last";
     else
@@ -835,7 +835,7 @@ updateStatus: function (status_msg,class_name)//{{{
     if (!this.resolution)
         return;
 
-    this.resolution.textContent = this.resolution.innerText = status_msg;
+    this.resolution.textContent = this.resolution.innerHTML = status_msg;
     this.resolution.className = class_name;
     this.popInfo();
 },//}}}
@@ -1022,18 +1022,33 @@ function preloadImages()//{{{
 //}}}
 
 // INTERACTION//{{{
-keycodes = {
-    13: "Enter",
-    27: "Escape",
-    32: "Space",
-    37: "Left",
-    38: "Up",
-    39: "Right",
-    40: "Down",
-    33: "PageUp",
-    34: "PageDown",
-    35: "End",
-    36: "Home"
+var keycodes = []
+keycodes[13] = "Enter";
+keycodes[27] = "Escape";
+keycodes[32] = "Space";
+keycodes[37] = "Left";
+keycodes[38] = "Up";
+keycodes[39] = "Right";
+keycodes[40] = "Down";
+keycodes[33] = "PageUp";
+keycodes[34] = "PageDown";
+keycodes[35] = "End";
+keycodes[36] = "Home";
+if ( navigator.userAgent.indexOf("WebKit") != -1 ) {
+    keycodes[97] =  "KP1";
+    keycodes[98] =  "KP2";
+    keycodes[99] =  "KP3";
+    keycodes[100] = "KP4";
+    keycodes[101] = "KP5";
+    keycodes[102] = "KP6";
+    keycodes[103] = "KP7";
+    keycodes[104] = "KP8";
+    keycodes[105] = "KP9";
+    keycodes[106] = "*";
+    keycodes[107] = "+";
+    keycodes[109] = "-";
+    keycodes[111] = "/";
+    keycodes[191] = "?";
 }
 
 function next()//{{{
@@ -1050,7 +1065,7 @@ function prev()//{{{
 
 function keyPress (e)//{{{
 {
-    if ( e.shiftKey || e.ctrlKey || e.altKey || e.metaKey )
+    if ( e.ctrlKey || e.altKey || e.metaKey )
         return;
 
 	var keycode = e.keyCode ? e.keyCode : e.which;
@@ -1060,178 +1075,22 @@ function keyPress (e)//{{{
     if ( !keyname )
 		keyname = String.fromCharCode(keycode);
 
-    // Viewer {{{
-    if ( !itemlist || itemlist.hidden() ) {
-        switch (keyname) {
-        case "Left":
-            if ( viewer.width() <= window.innerWidth )
-                prev();
-            else
-                window.scrollBy(-window.innerWidth/4,0);
-            break;
-        case "Right":
-            if ( viewer.width() <= window.innerWidth )
-                next();
-            else
-                window.scrollBy(window.innerWidth/4,0);
-            break;
-        case "Up":
-            window.scrollBy(0,-window.innerHeight/4);
-            if ( window.pageYOffset == 0 )
-                info.popInfo();
-            break;
-        case "Down":
-            window.scrollBy(0,window.innerHeight/4);
-            break;
-        case "PageUp":
-            window.scrollBy(0,-window.innerHeight);
-            if ( window.pageYOffset == 0 )
-                info.popInfo();
-            break;
-        case "PageDown":
-            window.scrollBy(0,window.innerHeight);
-            break;
-        case "End":
-            window.scrollTo(0,document.body.scrollHeight);
-            break;
-        case "Home":
-            window.scrollTo(0,0);
-            info.popInfo();
-            break;
-        case "Space":
-            if ( window.scrollY == window.scrollMaxY )
-                next();
-            else
-                window.scrollBy(0,window.innerHeight*9/10);
-            break;
-        case "1":
-        case "a":
-            if ( n != len )
-                go(len);
-            break;
-        case "2":
-        case "b":
-            window.scrollBy(0,window.innerHeight/4);
-            break;
-        case "3":
-        case "c":
-            if ( n != len )
-                go(n+5);
-            break;
-        case "4":
-        case "d":
-            prev();
-            break;
-        case "6":
-        case "Enter":
-        case "f":
-            next();
-            break;
-        case "7":
-        case "g":
-            if ( n != 1 )
-                go(1);
-            break;
-        case "8":
-        case "h":
-            window.scrollBy(0,-window.innerHeight/4);
-            if ( window.pageYOffset == 0 )
-                info.popInfo();
-            break;
-        case "9":
-        case "i":
-            if ( n != 1 )
-                go(n-5);
-            break;
-        case "+":
-        case "k":
-            viewer.zoom("+");
-            break;
-        case "-":
-        case "m":
-            viewer.zoom("-");
-            break;
-        case "*":
-        case "j":
-            viewer.zoom(1);
-            break;
-        case "/":
-        case "o":
-            viewer.zoom("fit");
-            break;
-        case ".":
-        case "n":
-            viewer.zoom("fill");
-            break;
-        case "5":
-        case "Escape":
-        case "e":
-            if (itemlist)
-                itemlist.toggle();
-            break;
-        default:
-            return;
-        }
-	}//}}}
+    // DEBUG:
+    //info.updateStatus(keycode+": "+keyname);
 
-    // ItemList {{{
-    else {
-        switch (keyname) {
-        case "Escape":
-        case "e":
-        case "5":
-            itemlist.toggle();
-            break;
-        case "Enter":
-            itemlist.submitSelected();
-            break;
-        case "Left":
-        case "4":
-        case "d":
-            itemlist.listLeft();
-            break;
-        case "Right":
-        case "6":
-        case "f":
-            itemlist.listRight();
-            break;
-        case "Up":
-        case "8":
-        case "h":
-            itemlist.listUp();
-            break;
-        case "Down":
-        case "2":
-        case "b":
-            itemlist.listDown();
-            break;
-        case "PageUp":
-        case "9":
-        case "i":
-            itemlist.listPageUp();
-            break;
-        case "PageDown":
-        case "3":
-        case "c":
-            itemlist.listPageDown();
-            break;
-        case "End":
-        case "1":
-        case "a":
-            itemlist.selectItem(itemlist.size()-1);
-            itemlist.ensureCurrentVisible();
-            break;
-        case "Home":
-        case "7":
-        case "g":
-            itemlist.selectItem(0);
-            itemlist.ensureCurrentVisible();
-            break;
-        default:
-            return;
-        }
-	}//}}}
-    e.preventDefault();
+    // try keys in this mode or modes.any
+    var try_modes = [mode[mode.length-1],modes.any];
+    for (var i in try_modes) {
+        var k = keys[try_modes[i]];
+        if (!k) continue;
+
+        var fn = k[keyname];
+        if (!fn) continue;
+
+        fn();
+        e.preventDefault();
+        break;
+    }
 }//}}}
 
 function onMouseWheel (e) {//{{{
@@ -1281,6 +1140,50 @@ function createItemList(e)//{{{
     // item list is initially hidden
     if ( !itemlist && document.getElementById("itemlist") )
         document.getElementById("itemlist").style.display = "none";
+
+    // navigation//{{{
+    addKeys(["KP5","5"], "Toggle thumbnail list", function() {
+            itemlist.toggle();
+            if ( itemlist.hidden() )
+                mode.pop();
+            else if ( mode[0] != modes.itemlist )
+                mode.push(modes.itemlist);
+        });
+    addKeys(["Escape"], "", function() {
+            itemlist.toggle();
+            mode.pop();
+        }, modes.itemlist);
+    addKeys(["Enter"], "", function() {
+            itemlist.submitSelected();
+            mode.pop();
+        }, modes.itemlist);
+    addKeys(["Left","KP4"], "Move cursor left", function() {
+            itemlist.listLeft();
+        }, modes.itemlist);
+    addKeys(["Right","KP6"], "Move cursor right", function() {
+            itemlist.listRight();
+        }, modes.itemlist);
+    addKeys(["Up","KP8"], "Move cursor up", function() {
+            itemlist.listUp();
+        }, modes.itemlist);
+    addKeys(["Down","KP2"], "Move cursor down", function() {
+            itemlist.listDown();
+        }, modes.itemlist);
+    addKeys(["PageUp","KP9"], "Previous page", function() {
+            itemlist.listPageUp();
+        }, modes.itemlist);
+    addKeys(["PageDown","KP3"], "Next page", function() {
+            itemlist.listPageDown();
+        }, modes.itemlist);
+    addKeys(["End","KP1"], "Move cursor on last thumbnail", function() {
+            itemlist.selectItem(itemlist.size()-1);
+            itemlist.ensureCurrentVisible();
+        }, modes.itemlist);
+    addKeys(["Home","KP7"], "Move cursor on first thumbnail", function() {
+            itemlist.selectItem(0);
+            itemlist.ensureCurrentVisible();
+        }, modes.itemlist);
+    //}}}
 }//}}}
 
 function createViewer(e,info)//{{{
@@ -1297,6 +1200,201 @@ function createViewer(e,info)//{{{
     }
 
     viewer.onZoomChanged = function(state) { if (vars['zoom'] == state) return; vars['zoom'] = state; updateUrl(); }
+
+    // navigation//{{{
+    addKeys(["Left"], "Move window left/Previous gallery item", function () {
+            if ( viewer.width() <= window.innerWidth )
+                prev();
+            else
+                window.scrollBy(-window.innerWidth/4,0);
+        }, modes.viewer);
+    addKeys(["Right"], "Move window right/Next gallery item", function() {
+            if ( viewer.width() <= window.innerWidth )
+                next();
+            else
+                window.scrollBy(window.innerWidth/4,0);
+        }, modes.viewer);
+    addKeys(["Up"], "Move window up", function() {
+            window.scrollBy(0,-window.innerHeight/4);
+            if ( window.pageYOffset == 0 )
+                info.popInfo();
+        }, modes.viewer);
+    addKeys(["Down"], "Move window down", function() {
+            window.scrollBy(0,window.innerHeight/4);
+        }, modes.viewer);
+    addKeys(["PageUp"], "", function() {
+            window.scrollBy(0,-window.innerHeight);
+            if ( window.pageYOffset == 0 )
+                info.popInfo();
+        }, modes.viewer);
+    addKeys(["PageDown"], "", function() {
+            window.scrollBy(0,window.innerHeight);
+        }, modes.viewer);
+    addKeys(["End"], "", function() {
+            window.scrollTo(0,document.body.scrollHeight);
+        }, modes.viewer);
+    addKeys(["Home"], "", function() {
+            window.scrollTo(0,0);
+            info.popInfo();
+        }, modes.viewer);
+    addKeys(["Space"], "Move window down/Next gallery item", function() {
+            if ( window.scrollY == window.scrollMaxY )
+                next();
+            else
+                window.scrollBy(0,window.innerHeight*9/10);
+        }, modes.viewer);
+    addKeys(["KP1","1"], "Browse to last gallery item", function() {
+            if ( n != len )
+                go(len);
+        }, modes.viewer);
+    addKeys(["KP2","2"], "", function() {
+            window.scrollBy(0,window.innerHeight/4);
+        }, modes.viewer);
+    addKeys(["KP3","3"], "Browse to fifth next gallery item", function() {
+            if ( n != len )
+                go(n+5);
+        }, modes.viewer);
+    addKeys(["KP4","4","K"], "Next", prev, modes.viewer);
+    addKeys(["KP6","6","Enter","J"], "Previous", next, modes.viewer);
+    addKeys(["KP7","7"], "Browse to first gallery item", function() {
+            if ( n != 1 )
+                go(modes.viewer);
+        }, modes.viewer);
+    addKeys(["KP8","8"], "", function() {
+            window.scrollBy(0,-window.innerHeight/4);
+            if ( window.pageYOffset == 0 )
+                info.popInfo();
+        }, modes.viewer);
+    addKeys(["KP9","9"], "Browse to fifth previous gallery item", function() {
+            if ( n != 1 )
+                go(n-5);
+        }, modes.viewer);
+    addKeys(["+"], "Zoom in", function() {
+            viewer.zoom("+");
+        }, modes.viewer);
+    addKeys(["-"], "Zoom out", function() {
+            viewer.zoom("-");
+        }, modes.viewer);
+    addKeys(["*"], "Zoom to original size", function() {
+            viewer.zoom(1);
+        }, modes.viewer);
+    addKeys(["/"], "Zoom to fit", function() {
+            viewer.zoom("fit");
+        }, modes.viewer);
+    addKeys(["."], "Zoom to fill", function() {
+            viewer.zoom("fill");
+        }, modes.viewer);
+    //}}}
+}//}}}
+
+function createNavigation (enext, eprev)//{{{
+{
+    if (enext) {
+        enext.onclick = next;
+    }
+
+    if (eprev) {
+        eprev.onclick = prev;
+    }
+
+    // keyboard
+    if ( navigator.userAgent.indexOf("WebKit") != -1 )
+        document.onkeydown = keyPress;
+    else
+        document.onkeypress = keyPress;
+
+    // mouse
+    window.onmousewheel = document.onmousewheel = onMouseWheel;
+    window.addEventListener('DOMMouseScroll', onmousewheel, false);
+
+    initDragScroll();
+
+    addKeys(["?","H"], "Show this help", toggleHelp);
+    addKeys(["Escape","?","H"], "Hide help", function() {
+            toggleHelp(true);
+            }, modes.help);
+    // disable showing item list in help mode
+    addKeys(["KP5","5"], "", function() {}, modes.help);
+}//}}}
+
+function addKeys(newkeys, desc, fn, keymode)//{{{
+{
+    if (!keys)
+        keys = {};
+    if (!keymode)
+        keymode = modes.any;
+
+    var ekeys = keys[keymode];
+    if (!ekeys)
+        ekeys = keys[keymode] = {};
+
+    for (var i in newkeys) {
+        ekeys[newkeys[i]] = fn;
+    }
+
+    // key description
+    if (!desc) return;
+    if (!keydesc)
+        keydesc = {};
+    var modekeydesc = keydesc[keymode];
+    if (!modekeydesc)
+        modekeydesc = keydesc[keymode] = {};
+    modekeydesc[desc] = newkeys;
+}//}}}
+
+function createHelp(e)//{{{
+{
+    var h1 = document.createElement("h1");
+    h1.innerHTML = "Help";
+    e.appendChild(h1);
+
+    for (var i in modes) {
+        var keymode = document.createElement("div");
+        keymode.className = "mode";
+        e.appendChild(keymode);
+
+        var h2 = document.createElement("h2");
+        h2.innerHTML = modes[i];
+        keymode.appendChild(h2);
+
+        var modekeydesc = keydesc[modes[i]];
+        for (var j in modekeydesc) {
+            var key = document.createElement("div");
+            key.className = "key";
+            keymode.appendChild(key);
+
+            var which = document.createElement("div");
+            which.className = "which";
+            which.innerHTML = modekeydesc[j].join(", ");
+            key.appendChild(which);
+
+            var desc = document.createElement("desc");
+            desc.className = "desc";
+            desc.innerHTML = j;
+            key.appendChild(desc);
+        }
+    }
+}//}}}
+
+function toggleHelp(hide)//{{{
+{
+    if (!help) {
+        help = document.getElementById("help");
+        if (!help)
+            return;
+        createHelp(help);
+    }
+
+    if ( help && !(hide && !help.className) ) {
+        if (hide) {
+            help.className = "";
+            mode.pop();
+        }
+        else {
+            help.className = "focused";
+            mode.push(modes.help);
+        }
+    }
 }//}}}
 
 function onLoad()//{{{
@@ -1339,17 +1437,8 @@ function onLoad()//{{{
     // browser with sessions: update URL when browser window closed
     b.onbeforeunload = function() { updateUrl(true); };
 
-    // keyboard
-    if ( navigator.userAgent.indexOf("WebKit") != -1 )
-        document.onkeydown = keyPress;
-    else
-        document.onkeypress = keyPress;
-
-    // mouse
-    window.onmousewheel = document.onmousewheel = onMouseWheel;
-    window.addEventListener('DOMMouseScroll', onmousewheel, false);
-
-    initDragScroll();
+    // navigation
+    createNavigation( document.getElementById("next"), document.getElementById("prev") );
 
     go(n);
 }//}}}
@@ -1371,8 +1460,13 @@ var b;
 
 var hash;
 
-var itemlist, info, viewer;
+var itemlist, info, viewer, help;
 var preloaded = null;
 
 var lasticon;
+
+var keys;
+var keydesc;
+var modes = {any:"Any", viewer:"Viewer", itemlist:"Item List", help:"Help"};
+var mode = [modes.viewer];
 
