@@ -19,7 +19,6 @@
     font-family: font-family-579-1, font-family-579-2, Aller, Verdana, Arial, Helvetica;
     font-size: 17px;
     color: #ddd;
-    image-rendering: optimizeQuality;
 }
 
 html,body {height: 100%;}
@@ -32,17 +31,24 @@ body {
     background-repeat: repeat;
 }
 
-h1, h2 {
+h1, h2, h3 {
     font-family: font-family-457-1, font-family-457-2, Aller Display;*/;
 	font-weight: bold;
-	color: white;
 }
 h1 {
-	font-size: 2.5em;
+	font-size: 3em;
+	color: white;
 }
 h2 {
+	font-size: 2.8em;
+	color: #ddd;
+    float: left;
+    margin: 1em;
+}
+h3 {
 	font-size: 1.5em;
-	border-bottom: 2px solid white;
+	color: #bbb;
+	border-bottom: 2px solid #bbb;
 }
 
 a {color: #7bf; text-decoration: none; font-weight: bold;}
@@ -131,22 +137,20 @@ a:visited:hover {color: #ff0;}
 	position: absolute;
 	top: 0px;
 	left: 0px;
-	width: 90%;
-	margin: 5%;
-	padding: 8px;
+	width: 80%;
+	margin: 10%;
+	margin-top: 2%;
 	background: rgba(0,0,0,0.7);
 	-moz-border-radius: 20px;
 	-webkit-border-radius: 20px;
 }
-#help .mode {
+#help .category {
 	text-align: left;
-	display: block;
-	float: left;
+    display: inline-block;
 	padding: 20px;
 }
-#help .key {
-}
-#help .which {
+#help .key {}
+#help #keys .which {
 	display: inline;
 	display: inline-block;
 	color: black;
@@ -170,9 +174,27 @@ a:visited:hover {color: #ff0;}
 	border-top: 2px solid white;
 	border-left: 2px solid white;
 }
+#help #keys,
+#help #options {
+	border-top: 2px dashed #aaa;
+}
+#help #options .which {
+	display: inline;
+	display: inline-block;
+	color: yellow;
+	font-weight: bold;
+    font-family: DejaVu Sans Mono, Inconsolata, Consolas, monospace;
+	text-align: right;
+	font-size: 0.75em;
+
+	margin-right: 1em;
+	margin-top: 4px;
+	padding-left: 2px;
+	padding-right: 2px;
+	text-align: center;
+}
 #help .desc {
 	display: inline;
-	width: 70%;
 }
 #help.focused {
 	opacity: 1;

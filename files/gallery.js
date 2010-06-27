@@ -1,15 +1,34 @@
 /*
+ * \section HTML elements
  * HTML document should include lines:
     <script type="text/javascript" src="THIS_FILE.js"></script>
     <body onload="onLoad()">
- * and optionally:
-    <div id="canvas></canvas>
+ * All other tags are optional.
+ *
+ * Item (Image/font) view:
+    <div id="canvas"></canvas>
+ *
+ * Item info:
     <div id="info">
+        <canvas id="progress"></canvas>
         <span id="counter"></span>
         <span id="itemtitle"></span>
         <span id="resolution"></span>
     </div>
+ *
+ * Elements for navigation:
+    <div id="next">Next</div>
+    <div id="prev">Prev</div>
+    <div id="list">List</div>
+ *
+ * Item list:
     <div id="itemlist"></div>
+ *
+ * Help window:
+    <div id="help">
+        <div id="keys"></div>
+        <div id="options"></div>
+    </div>
  *
  * \section caching Caching
  * \par
@@ -197,6 +216,8 @@ type: function ()//{{{
 
 show: function()//{{{
 {
+    var view = this;
+
     if ( this.e )
         return;
 
@@ -210,15 +231,31 @@ show: function()//{{{
     //else {
         //this.e = document.createElement("img");
     //}
-    this.e = document.createElement("canvas");
+
+    // redraw animated images in intervals
+    if (this.path.search(/\.gif$/i) > -1) {
+        this.e = document.createElement("div");
+        this.ctx = {
+            drawImage: function (img,x,y,width,height) {
+                           var e = document.getElementById("img");
+                           if (!e)
+                               view.e.appendChild(img);
+                           img.width = width;
+                           img.height = height;
+                       }
+        }
+    }
+    else {
+        this.e = document.createElement("canvas");
+        this.ctx = this.e.getContext('2d');
+    }
     this.e.className = "imageview";
     this.e.name = "view";
-    this.ctx = this.e.getContext('2d');
     this._parent.append(this.e);
 
     this.img = document.createElement("img");
+    this.img.id = "img";
     this.img.src = this.path;
-    var view = this;
     this.img.onload = function () {
         view.e.width = view.orig_width = this.naturalWidth;
         view.e.height = view.orig_height = this.naturalHeight;
@@ -294,8 +331,8 @@ zoom: function (how)//{{{
         break;
     }
 
-    this.e.width = this.width = this.e.width = w*z;
-    this.e.height = this.height = this.e.height = h*z;
+    this.width = this.e.width = w*z;
+    this.height = this.e.height = h*z;
     this.ctx.drawImage(this.img,0,0,this.width,this.height);
     this.zoom_factor = z;
 
@@ -388,7 +425,7 @@ thumbnail: function()//{{{
     var font = this.path.replace(/.*\//gi, "").replace(".","-");
     this.thumb = document.createElement("div");
     this.thumb.className = "thumbnail " + this.type();
-    this.thumb.style.maxWidth = config.get('thumbnail_max_width',300) + "px";
+    this.thumb.style.maxWidth = getConfig('thumbnail_max_width',300) + "px";
     this.thumb.style.fontFamily = this.font;
     this.thumb.innerHTML = config['thumbnail_font_test'];
 
@@ -399,7 +436,7 @@ thumbnail: function()//{{{
 
 zoom: function (how)//{{{
 {
-    var orig = config.get('font_size',16);
+    var orig = getConfig('font_size',16);
 
     if ( !this.orig_height )
         this.orig_height = this.e.offsetHeight;
@@ -526,7 +563,7 @@ appendItem: function (itemname, i)//{{{
     txt.className = "itemname";
     // break text ideally at characters / _ - .
     txt.appendChild( document.createTextNode(itemname.replace(/[\.\/_-]/g,'$&\u200B')) );
-    txt.style.maxWidth = config.get('thumbnail_max_width',300) + "px";
+    txt.style.maxWidth = getConfig('thumbnail_max_width',300) + "px";
 
     item.appendChild(ident);
     item.appendChild(txt);
@@ -538,8 +575,8 @@ appendItem: function (itemname, i)//{{{
 reloadThumbnails: function ()//{{{
 {
     var thumb;
-    var minwidth = config.get('thumbnail_min_width',100);
-    var maxwidth = config.get('thumbnail_max_width',300);
+    var minwidth = getConfig('thumbnail_min_width',100);
+    var maxwidth = getConfig('thumbnail_max_width',300);
     while ( thumb = this.thumbs.pop() ) {
         //thumb.style.maxWidth = maxwidth;
         if ( thumb.width != 0 )
@@ -776,8 +813,8 @@ updateProgress: function ()//{{{
     var ctx = this.progress.getContext("2d");
     var pi = 3.1415;
     var angle = 2*pi*this.n/this.len;
-    var r = config.get('progress_radius',22);
-    var w = config.get('progress_width',8);
+    var r = getConfig('progress_radius',22);
+    var w = getConfig('progress_width',8);
     var x = r;
     var y = r;
 
@@ -791,13 +828,13 @@ updateProgress: function ()//{{{
     ctx.beginPath();
     ctx.moveTo(x, y);
     ctx.arc(x, y, r, 0, 2*pi, false);
-    ctx.fillStyle = config.get('progress_bg',"rgba(200,200,200,0.4)");
+    ctx.fillStyle = getConfig('progress_bg',"rgba(200,200,200,0.4)");
     ctx.fill();
 
     ctx.beginPath();
     ctx.moveTo(x, y);
     ctx.arc(x, y, r, -pi/2, angle-pi/2, false);
-    ctx.fillStyle = config.get('progress_fg',"rgba(255,200,0,0.8)");
+    ctx.fillStyle = getConfig('progress_fg',"rgba(255,200,0,0.8)");
     ctx.fill();
 
     ctx.fillStyle = "white";
@@ -875,27 +912,33 @@ hidden: function()//{{{
 }
 //}}}
 
-
 // HELPER FUNCTIONS//{{{
-config.get = function (i,d)//{{{
+userAgents = {unknown:0, webkit:1};
+
+function userAgent() //{{{
 {
-    var x = this[i];
+if ( navigator.userAgent.indexOf("WebKit") != -1 )
+    return userAgents.webkit;
+else
+    return userAgents.unknown;
+}//}}}
+
+function getConfig (i,d)//{{{
+{
+    var x = vars[i];
+    if (x==null)
+        x = config[i];
     return (x==null) ? d : x;
 }//}}}
 
 function path (filename)//{{{
 {
-    return "imgs/" + filename;
+    return "items/" + filename;
 }//}}}
 
 function getPage (i)//{{{
 {
-	if (!i || i<1)
-		return 1;
-	else if (i > len)
-		return len;
-	else
-		return i;
+    return i ? Math.min( Math.max(i,1), len ) : 1
 }//}}}
 
 function go (i)//{{{
@@ -989,7 +1032,7 @@ function preloadImages()//{{{
         return;
     }
 
-    var maxnum = config.get('preload_images',2);
+    var maxnum = getConfig('preload_images',2);
     var num = maxnum - (n+2) % maxnum;
 
     var new_preloaded = [];
@@ -1045,7 +1088,7 @@ keycodes[33] = "PageUp";
 keycodes[34] = "PageDown";
 keycodes[35] = "End";
 keycodes[36] = "Home";
-if ( navigator.userAgent.indexOf("WebKit") != -1 ) {
+if ( userAgent() == userAgents.webkit ) {
     keycodes[97] =  "KP1";
     keycodes[98] =  "KP2";
     keycodes[99] =  "KP3";
@@ -1204,26 +1247,6 @@ function createViewer(e,info)//{{{
     viewer.onZoomChanged = function(state) { if (vars['zoom'] == state) return; vars['zoom'] = state; updateUrl(); }
 
     // navigation//{{{
-    addKeys(["Left"], "Move window left/Previous gallery item", function () {
-            if ( viewer.width() <= window.innerWidth )
-                prev();
-            else
-                window.scrollBy(-window.innerWidth/4,0);
-        }, modes.viewer);
-    addKeys(["Right"], "Move window right/Next gallery item", function() {
-            if ( viewer.width() <= window.innerWidth )
-                next();
-            else
-                window.scrollBy(window.innerWidth/4,0);
-        }, modes.viewer);
-    addKeys(["Up"], "Move window up", function() {
-            window.scrollBy(0,-window.innerHeight/4);
-            if ( window.pageYOffset == 0 )
-                info.popInfo();
-        }, modes.viewer);
-    addKeys(["Down"], "Move window down", function() {
-            window.scrollBy(0,window.innerHeight/4);
-        }, modes.viewer);
     addKeys(["PageUp"], "", function() {
             window.scrollBy(0,-window.innerHeight);
             if ( window.pageYOffset == 0 )
@@ -1260,7 +1283,7 @@ function createViewer(e,info)//{{{
     addKeys(["KP6","6","Enter","J"], "Previous", next, modes.viewer);
     addKeys(["KP7","7"], "Browse to first gallery item", function() {
             if ( n != 1 )
-                go(modes.viewer);
+                go(1);
         }, modes.viewer);
     addKeys(["KP8","8"], "", function() {
             window.scrollBy(0,-window.innerHeight/4);
@@ -1299,7 +1322,7 @@ function createNavigation (enext, eprev, elist)//{{{
         elist.onclick = toggleList;
 
     // keyboard
-    if ( navigator.userAgent.indexOf("WebKit") != -1 )
+    if ( userAgent() == userAgents.webkit )
         document.onkeydown = keyPress;
     else
         document.onkeypress = keyPress;
@@ -1314,8 +1337,26 @@ function createNavigation (enext, eprev, elist)//{{{
     addKeys(["Escape","?","H"], "Hide help", function() {
             toggleHelp(true);
             }, modes.help);
-    // disable showing item list in help mode
-    addKeys(["KP5","5"], "", function() {}, modes.help);
+    addKeys(["Left"], "Move window left/Previous gallery item", function () {
+            if ( viewer.width() <= window.innerWidth )
+                prev();
+            else
+                window.scrollBy(-window.innerWidth/4,0);
+        });
+    addKeys(["Right"], "Move window right/Next gallery item", function() {
+            if ( viewer.width() <= window.innerWidth )
+                next();
+            else
+                window.scrollBy(window.innerWidth/4,0);
+        });
+    addKeys(["Up"], "Move window up", function() {
+            window.scrollBy(0,-window.innerHeight/4);
+            if ( window.pageYOffset == 0 )
+                info.popInfo();
+        });
+    addKeys(["Down"], "Move window down", function() {
+            window.scrollBy(0,window.innerHeight/4);
+        });
 }//}}}
 
 function addKeys(newkeys, desc, fn, keymode)//{{{
@@ -1343,26 +1384,22 @@ function addKeys(newkeys, desc, fn, keymode)//{{{
     modekeydesc[desc] = newkeys;
 }//}}}
 
-function createHelp(e)//{{{
+function createKeyHelp(e)//{{{
 {
-    var h1 = document.createElement("h1");
-    h1.innerHTML = "Help";
-    e.appendChild(h1);
-
     for (var i in modes) {
-        var keymode = document.createElement("div");
-        keymode.className = "mode";
-        e.appendChild(keymode);
+        var cat = document.createElement("div");
+        cat.className = "category";
+        e.appendChild(cat);
 
-        var h2 = document.createElement("h2");
-        h2.innerHTML = modes[i];
-        keymode.appendChild(h2);
+        var h3 = document.createElement("h3");
+        h3.innerHTML = modes[i];
+        cat.appendChild(h3);
 
         var modekeydesc = keydesc[modes[i]];
         for (var j in modekeydesc) {
             var key = document.createElement("div");
             key.className = "key";
-            keymode.appendChild(key);
+            cat.appendChild(key);
 
             var which = document.createElement("div");
             which.className = "which";
@@ -1377,8 +1414,79 @@ function createHelp(e)//{{{
     }
 }//}}}
 
+function createConfigHelp(e)//{{{
+{
+    // configuration//{{{
+    var confdesc = {
+        "Images": {
+        'zoom_step': "zoom factor",
+        'preload_images': "number of images to preload",
+        },
+
+        "Font": {
+        'font_size': "font size",
+        'font_test': "default text",
+        },
+
+        "Progress bar": {
+        'progress_radius': "radius",
+        'progress_width': "width",
+        'progress_bg': "background color",
+        'progress_fg': "foreground color",
+        },
+
+        "Thumbnail": {
+        'thumbnail_min_width': "minimum width",
+        'thumbnail_max_width': "maximum width",
+        'thumbnail_font_test': "default text for fonts",
+        },
+    };//}}}
+
+    for (var i in confdesc) {
+        var cat = document.createElement("div");
+        cat.className = "category";
+        e.appendChild(cat);
+
+        var h3 = document.createElement("h3");
+        h3.innerHTML = i;
+        cat.appendChild(h3);
+
+        var desc = confdesc[i];
+        for (var j in desc) {
+            var opt = document.createElement("div");
+            opt.className = "option";
+            cat.appendChild(opt);
+
+            var which = document.createElement("div");
+            which.className = "which";
+            which.innerHTML = j;
+            opt.appendChild(which);
+
+            var desc = document.createElement("desc");
+            desc.className = "desc";
+            desc.innerHTML = confdesc[i][j];
+            opt.appendChild(desc);
+        }
+    }
+}//}}}
+
+function createHelp(e)//{{{
+{
+    var ekeys = document.getElementById("keys");
+    if (ekeys)
+        createKeyHelp(ekeys);
+
+    var econf = document.getElementById("options");
+    if (econf)
+        createConfigHelp(econf);
+
+    // disable showing item list in help mode
+    addKeys(["KP5","5"], "", function() {}, modes.help);
+}//}}}
+
 function toggleHelp(hide)//{{{
 {
+    // key bindings
     if (!help) {
         help = document.getElementById("help");
         if (!help)
@@ -1396,6 +1504,14 @@ function toggleHelp(hide)//{{{
             mode.push(modes.help);
         }
     }
+}//}}}
+
+function onResize()//{{{
+{
+    if (viewer)
+        viewer.zoom();
+    if (itemlist)
+        itemlist.resize();
 }//}}}
 
 function onLoad()//{{{
@@ -1418,7 +1534,7 @@ function onLoad()//{{{
         createItemList(e);
 
     // info
-    var e = document.getElementById("info");
+    e = document.getElementById("info");
     if (e) {
         info = new Info(e,
                 document.getElementById("counter"),
@@ -1433,7 +1549,7 @@ function onLoad()//{{{
         createViewer(e,info);
 
     // refresh zoom on resize
-    b.onresize = function() { viewer.zoom(); itemlist.resize(); };
+    window.onresize = onResize;
 
     // browser with sessions: update URL when browser window closed
     b.onbeforeunload = function() { updateUrl(true); };
@@ -1450,24 +1566,24 @@ function onLoad()//{{{
 // number of items in gallery
 var len = ls ? ls.length : 0;
 
-// variables
+// url variables
+var hash;
 var vars = getUrlVars();
 
 // page number
 var n = getPage( parseInt(vars['n']) );
 
 // zoom
-var zoom_step  = 0.125;
+var zoom_step = getConfig('zoom_step',0.125);
 
 // body
 var b;
 
-var hash;
-
+// objects (created if appropriate HTML element is available)
 var itemlist, info, viewer, help;
-var preloaded = null;
 
-var lasticon;
+// image cache
+var preloaded = null;
 
 var keys;
 var keydesc;

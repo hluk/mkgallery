@@ -36,14 +36,14 @@ FONT_FORMATS='otf\|ttf'
 # create gallery root
 (
 mkdir -p "$GDIR" &&
-ln -fsT "$PWD" "$GDIR/imgs" &&
+ln -fsT "$PWD" "$GDIR/items" &&
 ln -fsT "$DIR/files" "$GDIR/files" &&
 ln -fsT "$DIR/template.html" "$GDIR/index.html"
 cp "$DIR/config.js" "$GDIR/"
 ) || exit 1
 
 # generate list of images
-FILES="`cd "$GDIR" && find -L imgs/ -iregex '.*\.\('$IMAGE_FORMATS'\|'$FONT_FORMATS'\)' -printf '"%P",\n'|sort`"
+FILES="`cd "$GDIR" && find -L items/ -iregex '.*\.\('$IMAGE_FORMATS'\|'$FONT_FORMATS'\)' -printf '"%P",\n'|sort`"
 
 # use template to create new html document
 echo "var ls=[$FILES]; title = '$TITLE';" > "$GDIR/items.js"
@@ -63,9 +63,9 @@ fi
 # generate font-faces
 function cssline()
 {
-    echo "@font-face { font-family: `echo $1|sed 's/[^a-zA-Z0-9_]/_/g'`; src: url('imgs/$1'); }"
+    echo "@font-face { font-family: `echo $1|sed 's/[^a-zA-Z0-9_]/_/g'`; src: url('items/$1'); }"
 }
-(cd "$GDIR/imgs" && find -L -iregex '.*\.\('"$FONT_FORMATS"'\)' -printf '%P\n'|sort) |
+(cd "$GDIR/items" && find -L -iregex '.*\.\('"$FONT_FORMATS"'\)' -printf '%P\n'|sort) |
     while read font; do cssline "$font"; done > "$GDIR/fonts.css"
 
 # generate thumbnails

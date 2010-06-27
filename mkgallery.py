@@ -115,7 +115,7 @@ def prepare_gallery(d,gdir):#{{{
 			os.makedirs(gdir)
 		# TODO: port (symbolic links only on UNIX-like platforms)
 		links = {
-				os.path.abspath("."):gdir+"/imgs",
+				os.path.abspath("."):gdir+"/items",
 				d+"/files":gdir+"/files",
 				d+"/template.html":gdir+"/index.html"
 				}
@@ -141,7 +141,7 @@ def addFont(fontfile,css):#{{{
 	except:
 		pass
 
-	css.write("@font-face{font-family:"+fontname_re.sub("_",fontname)+";src:url('imgs/"+fontfile+"');}\n")
+	css.write("@font-face{font-family:"+fontname_re.sub("_",fontname)+";src:url('items/"+fontfile+"');}\n")
 
 	return fontname
 #}}}
@@ -215,7 +215,7 @@ def main(argv):#{{{
 	template = open( d+"/template.html", "r" );
 	itemfile = open( gdir+"/items.js", "w" )
 	css = open( gdir+"/fonts.css", "w" )
-	imgdir = gdir+"/imgs"
+	imgdir = gdir+"/items"
 
 	prepare_html(template,itemfile,css,imgdir)
 
