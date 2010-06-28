@@ -95,8 +95,10 @@ def parse_args(argv):#{{{
 			except:
 				exit("ERROR: Resolution must be single number!")
 
-	gdir = gdir % title
-	url = url % title
+	try:    gdir = gdir % title
+	except: pass
+	try:    url = url % title
+	except: pass
 
 	return (args and args or ["."]),title,resolution,gdir,url,d
 #}}}
