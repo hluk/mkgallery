@@ -1,0 +1,27 @@
+usage: mkgallery.py [options] [directories|filenames]
+
+    Creates HTML gallery containing images and fonts recursively
+    found in given directories and files or in the current directory.
+
+    If BROWSER environment variable is set, the gallery is
+    automatically viewed using web browser $BROWSER.
+
+    For program to be able to generate thumbnails and font names,
+    you must have Python Imaging Library (PIL) is installed.
+
+options:
+    -h, --help              prints this help
+    -t, --title=<title>     gallery title and directory name
+                              (default: 'default')
+    -r, --resolution=<res>  resolution for thumbnails in pixels
+                              (default: 300)
+    -d, --directory=<dir>   gallery is saved (%s is replaced by <title>)
+                              (default: '/home/lukas/dev/gallery/galleries/%s')
+    -u, --url=<url>         url location for web browser (%s is replaced by <title>)
+                              (default: 'http://127.0.0.1:8080/galleries/%s')
+    --template=<dir>        path to template html and support files
+                              (default: '/home/lukas/dev/gallery')
+
+    -r 0, --resolution=0    don't generate thumbnails
+    -u "", --url=""         don't launch web browser
+

@@ -19,17 +19,16 @@ fontname_re = re.compile('[^a-zA-Z0-9_ ]')
 def usage():#{{{
 	global title, resolution, gdir, url, d
 	print """\
-usage: %s [options] [gallery_name]
+usage: %s [options] [directories|filenames]
 
-    Creates new gallery (named "gallery_name") in script
-    directory; the gallery contains all images found in
-    current directory.
+    Creates HTML gallery containing images and fonts recursively
+    found in given directories and files or in the current directory.
 
-    For program to be able to generate thumbnails, you
-    must have Python Imaging Library (PIL) is installed.
+    If BROWSER environment variable is set, the gallery is
+    automatically viewed using web browser $BROWSER.
 
-    If BROWSER environment variable is set, the gallery
-    is automatically viewed using web browser $BROWSER.
+    For program to be able to generate thumbnails and font names,
+    you must have Python Imaging Library (PIL) is installed.
 
 options:
     -h, --help              prints this help
@@ -50,13 +49,13 @@ options:
 			% (sys.argv[0], title, resolution, gdir, url, d)
 #}}}
 
-def walkdir(root):#{{{
-	for f in os.listdir(root):
-		if os.path.isdir(root+"/"+f):
-			for ff in walkdir(root+"/"+f):
-				yield f+"/"+ff
-		else:
-			yield f
+def walk(root):#{{{
+	if os.path.isdir(root):
+		for f in os.listdir(root):
+			for ff in walk(root+"/"+f):
+				yield ff
+	else:
+		yield root
 #}}}
 
 def launch_browser():#{{{
@@ -78,12 +77,6 @@ def parse_args(argv):#{{{
 		usage()
 		sys.exit(2)
 
-	if len(args) == 1:
-		title = args[0]
-	elif len(args) > 1:
-		usage()
-		sys.exit(2)
-
 	for opt, arg in opts:
 		if opt in ("-h", "--help"):
 			usage()
@@ -100,13 +93,12 @@ def parse_args(argv):#{{{
 			try:
 				resolution = int(arg)
 			except:
-				print ("Error: Resolution must be single number!")
-				sys.exit(2)
+				exit("ERROR: Resolution must be single number!")
 
 	gdir = gdir % title
 	url = url % title
 
-	return title,resolution,gdir,url,d
+	return (args and args or ["."]),title,resolution,gdir,url,d
 #}}}
 
 def prepare_gallery(d,gdir):#{{{
@@ -115,14 +107,25 @@ def prepare_gallery(d,gdir):#{{{
 			os.makedirs(gdir)
 		# TODO: port (symbolic links only on UNIX-like platforms)
 		links = {
-				os.path.abspath("."):gdir+"/items",
 				d+"/files":gdir+"/files",
 				d+"/template.html":gdir+"/index.html"
 				}
 		for f,link in links.iteritems():
 			if os.path.islink(link):
 				os.remove(link)
-			os.symlink(f,link)
+			os.symlink( f, link )
+
+		# clean items directory
+		itemdir = gdir+"/items"
+		if os.path.isdir(itemdir):
+			for f in walk(itemdir):
+				# TODO: port
+				if os.path.islink(f):
+					os.remove(f)
+				else:
+					exit("ERROR: directory "+itemdir+" already contains files that aren't symbolic links ("+f+")!")
+		else:
+			os.mkdir(itemdir)
 
 		shutil.copyfile(d+"/config.js", gdir+"/config.js")
 	except:
@@ -146,24 +149,29 @@ def addFont(fontfile,css):#{{{
 	return fontname
 #}}}
 
-def prepare_html(template,itemfile,css,imgdir):#{{{
-	itemfile.write("var ls=[\n")
+def prepare_html(template,itemfile,css,imgdir,files):#{{{
 	items = []
-	for f in walkdir(imgdir):
-		isimg = isfont = False
-		isimg = img_fmt.search(f) != None
-		if not isimg:
-			isfont = font_fmt.search(f) != None
-		if isimg or isfont:
-			# if file is font: create font-face line in css
-			if isfont:
-				f = addFont(f,css);
-			items.append(f.replace("'","\\'"))
+	# find items in files
+	for ff in files:
+		for f in walk(ff):
+			isimg = isfont = False
+			isimg = img_fmt.search(f) != None
+			if not isimg:
+				isfont = font_fmt.search(f) != None
+			if isimg or isfont:
+				fdir = imgdir+"/"+os.path.dirname(f)
+				if not os.path.isdir(fdir):
+					os.makedirs(fdir)
+				os.symlink( os.path.abspath(f), fdir+"/" + os.path.basename(f) )
+				# if file is font: create font-face line in css
+				if isfont:
+					f = addFont(f,css);
+				items.append(f.replace("'","\\'"))
 
 	items.sort()
+	itemfile.write("var ls=[\n")
 	for item in items:
 		itemfile.write("'"+item+"',\n")
-
 	itemfile.write("];\nvar title = '"+title+"';");
 #}}}
 
@@ -173,7 +181,7 @@ def create_thumbnails(imgdir,thumbdir,resolution):#{{{
 			shutil.rmtree(thumbdir)
 
 		images = []
-		for f in walkdir(imgdir):
+		for f in walk(imgdir):
 			if img_fmt.search(f):
 				images.append(f)
 
@@ -208,7 +216,7 @@ def create_thumbnails(imgdir,thumbdir,resolution):#{{{
 def main(argv):#{{{
 	global img_fmt, font_fmt, fontname_re
 
-	title,resolution,gdir,url,d = parse_args(argv)
+	files,title,resolution,gdir,url,d = parse_args(argv)
 
 	prepare_gallery(d,gdir)
 
@@ -217,7 +225,7 @@ def main(argv):#{{{
 	css = open( gdir+"/fonts.css", "w" )
 	imgdir = gdir+"/items"
 
-	prepare_html(template,itemfile,css,imgdir)
+	prepare_html(template,itemfile,css,imgdir,files)
 
 	template.close()
 	itemfile.close()
