@@ -58,11 +58,13 @@ def walk(root):#{{{
 		yield root
 #}}}
 
-def launch_browser():#{{{
+def launch_browser(url):#{{{
 	if os.environ.has_key('BROWSER'):
 		if os.fork() == 0:
 			browser = os.environ['BROWSER']
 			print "Lauching web browser ("+browser+")."
+			if not url.lower().endswith("index.html"):
+				url = url+"/index.html"
 			# TODO: port
 			os.execv("/usr/bin/env",("/usr/bin/env",browser,url))
 #}}}
@@ -234,7 +236,7 @@ def main(argv):#{{{
 	css.close()
 
 	if url:
-		launch_browser()
+		launch_browser(url)
 	
 	if resolution>0:
 		thumbdir = gdir+"/thumbs"

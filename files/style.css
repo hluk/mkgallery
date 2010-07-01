@@ -132,7 +132,7 @@ a:visited:hover {color: #ff0;}
 
 /* help */
 #help {
-	opacity: 0;
+	display: none;
 	z-index: 3;
 	position: absolute;
 	top: 0px;
@@ -197,6 +197,6 @@ a:visited:hover {color: #ff0;}
 	display: inline;
 }
 #help.focused {
-	opacity: 1;
+	display: block;
 }
 

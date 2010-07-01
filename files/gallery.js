@@ -232,8 +232,10 @@ show: function()//{{{
         //this.e = document.createElement("img");
     //}
 
-    // redraw animated images in intervals
-    if (this.path.search(/\.gif$/i) > -1) {
+    // don't use canvas in some cases:
+    //  - GIF: redraw animated images in intervals
+    //  - Opera
+    if ( userAgent() == userAgents.opera || this.path.search(/\.gif$/i) > -1) {
         this.e = document.createElement("div");
         this.ctx = {
             drawImage: function (img,x,y,width,height) {
@@ -257,8 +259,8 @@ show: function()//{{{
     this.img.id = "img";
     this.img.src = this.path;
     this.img.onload = function () {
-        view.e.width = view.orig_width = this.naturalWidth;
-        view.e.height = view.orig_height = this.naturalHeight;
+        view.e.width = view.orig_width = this.width ? this.width : this.naturalWidth;
+        view.e.height = view.orig_height = this.height ? this.height : this.naturalHeight;
 
         view._parent.zoom();
         if ( view._parent.onUpdateStatus )
@@ -913,12 +915,14 @@ hidden: function()//{{{
 //}}}
 
 // HELPER FUNCTIONS//{{{
-userAgents = {unknown:0, webkit:1};
+userAgents = {unknown:0, webkit:1, opera:2};
 
 function userAgent() //{{{
 {
 if ( navigator.userAgent.indexOf("WebKit") != -1 )
     return userAgents.webkit;
+if ( navigator.userAgent.indexOf("Opera") != -1 )
+    return userAgents.opera;
 else
     return userAgents.unknown;
 }//}}}
