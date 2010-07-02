@@ -52,7 +52,7 @@ options:
 def walk(root):#{{{
 	if os.path.isdir(root):
 		for f in os.listdir(root):
-			for ff in walk(root+"/"+f):
+			for ff in walk(root == "." and f or root+"/"+f):
 				yield ff
 	else:
 		yield root
@@ -137,24 +137,23 @@ def prepare_gallery(d,gdir):#{{{
 #}}}
 
 def addFont(fontfile,css):#{{{
-	fontname = fontfile
-
 	try:
 		from PIL import ImageFont
 
 		font = ImageFont.truetype(fontfile,8)
 		name = font.getname()
-		fontname = name[0]+" "+name[1]+" ("+fontfile+")"
+		fontname = name[0]+" "+name[1]
 	except:
 		pass
 
-	css.write("@font-face{font-family:"+fontname_re.sub("_",fontname)+";src:url('items/"+fontfile+"');}\n")
+	css.write("@font-face{font-family:"+fontname_re.sub("_",fontfile)+";src:url('items/"+fontfile+"');}\n")
 
 	return fontname
 #}}}
 
 def prepare_html(template,itemfile,css,imgdir,files):#{{{
 	items = []
+	aliases = {}
 	# find items in files
 	for ff in files:
 		for f in walk(ff):
@@ -167,16 +166,28 @@ def prepare_html(template,itemfile,css,imgdir,files):#{{{
 				if not os.path.isdir(fdir):
 					os.makedirs(fdir)
 				os.symlink( os.path.abspath(f), fdir+"/" + os.path.basename(f) )
+
 				# if file is font: create font-face line in css
+				fontname = ""
 				if isfont:
-					f = addFont(f,css);
+					fontname = addFont(f,css);
+				# add font name
+				if fontname:
+					aliases[f] = fontname
 				items.append(f.replace("'","\\'"))
 
 	items.sort()
 	itemfile.write("var ls=[\n")
 	for item in items:
 		itemfile.write("'"+item+"',\n")
-	itemfile.write("];\nvar title = '"+title+"';");
+	itemfile.write("];\n");
+
+	itemfile.write("var title = '"+title+"';\n");
+
+	itemfile.write("var aliases={\n")
+	for f,alias in aliases.items():
+		itemfile.write("'"+f+"':'"+alias+"',\n")
+	itemfile.write("};");
 #}}}
 
 def create_thumbnails(imgdir,thumbdir,resolution):#{{{
@@ -237,7 +248,7 @@ def main(argv):#{{{
 
 	if url:
 		launch_browser(url)
-	
+
 	if resolution>0:
 		thumbdir = gdir+"/thumbs"
 		create_thumbnails(imgdir,thumbdir,resolution)

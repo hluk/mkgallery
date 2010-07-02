@@ -355,6 +355,7 @@ init: function(itempath, _parent)//{{{
     this._parent = _parent;
     this.zoom_factor = 1;
     this.font = this.path.replace(/[^a-zA-Z0-9_ ]/g,"_");
+	this.width = this.height = 0;
 },//}}}
 
 type: function ()//{{{
@@ -479,15 +480,16 @@ zoom: function (how)//{{{
 
 //! \class ItemList
 //{{{
-var ItemList = function(e,items) { this.init(e,items); };
+var ItemList = function(e,items, aliases) { this.init(e,items,aliases); };
 
 ItemList.prototype = {
-init: function (e,items)//{{{
+init: function (e,items, aliases)//{{{
 {
     this.e = e;
     if (!this.e)
         return null;
     this.ls = items;
+	this.aliases = aliases;
 
     this.e.style.display = "none";
     this.lastpos = [0,0];
@@ -563,8 +565,14 @@ appendItem: function (itemname, i)//{{{
     // item text
     var txt = document.createElement('div');
     txt.className = "itemname";
+	// item name
+	var name;
+	if (this.aliases)
+		name = this.aliases[itemname];
+	name = name ? name+" ("+itemname+")" : itemname;
     // break text ideally at characters / _ - .
-    txt.appendChild( document.createTextNode(itemname.replace(/[\.\/_-]/g,'$&\u200B')) );
+	name = name.replace(/[\.\/_-]/g,'$&\u200B');
+    txt.appendChild( document.createTextNode(name) );
     txt.style.maxWidth = getConfig('thumbnail_max_width',300) + "px";
 
     item.appendChild(ident);
@@ -782,18 +790,19 @@ init: function() {},
 
 //! \class Info
 //{{{
-var Info = function(e,counter,itemtitle,resolution,progress) {
-    this.init(e,counter,itemtitle,resolution,progress);
+var Info = function(e,counter,itemtitle,resolution,progress,aliases) {
+    this.init(e,counter,itemtitle,resolution,progress,aliases);
 };
 
 Info.prototype = {
-init: function(e,counter,itemtitle,resolution,progress)//{{{
+init: function(e,counter,itemtitle,resolution,progress,aliases)//{{{
 {
     this.e = e;
 	this.counter = counter;
 	this.itemtitle = itemtitle;
     this.resolution = resolution;
     this.progress = progress;
+	this.aliases = aliases;
 },//}}}
 
 updateCounter: function ()//{{{
@@ -864,8 +873,8 @@ updateItemTitle: function ()//{{{
 
     l = document.createElement('a');
     l.id = "link";
-	l.href = path( this.name() );
-	l.appendChild(document.createTextNode( this.name() ));
+	l.href = path( this.itempath );
+	l.appendChild( document.createTextNode(this.name()) );
 	this.itemtitle.appendChild(l);
 },//}}}
 
@@ -881,16 +890,17 @@ updateStatus: function (status_msg,class_name)//{{{
 
 name: function ()//{{{
 {
-    return this.itemname;
+	var alias = this.aliases ? this.aliases[this.href] : null;
+    return alias ? alias+" ("+this.href+")" : this.href;
 },//}}}
 
-updateInfo: function (itemname,i,len)//{{{
+updateInfo: function (href,i,len)//{{{
 {
     // image filename and path
-    this.itemname = itemname;
+    this.href = href;
     this.n = i;
     this.len = len;
-    this.itempath = encodeURIComponent( this.name() );
+    this.itempath = encodeURIComponent(this.href);
 
     this.updateCounter();
     this.updateProgress();
@@ -1195,7 +1205,7 @@ function initDragScroll ()//{{{
 
 function createItemList(e)//{{{
 {
-    itemlist = new ItemList(e,ls);
+    itemlist = new ItemList(e,ls,aliases);
     // item list is initially hidden
     if ( !itemlist && document.getElementById("itemlist") )
         document.getElementById("itemlist").style.display = "none";
@@ -1474,6 +1484,51 @@ function createConfigHelp(e)//{{{
     }
 }//}}}
 
+function createAbout(e)//{{{
+{
+	var cat = document.createElement("div");
+	cat.className = "category";
+	e.appendChild(cat);
+
+	var which = document.createElement("div");
+	which.className = "which";
+	which.innerHTML = "gallery created with";
+	cat.appendChild(which);
+
+	var desc = document.createElement("desc");
+	desc.className = "desc";
+	desc.innerHTML = "mkgallery v1.0";
+	cat.appendChild(desc);
+
+	var cat = document.createElement("div");
+	cat.className = "category";
+	e.appendChild(cat);
+
+	var which = document.createElement("div");
+	which.className = "which";
+	which.innerHTML = "author";
+	cat.appendChild(which);
+
+	var desc = document.createElement("desc");
+	desc.className = "desc";
+	desc.innerHTML = "Lukáš Holeček";
+	cat.appendChild(desc);
+
+	var cat = document.createElement("div");
+	cat.className = "category";
+	e.appendChild(cat);
+
+	var which = document.createElement("div");
+	which.className = "which";
+	which.innerHTML = "e-mail";
+	cat.appendChild(which);
+
+	var desc = document.createElement("desc");
+	desc.className = "desc";
+	desc.innerHTML = "<a href=\"mailto:hluk@email.cz\">hluk@email.cz</a>";
+	cat.appendChild(desc);
+}//}}}
+
 function createHelp(e)//{{{
 {
     var ekeys = document.getElementById("keys");
@@ -1483,6 +1538,10 @@ function createHelp(e)//{{{
     var econf = document.getElementById("options");
     if (econf)
         createConfigHelp(econf);
+
+    var eother = document.getElementById("about");
+    if (eother)
+        createAbout(eother);
 
     // disable showing item list in help mode
     addKeys(["KP5","5"], "", function() {}, modes.help);
@@ -1544,7 +1603,8 @@ function onLoad()//{{{
                 document.getElementById("counter"),
                 document.getElementById("itemtitle"),
                 document.getElementById("resolution"),
-                document.getElementById("progress"));
+                document.getElementById("progress"),
+				aliases);
     }
 
     // viewer

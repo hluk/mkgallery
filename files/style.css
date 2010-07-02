@@ -89,7 +89,7 @@ a:visited:hover {color: #ff0;}
     opacity: 1;
 }
 #counter, #resolution {color: white; font-size: 0.7em; font-weight: bold; z-index: 1;}
-#counter.last {color: #ff0;}
+#counter.last {font-size: 0.75em; text-decoration: underline;}
 #itemtitle {z-index: 1; float: left;}
 #resolution {font-size: 0.7em; font-weight: bold; display: block; text-align: left;}
 #resolution.loading {color: #fd0;}
@@ -175,7 +175,8 @@ a:visited:hover {color: #ff0;}
 	border-left: 2px solid white;
 }
 #help #keys,
-#help #options {
+#help #options,
+#help #about {
 	border-top: 2px dashed #aaa;
 }
 #help #options .which {
@@ -192,6 +193,12 @@ a:visited:hover {color: #ff0;}
 	padding-left: 2px;
 	padding-right: 2px;
 	text-align: center;
+}
+#help #about .category {
+	margin: 2em;
+}
+#help #about .which {
+	color: #8fd;
 }
 #help .desc {
 	display: inline;
