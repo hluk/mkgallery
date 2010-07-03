@@ -1,3 +1,5 @@
+mkgallery python script
+=======================
 usage: mkgallery.py [options] [directories|filenames]
 
     Creates HTML gallery containing images and fonts recursively
@@ -24,4 +26,69 @@ options:
 
     -r 0, --resolution=0    don't generate thumbnails
     -u "", --url=""         don't launch web browser
+
+
+Creating gallery manually
+=========================
+To create new gallery (without using the python script) just copy images and fonts to subdirectory "items" and edit file "items.js" and "fonts.js" (see next sections).
+
+The default HTML file ("template.html") can be modified so that gallery doesn't contain list of items, navigation elements, information label, help or even viewer.
+
+Specific options can be modified in file "config.js" or overridden in URL hash (the part after hash sign, e.g. "http://.../index.html#preload_images=5&zoom_step=0.25").
+
+The gallery appearance can be changed using default CSS files in directory "files".
+
+Directory "thumbs" contains thumbnails of images in gallery (thumbnail have same filename as the image).
+
+Default directory structure is:
+    /:
+        index.html
+        config.js
+        fonts.css
+        items.js
+
+    /files:
+        bg.png
+        bg2.png
+        bg3.png
+        favicon.png
+        gallery.js
+        style.css
+        style-list-print.css
+        style-list-simple.css
+        style-print.css
+
+    /items:
+        ...
+    /thumbs:
+        ...
+
+items.js
+--------
+In this file create array "ls" containing relative path of each file in directory "items".
+
+For example contents of file "items.js" for gallery with five PNG images is:
+    var ls = [
+        "face-smile-big.png",
+        "face-tired.png",
+        "stock_smiley-5.png",
+        "face-uncertain.png",
+        "face-angel.png",
+    ];
+
+Optional variables are "title" (title of gallery; default value is "default") and "aliases" (aliases for items).
+For example:
+    var title = "Smileys";
+    var aliases = {
+        "face-smile-big.png": "Smile!",
+        "face-uncertain.png": "Uncertain smiley",
+    };
+
+fonts.js
+--------
+This file contains definitions of CSS "font-face" for defining own fonts.
+For example:
+    @font-face{font-family:fonts_LinLibertine_Re_otf;src:url('items/fonts/LinLibertine_Re.otf');}
+
+The font name must be same as path (relative to "items" directory) to the font with all characters that are not a letter, a digit or space replaced with underscore.
 
