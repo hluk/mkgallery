@@ -1145,7 +1145,7 @@ function keyPress (e)//{{{
 		keyname = String.fromCharCode(keycode);
 
     // DEBUG:
-	//info.updateStatus(keycode+": "+keyname);
+    //info.updateStatus(keycode+": "+keyname);
 
     // try keys in this mode or modes.any
     var try_modes = [mode[mode.length-1],modes.any];
@@ -1216,29 +1216,29 @@ function createItemList(e)//{{{
     addKeys(["Enter"], "Go to selected item", function() {
             itemlist.submitSelected();
         }, modes.itemlist);
-    addKeys(["Left","KP4"], "Move cursor left", function() {
+    addKeys(["Left","KP4","4"], "Move cursor left", function() {
             itemlist.listLeft();
         }, modes.itemlist);
-    addKeys(["Right","KP6"], "Move cursor right", function() {
+    addKeys(["Right","KP6","6"], "Move cursor right", function() {
             itemlist.listRight();
         }, modes.itemlist);
-    addKeys(["Up","KP8"], "Move cursor up", function() {
+    addKeys(["Up","KP8","8"], "Move cursor up", function() {
             itemlist.listUp();
         }, modes.itemlist);
-    addKeys(["Down","KP2"], "Move cursor down", function() {
+    addKeys(["Down","KP2","2"], "Move cursor down", function() {
             itemlist.listDown();
         }, modes.itemlist);
-    addKeys(["PageUp","KP9"], "Previous page", function() {
+    addKeys(["PageUp","KP9","9"], "Previous page", function() {
             itemlist.listPageUp();
         }, modes.itemlist);
-    addKeys(["PageDown","KP3"], "Next page", function() {
+    addKeys(["PageDown","KP3","3"], "Next page", function() {
             itemlist.listPageDown();
         }, modes.itemlist);
-    addKeys(["End","KP1"], "Move cursor on last thumbnail", function() {
+    addKeys(["End","KP1","1"], "Move cursor on last thumbnail", function() {
             itemlist.selectItem(itemlist.size()-1);
             itemlist.ensureCurrentVisible();
         }, modes.itemlist);
-    addKeys(["Home","KP7"], "Move cursor on first thumbnail", function() {
+    addKeys(["Home","KP7","7"], "Move cursor on first thumbnail", function() {
             itemlist.selectItem(0);
             itemlist.ensureCurrentVisible();
         }, modes.itemlist);

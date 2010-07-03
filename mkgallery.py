@@ -11,10 +11,20 @@ url = "http://127.0.0.1:8080/galleries/%s" # browser url
 d = os.path.dirname(sys.argv[0]) # path to template
 gdir = d + "/galleries/%s";
 progress_len = 40 # progress bar length
+create_liks = True; # create symbolic links instead of copy
+cp = os.symlink
+force = False
 
 img_fmt  = re.compile('(jpg|png|gif|svg)$',re.I)
 font_fmt = re.compile('(otf|ttf)$',re.I)
 fontname_re = re.compile('[^a-zA-Z0-9_ ]')
+
+def copy(src, dest):#{{{
+	if os.path.isdir(src):
+		shutil.copytree( src, dest )
+	else:
+		shutil.copyfile( src, dest )
+#}}}
 
 def usage():#{{{
 	global title, resolution, gdir, url, d
@@ -42,6 +52,8 @@ options:
                               (default: '%s')
     --template=<dir>        path to template html and support files
                               (default: '%s')
+    -c, --copy              copy files instead of creating symbolic links
+	-f, --force             overwrites existing gallery
 
     -r 0, --resolution=0    don't generate thumbnails
     -u "", --url=""         don't launch web browser
@@ -70,11 +82,11 @@ def launch_browser(url):#{{{
 #}}}
 
 def parse_args(argv):#{{{
-	global title, resolution, gdir, url, d
+	global title, resolution, gdir, url, d, create_links, cp, force
 
 	try:
-		opts, args = getopt.getopt(argv[1:], "ht:r:d:u:",
-				["help", "title=", "resolution=", "directory=", "url=","template="])
+		opts, args = getopt.getopt(argv[1:], "ht:r:d:u:cf",
+				["help", "title=", "resolution=", "directory=", "url=","template=","copy","force"])
 	except getopt.GetoptError:
 		usage()
 		sys.exit(2)
@@ -96,16 +108,20 @@ def parse_args(argv):#{{{
 				resolution = int(arg)
 			except:
 				exit("ERROR: Resolution must be single number!")
+		elif opt in ("-c", "--copy"):
+			cp = copy
+		elif opt in ("-f", "--force"):
+			force = True
 
 	try:    gdir = gdir % title
 	except: pass
 	try:    url = url % title
 	except: pass
 
-	return (args and args or ["."]),title,resolution,gdir,url,d
+	return (args and args or ["."]),title,resolution,gdir,url,d,force
 #}}}
 
-def prepare_gallery(d,gdir):#{{{
+def prepare_gallery(d,gdir,force):#{{{
 	try:
 		if not os.path.isdir(gdir):
 			os.makedirs(gdir)
@@ -115,21 +131,25 @@ def prepare_gallery(d,gdir):#{{{
 				d+"/template.html":gdir+"/index.html"
 				}
 		for f,link in links.iteritems():
-			if os.path.islink(link):
+			if os.path.isfile(link) or os.path.islink(link):
 				os.remove(link)
-			os.symlink( f, link )
+			elif os.path.isdir(link):
+				for ff in walk(link):
+					print ff
+					os.remove(ff)
+				os.rmdir(link)
+			cp( f, link )
 
 		# clean items directory
 		itemdir = gdir+"/items"
 		if os.path.isdir(itemdir):
 			for f in walk(itemdir):
 				# TODO: port
-				if os.path.islink(f):
-					os.remove(f)
-				else:
-					exit("ERROR: directory "+itemdir+" already contains files that aren't symbolic links ("+f+")!")
-		else:
-			os.mkdir(itemdir)
+				if not (os.path.islink(f) or force):
+					exit("ERROR: directory "+itemdir+" already contains files that aren't symbolic links ("+f+")!\n"+
+						 "       Use -f (--force) to remove all files.")
+			shutil.rmtree(itemdir)
+		os.mkdir(itemdir)
 
 		shutil.copyfile(d+"/config.js", gdir+"/config.js")
 	except:
@@ -165,7 +185,7 @@ def prepare_html(template,itemfile,css,imgdir,files):#{{{
 				fdir = imgdir+"/"+os.path.dirname(f)
 				if not os.path.isdir(fdir):
 					os.makedirs(fdir)
-				os.symlink( os.path.abspath(f), fdir+"/" + os.path.basename(f) )
+				cp( os.path.abspath(f), fdir+"/" + os.path.basename(f) )
 
 				# if file is font: create font-face line in css
 				fontname = ""
@@ -231,9 +251,9 @@ def create_thumbnails(imgdir,thumbdir,resolution):#{{{
 def main(argv):#{{{
 	global img_fmt, font_fmt, fontname_re
 
-	files,title,resolution,gdir,url,d = parse_args(argv)
+	files,title,resolution,gdir,url,d,force = parse_args(argv)
 
-	prepare_gallery(d,gdir)
+	prepare_gallery(d,gdir,force)
 
 	template = open( d+"/template.html", "r" );
 	itemfile = open( gdir+"/items.js", "w" )
