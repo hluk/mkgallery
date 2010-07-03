@@ -15,6 +15,9 @@ create_liks = True; # create symbolic links instead of copy
 cp = os.symlink
 force = False
 
+rmerror = "ERROR: Existing gallery contains files that aren't symbolic links!\n"+\
+          "       Use -f (--force) to remove all files."
+
 img_fmt  = re.compile('(jpg|png|gif|svg)$',re.I)
 font_fmt = re.compile('(otf|ttf)$',re.I)
 fontname_re = re.compile('[^a-zA-Z0-9_ ]')
@@ -122,6 +125,7 @@ def parse_args(argv):#{{{
 #}}}
 
 def prepare_gallery(d,gdir,force):#{{{
+	global rmerror
 	try:
 		if not os.path.isdir(gdir):
 			os.makedirs(gdir)
@@ -131,13 +135,13 @@ def prepare_gallery(d,gdir,force):#{{{
 				d+"/template.html":gdir+"/index.html"
 				}
 		for f,link in links.iteritems():
-			if os.path.isfile(link) or os.path.islink(link):
+			if os.path.islink(link):
 				os.remove(link)
 			elif os.path.isdir(link):
-				for ff in walk(link):
-					print ff
-					os.remove(ff)
-				os.rmdir(link)
+				if force:
+					shutil.rmtree(link)
+				else:
+					exit(rmerror)
 			cp( f, link )
 
 		# clean items directory
@@ -146,8 +150,7 @@ def prepare_gallery(d,gdir,force):#{{{
 			for f in walk(itemdir):
 				# TODO: port
 				if not (os.path.islink(f) or force):
-					exit("ERROR: directory "+itemdir+" already contains files that aren't symbolic links ("+f+")!\n"+
-						 "       Use -f (--force) to remove all files.")
+					exit(rmerror)
 			shutil.rmtree(itemdir)
 		os.mkdir(itemdir)
 
@@ -171,11 +174,11 @@ def addFont(fontfile,css):#{{{
 	return fontname
 #}}}
 
-def prepare_html(template,itemfile,css,imgdir,files):#{{{
+def prepare_html(template,itemfile,css,imgdir,files_dir):#{{{
 	items = []
 	aliases = {}
-	# find items in files
-	for ff in files:
+	# find items in "files" directory
+	for ff in files_dir:
 		for f in walk(ff):
 			isimg = isfont = False
 			isimg = img_fmt.search(f) != None
@@ -251,7 +254,7 @@ def create_thumbnails(imgdir,thumbdir,resolution):#{{{
 def main(argv):#{{{
 	global img_fmt, font_fmt, fontname_re
 
-	files,title,resolution,gdir,url,d,force = parse_args(argv)
+	files_dir,title,resolution,gdir,url,d,force = parse_args(argv)
 
 	prepare_gallery(d,gdir,force)
 
@@ -260,7 +263,7 @@ def main(argv):#{{{
 	css = open( gdir+"/fonts.css", "w" )
 	imgdir = gdir+"/items"
 
-	prepare_html(template,itemfile,css,imgdir,files)
+	prepare_html(template,itemfile,css,imgdir,files_dir)
 
 	template.close()
 	itemfile.close()
@@ -269,9 +272,11 @@ def main(argv):#{{{
 	if url:
 		launch_browser(url)
 
+	thumbdir = gdir+"/thumbs"
 	if resolution>0:
-		thumbdir = gdir+"/thumbs"
 		create_thumbnails(imgdir,thumbdir,resolution)
+	elif os.path.isdir(thumbdir):
+		shutil.rmtree(thumbdir)
 
 	print("New gallery was created in: '"+gdir+"'")
 #}}}
