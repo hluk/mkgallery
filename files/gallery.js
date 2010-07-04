@@ -1144,7 +1144,7 @@ function keyPress (e)//{{{
     if ( !keyname )
 		keyname = String.fromCharCode(keycode);
 
-    // DEBUG:
+    //DEBUG:
     //info.updateStatus(keycode+": "+keyname);
 
     // try keys in this mode or modes.any
@@ -1293,8 +1293,8 @@ function createViewer(e,info)//{{{
             if ( n != len )
                 go(n+5);
         }, modes.viewer);
-    addKeys(["KP4","4","K"], "Next", prev, modes.viewer);
-    addKeys(["KP6","6","Enter","J"], "Previous", next, modes.viewer);
+    addKeys(["KP4","4","K","k"], "Next", prev, modes.viewer);
+    addKeys(["KP6","6","Enter","J","k"], "Previous", next, modes.viewer);
     addKeys(["KP7","7"], "Browse to first gallery item", function() {
             if ( n != 1 )
                 go(1);
@@ -1347,8 +1347,8 @@ function createNavigation (enext, eprev, elist)//{{{
 
     initDragScroll();
 
-    addKeys(["?","H"], "Show this help", toggleHelp);
-    addKeys(["Escape","?","H"], "Hide help", function() {
+    addKeys(["?","H","h"], "Show this help", toggleHelp);
+    addKeys(["Escape","?","H","h"], "Hide help", function() {
             toggleHelp(true);
             }, modes.help);
     addKeys(["Left"], "Move window left/Previous gallery item", function () {

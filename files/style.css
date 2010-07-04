@@ -74,7 +74,7 @@ a:visited:hover {color: #ff0;}
     top: 0px;
     left: 0px;
     text-shadow: black 1px 1px 1px;
-    z-index: 1;
+    z-index: 2;
 
     /* box */
     /*background-color: rgba(255,255,255,0.5);*/
@@ -105,6 +105,7 @@ a:visited:hover {color: #ff0;}
 }
 #next, #prev, #list {
     opacity: 0;
+    display: block;
     color: white;
     font-family: font-family-457-1, font-family-457-2, Aller Display;
 	font-weight: bold;
