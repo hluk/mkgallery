@@ -7,10 +7,9 @@ import os, sys, re, getopt, shutil, glob
 # default values:
 title="default" # html title and gallery directory name
 resolution = 300 # thumbnail resolution
-#url = "http://127.0.0.1:8080/galleries/%s" # browser url
 d = os.path.dirname(sys.argv[0]) # path to template
-gdir = d + "/galleries/%s";
-url = "file:///"+gdir+"/index.html" # browser url
+gdir = d + "/galleries/%s"; # path to gallery
+url = "file:///<path_to_gallery>/index.html" # browser url
 progress_len = 40 # progress bar length
 create_liks = True; # create symbolic links instead of copy
 cp = os.symlink
@@ -46,16 +45,16 @@ usage: %s [options] [directories|filenames]
 
 options:
     -h, --help              prints this help
-    -t, --title=<title>     gallery title and directory name
+    -t, --title=<title>     gallery title
                               (default: '%s')
-    -r, --resolution=<res>  resolution for thumbnails in pixels
-                              (default: %s)
-    -d, --directory=<dir>   gallery is saved (%%s is replaced by <title>)
-                              (default: '%s')
-    -u, --url=<url>         url location for web browser (%%s is replaced by <title>)
+    -d, --directory=<dir>   path to gallery (%%s is replaced by <title>)
                               (default: '%s')
     --template=<dir>        path to template html and support files
                               (default: '%s')
+    -u, --url=<url>         url location for web browser (%%s is replaced by <title>)
+                              (default: '%s')
+    -r, --resolution=<res>  resolution for thumbnails in pixels
+                              (default: %s)
     -c, --copy              copy files instead of creating symbolic links
 	-f, --force             overwrites existing gallery
 
@@ -95,6 +94,7 @@ def parse_args(argv):#{{{
 		usage()
 		sys.exit(2)
 
+	newurl = ""
 	for opt, arg in opts:
 		if opt in ("-h", "--help"):
 			usage()
@@ -104,7 +104,7 @@ def parse_args(argv):#{{{
 		elif opt in ("-d", "--directory"):
 			gdir = arg
 		elif opt in ("-u", "--url"):
-			url = arg
+			newurl = arg
 		elif opt == "--template":
 			d = arg
 		elif opt in ("-r", "--resolution"):
@@ -119,6 +119,9 @@ def parse_args(argv):#{{{
 
 	try:    gdir = gdir % title
 	except: pass
+
+	url = newurl and newurl or "file://"+ os.path.abspath(gdir) + "/index.html"
+
 	try:    url = url % title
 	except: pass
 
@@ -175,12 +178,19 @@ def addFont(fontfile,css):#{{{
 	return fontname
 #}}}
 
-def prepare_html(template,itemfile,css,imgdir,files_dir):#{{{
+def prepare_html(template,itemfile,css,gdir,files):#{{{
 	items = []
 	aliases = {}
+	imgdir = gdir+"/items"
+	abs_gdir = os.path.abspath(gdir)
+
 	# find items in "files" directory
-	for ff in files_dir:
+	for ff in files:
 		for f in walk(ff):
+			abs_f = os.path.abspath(f)
+			# ignore gallery directory
+			if abs_f.startswith(abs_gdir):
+				continue
 			isimg = isfont = False
 			isimg = img_fmt.search(f) != None
 			if not isimg:
@@ -189,7 +199,7 @@ def prepare_html(template,itemfile,css,imgdir,files_dir):#{{{
 				fdir = imgdir+"/"+os.path.dirname(f)
 				if not os.path.isdir(fdir):
 					os.makedirs(fdir)
-				cp( os.path.abspath(f), fdir+"/" + os.path.basename(f) )
+				cp( abs_f, fdir+"/" + os.path.basename(f) )
 
 				# if file is font: create font-face line in css
 				fontname = ""
@@ -255,16 +265,15 @@ def create_thumbnails(imgdir,thumbdir,resolution):#{{{
 def main(argv):#{{{
 	global img_fmt, font_fmt, fontname_re
 
-	files_dir,title,resolution,gdir,url,d,force = parse_args(argv)
+	files,title,resolution,gdir,url,d,force = parse_args(argv)
 
 	prepare_gallery(d,gdir,force)
 
 	template = open( d+"/template.html", "r" );
 	itemfile = open( gdir+"/items.js", "w" )
 	css = open( gdir+"/fonts.css", "w" )
-	imgdir = gdir+"/items"
 
-	prepare_html(template,itemfile,css,imgdir,files_dir)
+	prepare_html(template,itemfile,css,gdir,files)
 
 	template.close()
 	itemfile.close()
@@ -274,10 +283,10 @@ def main(argv):#{{{
 		launch_browser(url)
 
 	thumbdir = gdir+"/thumbs"
-	if resolution>0:
-		create_thumbnails(imgdir,thumbdir,resolution)
-	elif os.path.isdir(thumbdir):
+	if os.path.isdir(thumbdir):
 		shutil.rmtree(thumbdir)
+	if resolution>0:
+		create_thumbnails(gdir+"/items",thumbdir,resolution)
 
 	print("New gallery was created in: '"+gdir+"'")
 #}}}
