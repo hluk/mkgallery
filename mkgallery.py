@@ -12,8 +12,8 @@ gdir = d + "/galleries/%s"; # path to gallery
 url = "file:///<path_to_gallery>/index.html" # browser url
 progress_len = 40 # progress bar length
 create_liks = True; # create symbolic links instead of copy
-cp = os.symlink
-force = False
+cp = os.symlink # default is create symbolic links
+force = False # don't delete files
 
 rmerror = "ERROR: Existing gallery contains files that aren't symbolic links!\n"+\
           "       Use -f (--force) to remove all files."

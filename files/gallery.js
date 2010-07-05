@@ -565,15 +565,25 @@ appendItem: function (itemname, i)//{{{
     // item text
     var txt = document.createElement('div');
     txt.className = "itemname";
-	// item name
-	var name;
-	if (this.aliases)
-		name = this.aliases[itemname];
-	name = name ? name+" ("+itemname+")" : itemname;
-    // break text ideally at characters / _ - .
-	name = name.replace(/[\.\/_-]/g,'$&\u200B');
-    txt.appendChild( document.createTextNode(name) );
     txt.style.maxWidth = getConfig('thumbnail_max_width',300) + "px";
+
+	// item alias
+	if (this.aliases) {
+		var alias = this.aliases[itemname];
+		if (alias) {
+			var e_alias = document.createElement('div');
+			e_alias.className = "alias";
+			e_alias.appendChild( document.createTextNode(alias) );
+			txt.appendChild(e_alias);
+		}
+	}
+
+	// filename
+    var filename = document.createElement('div');
+    filename.className = "filename";
+	// break filename ideally at characters / _ - .
+    filename.appendChild( document.createTextNode(itemname.replace(/[\.\/_-]/g,'$&\u200B')) );
+    txt.appendChild(filename);
 
     item.appendChild(ident);
     item.appendChild(txt);
@@ -874,7 +884,24 @@ updateItemTitle: function ()//{{{
     l = document.createElement('a');
     l.id = "link";
 	l.href = path( this.itempath );
-	l.appendChild( document.createTextNode(this.name()) );
+
+	if (this.aliases) {
+		var alias = this.aliases[this.href];
+		if (alias) {
+			var e_alias = document.createElement('div');
+			e_alias.className = "alias";
+			e_alias.appendChild( document.createTextNode(alias) );
+			l.appendChild(e_alias);
+		}
+	}
+
+	// filename
+    var filename = document.createElement('div');
+    filename.className = "filename";
+	// break filename ideally at characters / _ - .
+    filename.appendChild( document.createTextNode(this.href.replace(/[\.\/_-]/g,'$&\u200B')) );
+
+	l.appendChild( filename );
 	this.itemtitle.appendChild(l);
 },//}}}
 
