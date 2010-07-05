@@ -42,13 +42,6 @@
     background-color: black;
 }
 .itemname {
-    /* wrap long filename */
-    white-space: pre-wrap; /* css-3 */
-    white-space: -moz-pre-wrap !important; /* Mozilla, since 1999 */
-    white-space: -pre-wrap; /* Opera 4-6 */
-    white-space: -o-pre-wrap; /* Opera 7 */
-    word-wrap: break-word; /* Internet Explorer 5.5+ */
-
     margin: 0.5em;
     overflow: hidden;
     text-align: center;
@@ -58,9 +51,14 @@
     z-index: 2;
 }
 .itemname .alias,
+.itemname .path,
+.itemname .directory,
 .itemname .filename {color: inherit;}
 .itemname .alias {font-size: inherit; color: #fe9 !important;}
-.itemname .filename { font-size: 0.9em; font-family: DejaVu Sans Mono, Inconsolata, Consolas, monospace; }
+.itemname .directory,
+.itemname .filename {font-family: monospace;}
+.itemname .directory {font-size: 0.7em; opacity: 0.7;}
+.itemname .filename {font-size: 0.8em;}
 #selected .itemname {
     color: black;
 }

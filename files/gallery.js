@@ -579,11 +579,8 @@ appendItem: function (itemname, i)//{{{
 	}
 
 	// filename
-    var filename = document.createElement('div');
-    filename.className = "filename";
-	// break filename ideally at characters / _ - .
-    filename.appendChild( document.createTextNode(itemname.replace(/[\.\/_-]/g,'$&\u200B')) );
-    txt.appendChild(filename);
+	var e = newPathElement(itemname);
+    txt.appendChild(e);
 
     item.appendChild(ident);
     item.appendChild(txt);
@@ -896,12 +893,9 @@ updateItemTitle: function ()//{{{
 	}
 
 	// filename
-    var filename = document.createElement('div');
-    filename.className = "filename";
-	// break filename ideally at characters / _ - .
-    filename.appendChild( document.createTextNode(this.href.replace(/[\.\/_-]/g,'$&\u200B')) );
+	var e = newPathElement(this.href);
+	l.appendChild(e);
 
-	l.appendChild( filename );
 	this.itemtitle.appendChild(l);
 },//}}}
 
@@ -975,6 +969,32 @@ function getConfig (i,d)//{{{
 function path (filename)//{{{
 {
     return "items/" + filename;
+}//}}}
+
+function breakText(text) {//{{{
+	// break filename ideally at characters / _ - .
+	return text.replace(/[\.\/_-]/g,'$&\u200B');
+}//}}}
+
+function newPathElement(path) {//{{{
+    var e = document.createElement('div');
+    e.className = "path";
+
+	var p = path.match(/(.*)[\/|\\]([^\\\/]+)$/);
+
+	if (p) {
+		var dir = document.createElement('div');
+		dir.className = "directory";
+		dir.appendChild( document.createTextNode(breakText(p[1])) );
+		e.appendChild(dir);
+	}
+
+    var filename = document.createElement('div');
+    filename.className = "filename";
+    filename.appendChild( document.createTextNode(breakText(p ? p[2] : path)) );
+	e.appendChild(filename);
+
+	return e;
 }//}}}
 
 function getPage (i)//{{{

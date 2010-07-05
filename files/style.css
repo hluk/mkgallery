@@ -4,8 +4,8 @@
  *  FF Dax Compact: 457
  *  FF Masala: 460
  */
-@import url('http://typekit.com/css/a/default/all/579.css');
-@import url('http://typekit.com/css/a/default/all/457.css');
+/*@import url('http://typekit.com/css/a/default/all/579.css');*/
+/*@import url('http://typekit.com/css/a/default/all/457.css');*/
 
 /* item list style */
 @import url('style-list-simple.css');
@@ -16,7 +16,8 @@
 
 * {
     margin: 0;
-    font-family: font-family-579-1, font-family-579-2, Aller, Verdana, Arial, Helvetica;
+    /*font-family: font-family-579-1, font-family-579-2, Aller, Verdana, Arial, Helvetica;*/
+    font-family: sans-serif;
     font-size: 12pt;
     color: #ddd;
 }
@@ -32,7 +33,8 @@ body {
 }
 
 h1, h2, h3 {
-    font-family: font-family-457-1, font-family-457-2, Aller Display;*/;
+    /*font-family: font-family-457-1, font-family-457-2, Aller Display;*/
+    font-family: sans-serif;
 }
 h1 {
 	font-size: 3em;
@@ -86,8 +88,14 @@ textarea {
 #counter.last {font-size: 0.75em; text-decoration: underline;}
 #itemtitle {z-index: 1; float: left; text-align: left;}
 #itemtitle .alias,
+#itemtitle .path,
 #itemtitle .filename {color: inherit;}
-#itemtitle .filename { font-size: 0.8em; font-family: DejaVu Sans Mono, Inconsolata, Consolas, monospace; }
+#itemtitle .directory,
+#itemtitle .filename {
+	font-family: monospace;
+}
+#itemtitle .directory {font-size: 0.7em; color: #aaa;}
+#itemtitle .filename {font-size: 0.9em;}
 #resolution {font-size: 0.7em; font-weight: bold; display: block; text-align: left;}
 #resolution.loading {color: #fd0;}
 #resolution.error   {color: #faa;}
@@ -102,7 +110,8 @@ textarea {
     opacity: 0;
     display: block;
     color: white;
-    font-family: font-family-457-1, font-family-457-2, Aller Display;
+    /*font-family: font-family-457-1, font-family-457-2, Aller Display;*/
+    font-family: sans-serif;
 	font-weight: bold;
     font-size: 20pt;
     text-shadow: black 0px 0px 0.5em;
@@ -180,7 +189,8 @@ textarea {
 	display: inline-block;
 	color: yellow;
 	font-weight: bold;
-    font-family: DejaVu Sans Mono, Inconsolata, Consolas, monospace;
+    /*font-family: DejaVu Sans Mono, Inconsolata, Consolas, monospace;*/
+    font-family: monospace;
 	text-align: right;
 	font-size: 0.75em;
 
