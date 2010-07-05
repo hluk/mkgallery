@@ -7,9 +7,10 @@ import os, sys, re, getopt, shutil, glob
 # default values:
 title="default" # html title and gallery directory name
 resolution = 300 # thumbnail resolution
-url = "http://127.0.0.1:8080/galleries/%s" # browser url
+#url = "http://127.0.0.1:8080/galleries/%s" # browser url
 d = os.path.dirname(sys.argv[0]) # path to template
 gdir = d + "/galleries/%s";
+url = "file:///"+gdir+"/index.html" # browser url
 progress_len = 40 # progress bar length
 create_liks = True; # create symbolic links instead of copy
 cp = os.symlink

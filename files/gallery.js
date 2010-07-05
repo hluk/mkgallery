@@ -257,7 +257,7 @@ show: function()//{{{
 
     this.img = document.createElement("img");
     this.img.id = "img";
-    this.img.src = this.path;
+    this.img.src = escape(this.path);
     this.img.onload = function () {
         view.e.width = view.orig_width = this.width ? this.width : this.naturalWidth;
         view.e.height = view.orig_height = this.height ? this.height : this.naturalHeight;
@@ -287,9 +287,9 @@ thumbnail: function()//{{{
     var thumbpath = "thumbs/" + this.path.replace(/^.*[\/\\]/,'') + ".png";
 
     this.thumb = document.createElement("img");
-    this.thumb.src = thumbpath;
+    this.thumb.src = escape(thumbpath);
     this.thumb.className = "thumbnail " + this.type();
-    this.thumb.src = thumbpath;
+    this.thumb.src = escape(thumbpath);
 
     var view = this;
     this.thumb.onerror = this.thumb.onload = function () { view._parent.thumbnailOnLoad(view); };
@@ -369,7 +369,7 @@ show: function()//{{{
         return;
 
     this.e = document.createElement("div");
-    this.e.src = this.path;
+    this.e.src = escape(this.path);
     this.e.className = "fontview";
     this.e.name = "view";
 
@@ -900,7 +900,7 @@ updateInfo: function (href,i,len)//{{{
     this.href = href;
     this.n = i;
     this.len = len;
-    this.itempath = encodeURIComponent(this.href);
+    this.itempath = escape(this.href);
 
     this.updateCounter();
     this.updateProgress();
@@ -1066,7 +1066,7 @@ function preloadImages()//{{{
 
             // create image
             im = new Image();
-            im.src = filename;
+            im.src = escape(filename);
 
             // since we access the disk (read the image) we can also
             // change the url - browser saves history
