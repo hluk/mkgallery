@@ -3,11 +3,11 @@
 Creates web gallery of images and fonts present in current directory
 """
 import os, sys, re, getopt, shutil, glob
-
 # default values:
 title="default" # html title and gallery directory name
 resolution = 300 # thumbnail resolution
 d = os.path.dirname(sys.argv[0]) # path to template
+if not d: d = "."
 gdir = d + "/galleries/%s"; # path to gallery
 url = "file:///<path_to_gallery>/index.html" # browser url
 progress_len = 40 # progress bar length
@@ -31,7 +31,7 @@ def copy(src, dest):#{{{
 
 def usage():#{{{
 	global title, resolution, gdir, url, d
-	print """\
+	print ( """\
 usage: %s [options] [directories|filenames]
 
     Creates HTML gallery containing images and fonts recursively
@@ -60,8 +60,7 @@ options:
 
     -r 0, --resolution=0    don't generate thumbnails
     -u "", --url=""         don't launch web browser
-"""\
-			% (sys.argv[0], title, resolution, gdir, url, d)
+"""	% (sys.argv[0], title, resolution, gdir, url, d) )
 #}}}
 
 def walk(root):#{{{
@@ -74,14 +73,16 @@ def walk(root):#{{{
 #}}}
 
 def launch_browser(url):#{{{
-	if os.environ.has_key('BROWSER'):
+	try:
 		if os.fork() == 0:
 			browser = os.environ['BROWSER']
-			print "Lauching web browser ("+browser+")."
+			print("Lauching web browser ("+browser+").")
 			if not url.lower().endswith("index.html"):
 				url = url+"/index.html"
 			# TODO: port
 			os.execv("/usr/bin/env",("/usr/bin/env",browser,url))
+	except:
+		pass
 #}}}
 
 def parse_args(argv):#{{{
@@ -138,7 +139,8 @@ def prepare_gallery(d,gdir,force):#{{{
 				d+"/files":gdir+"/files",
 				d+"/template.html":gdir+"/index.html"
 				}
-		for f,link in links.iteritems():
+		for f in links:
+			link = links[f]
 			if os.path.islink(link):
 				os.remove(link)
 			elif os.path.isdir(link):
@@ -164,13 +166,15 @@ def prepare_gallery(d,gdir,force):#{{{
 #}}}
 
 def addFont(fontfile,css):#{{{
+	fontname = None
+
 	try:
 		from PIL import ImageFont
 
 		font = ImageFont.truetype(fontfile,8)
 		name = font.getname()
 		fontname = name[0]+" "+name[1]
-	except:
+	except ImportError:
 		pass
 
 	css.write("@font-face{font-family:"+fontname_re.sub("_",fontfile)+";src:url('items/"+fontfile+"');}\n")
@@ -213,21 +217,20 @@ def prepare_html(template,itemfile,css,gdir,files):#{{{
 	items.sort()
 	itemfile.write("var ls=[\n")
 	for item in items:
-		itemfile.write("'"+item+"',\n")
+		itemfile.write('"'+item.replace('\\','\\\\').replace('"','\\"')+'",\n')
 	itemfile.write("];\n");
 
-	itemfile.write("var title = '"+title+"';\n");
+	itemfile.write('var title = "'+title+'";\n');
 
 	itemfile.write("var aliases={\n")
 	for f,alias in aliases.items():
-		itemfile.write("'"+f+"':'"+alias+"',\n")
+		itemfile.write('"'+f+'":"'+alias.replace('\\','\\\\').replace('"','\\"')+'",\n')
 	itemfile.write("};");
 #}}}
 
 def create_thumbnails(imgdir,thumbdir,resolution):#{{{
 	try:
-		if os.path.isdir(thumbdir):
-			shutil.rmtree(thumbdir)
+		from PIL import Image
 
 		images = []
 		for f in walk(imgdir):
@@ -236,8 +239,6 @@ def create_thumbnails(imgdir,thumbdir,resolution):#{{{
 
 		n = len(images)
 		if n == 0: return
-
-		from PIL import Image
 
 		os.makedirs(thumbdir)
 
@@ -257,7 +258,7 @@ def create_thumbnails(imgdir,thumbdir,resolution):#{{{
 			sys.stdout.flush()
 
 		print("Thumbnails successfully generated.")
-	except:
+	except ImportError:
 		print("Warning: Generating thumbnails was unsuccessfull!")
 		raise
 #}}}

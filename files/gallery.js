@@ -263,8 +263,6 @@ show: function()//{{{
         view.e.height = view.orig_height = this.height ? this.height : this.naturalHeight;
 
         view._parent.zoom();
-        if ( view._parent.onUpdateStatus )
-            view._parent.onUpdateStatus(view.orig_width+"x"+view.orig_height);
         if ( view._parent.onLoad )
             view._parent.onLoad();
     };
@@ -337,6 +335,10 @@ zoom: function (how)//{{{
     this.height = this.e.height = h*z;
     this.ctx.drawImage(this.img,0,0,this.width,this.height);
     this.zoom_factor = z;
+
+    if ( this._parent.onUpdateStatus )
+        this._parent.onUpdateStatus( this.orig_width+"x"+this.orig_height+
+                (z==1 ? "" : " ["+(Math.floor(z*100))+"%]") );
 
     this._parent.zoomChanged(how,this.zoom_factor);
 },//}}}
@@ -980,7 +982,8 @@ function newPathElement(path) {//{{{
     var e = document.createElement('div');
     e.className = "path";
 
-	var p = path.match(/(.*)[\/|\\]([^\\\/]+)$/);
+	// TODO: "dir1/dir2/a\\b.png" etc.
+	var p = path.match(/(.*)[\/\\](.*)/);
 
 	if (p) {
 		var dir = document.createElement('div');

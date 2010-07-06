@@ -62,6 +62,7 @@
 #selected .itemname {
     color: black;
 }
+.itemname .alias {margin-bottom: 0.3em;}
 #selected .itemname .alias {color: white !important;}
 #selection {
     position: absolute;
