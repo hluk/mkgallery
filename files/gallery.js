@@ -103,6 +103,8 @@ zoomChanged: function (zoom_state,zoom_factor)//{{{
     // center item in window
     var newtop = ( window.innerHeight - this.view.height )/2;
     this.e.style.top = (newtop > 0 ? newtop : 0) + "px";
+    var newleft = ( window.innerWidth - this.view.width )/2;
+    this.e.style.left = (newleft > 0 ? newleft : 0) + "px";
 
     if ( this.zoom_state != z ) {
         this.zoom_state = z;
@@ -251,6 +253,7 @@ show: function()//{{{
         this.e = document.createElement("canvas");
         this.ctx = this.e.getContext('2d');
     }
+    this.e.style.display = "block";
     this.e.className = "imageview";
     this.e.name = "view";
     this._parent.append(this.e);
@@ -379,6 +382,7 @@ show: function()//{{{
 
     this._parent.e.style.width = "100%";
     this._parent.e.style.height = "100%";
+    this.e.style.display = "block";
     this.e.style.width = "80%";
     this.e.style.height = "80%";
     this.ee.style.width = "100%";
@@ -473,6 +477,7 @@ zoom: function (how)//{{{
     this.zoom_factor = z;
 
     this._parent.zoomChanged(how,this.zoom_factor);
+    this._parent.e.style.left = "0px";
 
     if ( this._parent.onUpdateStatus )
         this._parent.onUpdateStatus(this.ee.style.fontSize);

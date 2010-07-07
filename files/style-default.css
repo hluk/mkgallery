@@ -1,0 +1,38 @@
+/* typekit:
+ *  Museo: 579
+ *  Fertigo: 586
+ *  FF Dax Compact: 457
+ *  FF Masala: 460
+ */
+/*@import url('http://typekit.com/css/a/default/all/579.css');*/
+/*@import url('http://typekit.com/css/a/default/all/457.css');*/
+
+* {
+    margin: 0px;
+    /*font-family: font-family-579-1, font-family-579-2, Aller, Verdana, Arial, Helvetica;*/
+    font-family: sans-serif;
+    font-size: 12pt;
+    color: #ddd;
+}
+
+html,body {height: 100%;}
+
+body {
+    text-align: center;
+    /*background-color: #222;*/
+    /*www.tartanmaker.com www.stripegenerator.com http://squidfingers.com/patterns/*/
+    background-image: url('bg3.png');
+    background-repeat: repeat;
+}
+
+a {color: #7bf; text-decoration: none; font-weight: bold;}
+a:hover {color: #ff0;}
+a:visited {color: #7bf;}
+a:visited:hover {color: #ff0;}
+
+/* viewer */
+#canvas {position: relative;/* view can be in the middle */}
+.imageview {}
+.fontview {width: 80%; margin: auto;}
+textarea {z-index: 3;/* on top -- always focusable */}
+

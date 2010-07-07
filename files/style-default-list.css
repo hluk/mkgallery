@@ -57,11 +57,10 @@
 .itemname .alias {font-size: inherit; color: #fe9 !important;}
 .itemname .directory,
 .itemname .filename {font-family: monospace;}
-.itemname .directory {font-size: 0.7em; opacity: 0.7;}
+.itemname .directory {font-size: 0.7em; color: #888;}
 .itemname .filename {font-size: 0.8em;}
-#selected .itemname {
-    color: black;
-}
+#selected .directory {color: #333;}
+#selected .itemname {color: black;}
 .itemname .alias {margin-bottom: 0.3em;}
 #selected .itemname .alias {color: white !important;}
 #selection {

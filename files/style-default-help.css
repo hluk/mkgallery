@@ -1,0 +1,91 @@
+h1, h2, h3 {
+    /*font-family: font-family-457-1, font-family-457-2, Aller Display;*/
+    font-family: sans-serif;
+}
+h1 {
+	font-size: 2.5em;
+	color: white;
+}
+h2 {
+	font-size: 2em;
+	color: #ddd;
+    float: left;
+    margin: 1em;
+}
+h3 {
+	font-size: 1.2em;
+	color: #bbb;
+	border-bottom: 2px solid #bbb;
+}
+
+#help {
+	display: none;
+	z-index: 3; /* on top */
+
+	position: absolute;
+	top: 0px;
+	left: 0px;
+	width: 80%;
+	margin: 10%;
+	margin-top: 2%;
+
+	background: rgba(0,0,0,0.7);
+	-moz-border-radius: 20px;
+	-webkit-border-radius: 20px;
+}
+#help.focused {display: block;}
+#help .category {
+	text-align: left;
+    display: inline-block;
+	padding: 1em;
+}
+#help .key {}
+#help #keys .which {
+	display: inline;
+	display: inline-block;
+
+	font-weight: bold;
+	text-align: right;
+	font-size: 0.7em;
+
+	margin-right: 1em;
+	margin-top: 0.2em;
+	padding-left: 0.1em;
+	padding-right: 0.1em;
+	width: 12ex;
+	text-align: center;
+
+	background-color: #aaa;
+	color: black;
+    text-shadow: white 1px 1px 2px;
+	-moz-border-radius: 4px;
+	-webkit-border-radius: 4px;
+	border: 2px solid gray;
+	border-top: 2px solid white;
+	border-left: 2px solid white;
+}
+#help #keys,
+#help #options,
+#help #about {
+	border-top: 2px dashed #aaa;
+}
+#help #options .which {
+	display: inline;
+	display: inline-block;
+	color: yellow;
+	font-weight: bold;
+    /*font-family: DejaVu Sans Mono, Inconsolata, Consolas, monospace;*/
+    font-family: monospace;
+	text-align: right;
+	font-size: 0.75em;
+
+	margin-right: 1em;
+	margin-top: 0.2em;
+	padding-left: 0.1em;
+	padding-right: 0.1em;
+	text-align: center;
+}
+#help #about .category {margin: 2em;}
+#help #about .which {color: #8fd;}
+#help .desc {display: inline; font-size: 0.8em;}
+

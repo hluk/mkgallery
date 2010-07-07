@@ -1,0 +1,42 @@
+#info {
+    opacity: 0;
+    z-index: 2;
+
+    margin: 0.5em 0.5em;
+    position: absolute;
+    top: 0px;
+    left: 0px;
+
+    font-weight: bold;
+    text-shadow: black 1px 1px 1px;
+
+    background-color: rgba(0,0,0,0.4);
+	-moz-border-radius: 50px;
+	-webkit-border-radius: 50px;
+    border: 2px solid rgba(0,0,0,0.5);
+    padding: 6px;
+    padding-right: 1em;
+
+    -webkit-transition: opacity 0.5s ease-in-out;
+}
+#info:hover, #info.focused {
+    opacity: 1;
+}
+#counter {margin: 6px; /* same value as info.padding */}
+#counter, #resolution {color: white; font-size: 0.7em; z-index: 1;}
+#counter.last {font-size: 0.75em; text-decoration: underline;}
+#itemtitle {z-index: 1; float: right; text-align: left;}
+#itemtitle .path,
+#itemtitle .filename {color: inherit;}
+#itemtitle .directory,
+#itemtitle .filename {
+	font-family: monospace;
+}
+#itemtitle .alias {font-size: 0.8em; color: #fd0; margin-bottom: 0.3em;}
+#itemtitle .directory {font-size: 0.7em; color: #7da;}
+#itemtitle .filename {font-size: 0.8em;}
+#resolution {font-size: 0.7em; display: block; text-align: left;}
+#resolution.loading {color: #fd0;}
+#resolution.error   {color: #faa;}
+#progress {float: left; margin-right: 0.5em;}
+
