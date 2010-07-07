@@ -162,8 +162,10 @@ init: function(_parent) {//{{{
 newView: function(filepath) {//{{{
     if (filepath.search(/\.(png|jpg|gif)$/i) > -1)
         return new ImageView(filepath, this._parent);
-    else if (filepath.search(/(ttf|otf)\)?$/i) > -1)
+    else if (filepath.search(/\.(ttf|otf)$/i) > -1)
         return new FontView(filepath, this._parent);
+    else if (filepath.search(/\.(mp4|mov|flv|ogg|mp3|wav)$/i) > -1)
+        return new VideoView(filepath, this._parent);
     else
         return null;
 },//}}}
@@ -343,6 +345,146 @@ zoom: function (how)//{{{
 
     if ( this._parent.onUpdateStatus )
         this._parent.onUpdateStatus( this.orig_width+"x"+this.orig_height+
+                (z==1 ? "" : " ["+(Math.floor(z*100))+"%]") );
+
+    this._parent.zoomChanged(how,this.zoom_factor);
+},//}}}
+}
+//}}}
+
+//! \class VideoView
+//! \implements ItemView
+//{{{
+var VideoView = function(vidpath, _parent) { this.init(vidpath, _parent); };
+
+VideoView.prototype = {
+init: function(vidpath, _parent)//{{{
+{
+    this.path = path(vidpath);
+    this._parent = _parent;
+    this.zoom_factor = 1;
+},//}}}
+
+type: function ()//{{{
+{
+    return "video";
+},//}}}
+
+show: function()//{{{
+{
+    var view = this;
+
+    if ( this.e )
+        return;
+
+    if ( this._parent.onUpdateStatus )
+        this._parent.onUpdateStatus("loading","loading");
+
+	this.e = document.createElement("video");
+	this.e.innerHTML = "Your browser does not support the video tag.";
+    this.e.controls = "controls";
+    this.e.style.display = "block";
+    this.e.className = "videoview";
+    this.e.name = "view";
+    this._parent.append(this.e);
+
+	if ( getConfig('autoplay',false) )
+		this.e.autoplay = "autoplay";
+	if ( getConfig('loop',false) )
+		this.e.loop = "loop";
+	// TODO: onended event doesn't work -- WHY?
+	if ( getConfig('autonext',false) && next )
+		this.e.onended = next;
+
+    this.e.id = "video";
+    this.e.src = escape(this.path);
+    this.e.onload = function () {
+        view.orig_width = this.videoWidth;
+        view.orig_height = this.videoHeight;
+		view.duration = this.duration/60;
+		var s = Math.floor(this.duration);
+		var m = Math.floor(s/60);
+		s = ""+(s-m*60);
+		view.duration = m+":"+(s.length == 1 ? "0" : "")+s;
+
+		view._parent.zoom();
+        if ( view._parent.onLoad )
+            view._parent.onLoad();
+    };
+    this.e.onerror = function () {
+		if ( view._parent.onUpdateStatus )
+			view._parent.onUpdateStatus( "Unsupported format!", "error" );
+	};
+},//}}}
+
+remove: function()//{{{
+{
+    if ( !this.e )
+        return;
+
+    this._parent.remove(this.e);
+    this.e = null;
+},//}}}
+
+thumbnail: function()//{{{
+{
+    if ( this.thumb )
+        return this.thumb;
+
+    this.thumb = document.createElement("div");
+    this.thumb.className = "thumbnail " + this.type();
+
+    return this.thumb;
+},//}}}
+
+zoom: function (how)//{{{
+{
+	var ww = window.innerWidth;
+	var wh = window.innerHeight;
+
+    if(!this.orig_width) {
+		this.width = this.e.width = ww;
+		this.height = this.e.height = wh/2;
+		if ( this._parent.onUpdateStatus )
+			this._parent.onUpdateStatus(this.duration);
+		return;
+	}
+
+    var w = this.orig_width;
+    var h = this.orig_height;
+
+    var z = this.zoom_factor;
+
+    switch(how) {
+    case "+":
+        if ( z > zoom_step )
+            z += zoom_step;
+        else
+            z *= 4;
+        break;
+    case "-":
+        if ( z > zoom_step )
+            z -= zoom_step;
+        else
+            z *= 0.8;
+        break;
+    case "fit":
+		z = ( ww*h < wh*w ) ? ww/w : wh/h;
+        break;
+    case "fill":
+        z = ( ww*h < wh*w ) ? wh/h : ww/w;
+        break;
+    default:
+        z = how ? parseFloat(how) : 1;
+        break;
+    }
+
+    this.width = this.e.width = w*z;
+    this.height = this.e.height = h*z;
+    this.zoom_factor = z;
+
+    if ( this._parent.onUpdateStatus )
+        this._parent.onUpdateStatus( "|" + this.duration + "| " + this.orig_width+"x"+this.orig_height+
                 (z==1 ? "" : " ["+(Math.floor(z*100))+"%]") );
 
     this._parent.zoomChanged(how,this.zoom_factor);
@@ -1345,8 +1487,11 @@ function createViewer(e,info)//{{{
             window.scrollTo(0,0);
             info.popInfo();
         }, modes.viewer);
-    addKeys(["Space"], "Move window down/Next gallery item", function() {
-            if ( window.pageYOffset+window.innerHeight == document.documentElement.scrollHeight )
+    addKeys(["Space"], "Move window down/Next gallery item/Play or pause", function() {
+			var v = viewer.view;
+			if (v && v.type() == "video")
+				v.e.paused ? v.e.play() : v.e.pause();
+			else if ( window.pageYOffset+window.innerHeight == document.documentElement.scrollHeight )
                 next();
             else
                 window.scrollBy(0,window.innerHeight*9/10);
@@ -1523,6 +1668,12 @@ function createConfigHelp(e)//{{{
         'thumbnail_max_width': "maximum width",
         'thumbnail_font_test': "default text for fonts",
         },
+
+		"Audio/Video": {
+		'autoplay': "Play audio/video when viewed",
+		'loop': "Replay when playback ends",
+		'autonext': "Go to next item whed playback ends",
+		}
     };//}}}
 
     for (var i in confdesc) {

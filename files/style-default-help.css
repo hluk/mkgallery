@@ -73,17 +73,15 @@ h3 {
 	display: inline;
 	display: inline-block;
 	color: yellow;
+
 	font-weight: bold;
     /*font-family: DejaVu Sans Mono, Inconsolata, Consolas, monospace;*/
     font-family: monospace;
-	text-align: right;
 	font-size: 0.65em;
 
 	margin-right: 1em;
-	margin-top: 0.2em;
 	padding-left: 0.1em;
 	padding-right: 0.1em;
-	text-align: center;
 }
 #help #about .category {margin: 2em;}
 #help #about .which {color: #8fd;}

@@ -30,7 +30,7 @@
 }
 #counter #max, #counter #now {color: white; font-size: 0.8em;}
 #counter #max {font-size: 0.6em; border-top: 1px solid #aaa; color: #ccc;}
-.last #counter {text-decoration: underline;}
+.last #counter #now {color: #db8}
 
 /* item directory, filename, alias */
 #itemtitle {z-index: 1; float: right; text-align: left;}

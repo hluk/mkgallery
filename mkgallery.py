@@ -6,8 +6,7 @@ import os, sys, re, getopt, shutil, glob
 # default values:
 title="default" # html title and gallery directory name
 resolution = 300 # thumbnail resolution
-d = os.path.dirname(sys.argv[0]) # path to template
-if not d: d = "."
+d = os.path.dirname(sys.argv[0]) or "." # path to template
 gdir = d + "/galleries/%s"; # path to gallery
 url = "file:///<path_to_gallery>/index.html" # browser url
 progress_len = 40 # progress bar length
@@ -18,8 +17,9 @@ force = False # don't delete files
 rmerror = "ERROR: Existing gallery contains files that aren't symbolic links!\n"+\
           "       Use -f (--force) to remove all files."
 
-img_fmt  = re.compile('(jpg|png|gif|svg)$',re.I)
-font_fmt = re.compile('(otf|ttf)$',re.I)
+img_fmt  = re.compile('\.(jpg|png|gif|svg)$',re.I)
+font_fmt = re.compile('\.(otf|ttf)$',re.I)
+vid_fmt = re.compile('\.(mp4|mov|flv|ogg|mp3|wav)$',re.I)
 fontname_re = re.compile('[^a-zA-Z0-9_ ]')
 
 def copy(src, dest):#{{{
@@ -195,23 +195,24 @@ def prepare_html(template,itemfile,css,gdir,files):#{{{
 			# ignore gallery directory
 			if abs_f.startswith(abs_gdir):
 				continue
-			isimg = isfont = False
+			isimg = isfont = isvid = False
 			isimg = img_fmt.search(f) != None
 			if not isimg:
 				isfont = font_fmt.search(f) != None
-			if isimg or isfont:
+				if not isfont:
+					isvid = vid_fmt.search(f) != None
+			if isimg or isfont or isvid:
 				fdir = imgdir+"/"+os.path.dirname(f)
 				if not os.path.isdir(fdir):
 					os.makedirs(fdir)
 				cp( abs_f, fdir+"/" + os.path.basename(f) )
 
 				# if file is font: create font-face line in css
-				fontname = ""
 				if isfont:
 					fontname = addFont(f,css);
-				# add font name
-				if fontname:
-					aliases[f] = fontname
+					# add font name
+					if fontname:
+						aliases[f] = fontname
 				items.append(f.replace("'","\\'"))
 
 	items.sort()
@@ -247,8 +248,9 @@ def create_thumbnails(imgdir,thumbdir,resolution):#{{{
 		sys.stdout.write( "Creating thumbnails: [%s] %d/%d\r"%(bar,0,n) );
 		for f in images:
 			im = Image.open(f)
+			im = im.convert("RGBA")
 			im.thumbnail((resolution,resolution), Image.ANTIALIAS)
-			im.save(thumbdir+"/"+os.path.basename(f) + ".png", "PNG")
+			im.save(thumbdir+"/"+os.path.basename(f) + ".png", "PNG", quality=60)
 
 			# TODO: show progress bar
 			i=i+1
