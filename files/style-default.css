@@ -25,13 +25,14 @@ body {
     background-repeat: repeat;
 }
 
-a {color: #7bf; text-decoration: none; font-weight: bold;}
+a {font-size: 1em; color: #7bf; text-decoration: none;}
 a:hover {color: #ff0;}
 a:visited {color: #7bf;}
 a:visited:hover {color: #ff0;}
 
 /* viewer */
-#canvas {position: relative;/* view can be in the middle */}
+#canvas {display: none; position: relative;/* view can be in the middle */}
+.modeViewer #canvas {display: block;}
 .imageview {}
 .fontview {width: 80%; margin: auto;}
 textarea {z-index: 3;/* on top -- always focusable */}

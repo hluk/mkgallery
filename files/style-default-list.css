@@ -1,4 +1,5 @@
 #itemlist {
+	display: none;
     position: absolute;
     top: 0px;
     left: 0px;
@@ -8,6 +9,8 @@
     z-index: 2;
     min-height: 100%;
 }
+#itemlist.focused {display: block;}
+
 .item {
     display: inline-block;
     vertical-align: middle;
@@ -23,6 +26,7 @@
     -moz-border-radius: 6px;
     -webkit-border-radius: 6px;
 }
+
 .itemident {
     float: left;
     font-size: 0.7em;
@@ -37,10 +41,7 @@
     background-color: white;
     min-width: 14px;
 }
-#selected .itemident {
-    color: white;
-    background-color: black;
-}
+
 .itemname {
     margin: 0.5em;
     overflow: hidden;
@@ -59,6 +60,7 @@
 .itemname .filename {font-family: monospace;}
 .itemname .directory {font-size: 0.7em; color: #888;}
 .itemname .filename {font-size: 0.8em;}
+
 #selected .directory {color: #333;}
 #selected .itemname {color: black;}
 .itemname .alias {margin-bottom: 0.3em;}
@@ -73,6 +75,11 @@
 #selected {
     -webkit-box-shadow: 0px 0px 0px white;
 }
+#selected .itemident {
+    color: white;
+    background-color: black;
+}
+
 .thumbnail {
     vertical-align: middle;
     margin: auto;

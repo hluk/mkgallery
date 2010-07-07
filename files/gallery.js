@@ -227,12 +227,14 @@ show: function()//{{{
         this._parent.onUpdateStatus("loading","loading");
 
     // TODO: SVG -- for some reason this doesn't work in Chromium
-    //if (this.path.search(/\.svg$/i) > -1) {
-        //this.e = document.createElement("embed");
-    //}
-    //else {
-        //this.e = document.createElement("img");
-    //}
+	/*
+	if (this.path.search(/\.svg$/i) > -1) {
+		this.e = document.createElement("embed");
+	}
+	else {
+		this.e = document.createElement("img");
+	}
+	*/
 
     // don't use canvas in some cases:
     //  - GIF: redraw animated images in intervals
@@ -262,8 +264,8 @@ show: function()//{{{
     this.img.id = "img";
     this.img.src = escape(this.path);
     this.img.onload = function () {
-        view.e.width = view.orig_width = this.width ? this.width : this.naturalWidth;
-        view.e.height = view.orig_height = this.height ? this.height : this.naturalHeight;
+        view.orig_width = this.width ? this.width : this.naturalWidth;
+        view.orig_height = this.height ? this.height : this.naturalHeight;
 
         view._parent.zoom();
         if ( view._parent.onLoad )
@@ -498,7 +500,6 @@ init: function (e,items, aliases)//{{{
     this.ls = items;
 	this.aliases = aliases;
 
-    this.e.style.display = "none";
     this.lastpos = [0,0];
 
     this.viewFactory = new ViewFactory(this);
@@ -511,7 +512,7 @@ get: function(i)//{{{
 
 hidden: function()//{{{
 {
-    return this.e.style.display == "none";
+    return this.e.className == "";
 },//}}}
 
 size: function ()//{{{
@@ -635,7 +636,7 @@ toggle: function ()//{{{
     }
 
     var lastpos2 = [window.pageXOffset,window.pageYOffset];
-    this.e.style.display = this.hidden() ? "" : "none";
+    this.e.className = this.hidden() ? "focused" : "";
     window.scrollTo( this.lastpos[0], this.lastpos[1] );
     this.lastpos = lastpos2;
 
@@ -812,22 +813,28 @@ Info.prototype = {
 init: function(e,counter,itemtitle,resolution,progress,aliases)//{{{
 {
     this.e = e;
-	this.counter = counter;
 	this.itemtitle = itemtitle;
     this.resolution = resolution;
     this.progress = progress;
 	this.aliases = aliases;
+
+	if (counter) {
+		this.counternow = document.createElement('div');
+		this.counternow.id = "now";
+		counter.appendChild(this.counternow);
+
+		this.countermax = document.createElement('div');
+		this.countermax.id = "max";
+		counter.appendChild(this.countermax);
+
+		this.counter = counter;
+	}
 },//}}}
 
 updateCounter: function ()//{{{
 {
-    if ( !this.counter )
-        return;
-    this.counter.textContent = this.counter.innerHTML = this.n + "/" + this.len;
-    if (this.n == this.len)
-        this.counter.className = "last";
-    else
-        this.counter.className = "";
+    if ( this.counter )
+		this.counternow.textContent = this.counternow.innerHTML = this.n;
 },//}}}
 
 updateProgress: function ()//{{{
@@ -848,7 +855,7 @@ updateProgress: function ()//{{{
 
     ctx.save();
 
-    ctx.clearRect(x-r,y-r,2*r,2*r);
+    //ctx.clearRect(x-r,y-r,2*r,2*r);
 
     ctx.beginPath();
     ctx.moveTo(x, y);
@@ -924,10 +931,10 @@ name: function ()//{{{
 
 updateInfo: function (href,i,len)//{{{
 {
-    // image filename and path
     this.href = href;
     this.n = i;
     this.len = len;
+	this.countermax.textContent = this.countermax.innerHTML = this.len;
     this.itempath = escape(this.href);
 
     this.updateCounter();
@@ -1031,6 +1038,8 @@ function go (i)//{{{
     }
 
     updateTitle();
+	updateUrl(1000);
+	updateClassName();
 
     window.scrollTo(0,0);
 }//}}}
@@ -1053,7 +1062,12 @@ function getUrlVars()//{{{
 	return map;
 }//}}}
 
-function updateUrl (immediately)//{{{
+function updateClassName()//{{{
+{
+	b.className = "mode" + mode[mode.length-1] + " item" + n + (n == len ? " last" : "")
+}//}}}
+
+function updateUrl (timeout)//{{{
 {
     hash = "";
 
@@ -1062,10 +1076,12 @@ function updateUrl (immediately)//{{{
 
     if ( hash != location.hash ) {
         // if url is updated immediately, user cannot browse images rapidly
-        if (immediately)
-            location.hash = "#"+hash;
-        else
-            window.setTimeout( 'if( hash == "'+hash+'" ) location.hash = "#'+hash+'";',1000 );
+		if (url_t)
+			clearTimeout(url_t);
+		if (timeout)
+			url_t = window.setTimeout( 'if( hash == "'+hash+'" ) location.hash = "#'+hash+'";',timeout );
+		else
+			location.hash = "#"+hash;
     }
 }//}}}
 
@@ -1125,7 +1141,7 @@ function preloadImages()//{{{
 
             // since we access the disk (read the image) we can also
             // change the url - browser saves history
-            updateUrl();
+            updateUrl(1000);
         }
         new_preloaded[i] = im;
     }
@@ -1140,6 +1156,7 @@ function toggleList()//{{{
             mode.pop();
         else if ( mode[0] != modes.itemlist )
             mode.push(modes.itemlist);
+		updateClassName();
     }
 }//}}}
 //}}}
@@ -1261,9 +1278,6 @@ function initDragScroll ()//{{{
 function createItemList(e)//{{{
 {
     itemlist = new ItemList(e,ls,aliases);
-    // item list is initially hidden
-    if ( !itemlist && document.getElementById("itemlist") )
-        document.getElementById("itemlist").style.display = "none";
 
     // navigation//{{{
     addKeys(["KP5","5"], "Toggle thumbnail list", toggleList);
@@ -1313,7 +1327,7 @@ function createViewer(e,info)//{{{
         viewer.onError = function(msg) { info.updateStatus( msg, "error" ); }
     }
 
-    viewer.onZoomChanged = function(state) { if (vars['zoom'] == state) return; vars['zoom'] = state; updateUrl(); }
+    viewer.onZoomChanged = function(state) { if (vars['zoom'] == state) return; vars['zoom'] = state; updateUrl(1000); }
 
     // navigation//{{{
     addKeys(["PageUp"], "", function() {
@@ -1325,14 +1339,14 @@ function createViewer(e,info)//{{{
             window.scrollBy(0,window.innerHeight);
         }, modes.viewer);
     addKeys(["End"], "", function() {
-            window.scrollTo(0,document.body.scrollHeight);
+            window.scrollTo(0,b.scrollHeight);
         }, modes.viewer);
     addKeys(["Home"], "", function() {
             window.scrollTo(0,0);
             info.popInfo();
         }, modes.viewer);
     addKeys(["Space"], "Move window down/Next gallery item", function() {
-            if ( window.scrollY == window.scrollMaxY )
+            if ( window.pageYOffset+window.innerHeight == document.documentElement.scrollHeight )
                 next();
             else
                 window.scrollBy(0,window.innerHeight*9/10);
@@ -1407,13 +1421,13 @@ function createNavigation (enext, eprev, elist)//{{{
             toggleHelp(true);
             }, modes.help);
     addKeys(["Left"], "Move window left/Previous gallery item", function () {
-            if ( viewer.width() <= window.innerWidth )
+            if ( !viewer.width() || viewer.width() <= window.innerWidth )
                 prev();
             else
                 window.scrollBy(-window.innerWidth/4,0);
         });
     addKeys(["Right"], "Move window right/Next gallery item", function() {
-            if ( viewer.width() <= window.innerWidth )
+            if ( !viewer.width() || viewer.width() <= window.innerWidth )
                 next();
             else
                 window.scrollBy(window.innerWidth/4,0);
@@ -1621,6 +1635,7 @@ function toggleHelp(hide)//{{{
             help.className = "focused";
             mode.push(modes.help);
         }
+		updateClassName();
     }
 }//}}}
 
@@ -1671,7 +1686,7 @@ function onLoad()//{{{
     window.onresize = onResize;
 
     // browser with sessions: update URL when browser window closed
-    b.onbeforeunload = function() { updateUrl(true); };
+    b.onbeforeunload = function() { updateUrl(); };
 
     // navigation
     createNavigation(
@@ -1703,6 +1718,9 @@ var itemlist, info, viewer, help;
 
 // image cache
 var preloaded = null;
+
+// URL hash timeout
+var url_t;
 
 var keys;
 var keydesc;

@@ -30,4 +30,6 @@
 #list:hover, #list.focused {
     opacity: 1;
 }
+.last #next {display: none;}
+.item1 #prev {display: none;}
 
