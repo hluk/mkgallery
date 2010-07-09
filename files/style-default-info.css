@@ -25,6 +25,7 @@
 
 /* current item and number of items */
 #counter {
+    text-align: center;
 	margin: 6px; /* same value as info.padding */
     font-weight: bold;
 	margin-top: 0.5em;
@@ -36,12 +37,20 @@
 /* item directory, filename, alias */
 #itemtitle {z-index: 1; float: left; text-align: left;}
 #itemtitle .path,
+#itemtitle .extension,
 #itemtitle .filename {color: inherit;}
 #itemtitle .directory,
+#itemtitle .extension,
 #itemtitle .filename {font-family: monospace;}
 #itemtitle .alias {font-size: 0.8em; color: #fd0; margin-bottom: 0.3em;}
 #itemtitle .directory {font-size: 0.7em; color: #7da;}
-#itemtitle .filename {font-weight: bold; font-size: 0.8em;}
+#itemtitle .extension {
+    display: inline;
+    color: #fd0;
+    font-size: 0.7em;
+    margin-left: 0.5em;
+}
+#itemtitle .filename {display: inline; font-weight: bold; font-size: 0.8em;}
 
 /* resolution and zoom or font-size */
 #resolution {

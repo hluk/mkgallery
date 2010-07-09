@@ -12,6 +12,7 @@
 #itemlist.focused {display: block;}
 
 .item {
+    text-align: center;
     display: inline-block;
     vertical-align: middle;
     padding: 4px;
@@ -29,11 +30,13 @@
 
 .itemident {
     float: left;
-    font-size: 0.7em;
     z-index: 2;
+
+    font-size: 0.7em;
+    text-align: center;
     font-weight: bold;
+
     margin: 0.5em;
-    margin-right: 0.1em;
     padding: 0.3em;
     -moz-border-radius: 20px;
     -webkit-border-radius: 20px;
@@ -45,7 +48,6 @@
 .itemname {
     margin: 0.5em;
     overflow: hidden;
-    text-align: center;
     font-size: 0.8em;
     font-weight: bold;
     color: white;
@@ -54,35 +56,38 @@
 .itemname .alias,
 .itemname .path,
 .itemname .directory,
-.itemname .filename {color: inherit;}
+.itemname .extension,
+.itemname .filename {text-align: left; color: inherit;}
 .itemname .alias {font-size: inherit; color: #fe9 !important;}
 .itemname .directory,
+.itemname .extension,
 .itemname .filename {font-family: monospace;}
 .itemname .directory {font-size: 0.7em; color: #888;}
-.itemname .filename {font-size: 0.8em;}
+.itemname .filename {font-size: 0.8em; display: inline;}
+.itemname .extension {display: inline; font-size: 0.6em; float: right; color: #fd0;}
 
-#selected .directory {color: #333;}
+#selected .extension {color: #444;}
+#selected .directory {color: #444;}
 #selected .itemname {color: black;}
 .itemname .alias {margin-bottom: 0.3em;}
 #selected .itemname .alias {color: white !important;}
 #selection {
-    position: absolute;
-    z-index: -2;
-    background-color: rgba(160,220,255,0.7);
-    -moz-border-radius: 6px;
-    -webkit-border-radius: 6px;
+	position: absolute;
+	z-index: -2;
+	background-color: #6bf;
+	-moz-border-radius: 6px;
+	-webkit-border-radius: 6px;
 }
 #selected {
-    -webkit-box-shadow: 0px 0px 0px white;
+	-webkit-box-shadow: 0px 0px 0px white;
 }
 #selected .itemident {
-    color: white;
-    background-color: black;
+	color: white;
+	background-color: black;
 }
 
 .thumbnail {
     vertical-align: middle;
-    margin: auto;
     z-index: -1;
     color: black;
     -webkit-transition: height 0.5s ease-in-out;

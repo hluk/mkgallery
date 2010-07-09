@@ -635,16 +635,15 @@ updateHeight: function()//{{{
 
 //! \class ItemList
 //{{{
-var ItemList = function(e,items, aliases) { this.init(e,items,aliases); };
+var ItemList = function(e,items) { this.init(e,items); };
 
 ItemList.prototype = {
-init: function (e,items, aliases)//{{{
+init: function (e,items)//{{{
 {
     this.e = e;
     if (!this.e)
         return null;
     this.ls = items;
-	this.aliases = aliases;
 
     this.lastpos = [0,0];
 
@@ -680,7 +679,8 @@ addThumbnails: function (items, i)//{{{
     if ( !items )
         items = this.items;
 
-    var thumb = this.viewFactory.newView( this.ls[i] );
+	var item = this.ls[i];
+    var thumb = this.viewFactory.newView( item instanceof Array ? item[0] : item );
     thumb.dataNum = i;
     var e = thumb.thumbnail();
     // show thumbnail only if src exists
@@ -721,15 +721,21 @@ appendItem: function (itemname, i)//{{{
     txt.className = "itemname";
     txt.style.maxWidth = getConfig('thumbnail_max_width',300) + "px";
 
+	var x = this.ls[i-1];
+	var itemname, alias;
+	if (x instanceof Array) {
+		itemname = x[0];
+		alias = x[1];
+	}
+	else
+		itemname = x;
+
 	// item alias
-	if (this.aliases) {
-		var alias = this.aliases[itemname];
-		if (alias) {
-			var e_alias = document.createElement('div');
-			e_alias.className = "alias";
-			e_alias.appendChild( document.createTextNode(alias) );
-			txt.appendChild(e_alias);
-		}
+	if (alias) {
+		var e_alias = document.createElement('div');
+		e_alias.className = "alias";
+		e_alias.appendChild( document.createTextNode(alias) );
+		txt.appendChild(e_alias);
 	}
 
 	// filename
@@ -761,11 +767,13 @@ reloadThumbnails: function ()//{{{
 toggle: function ()//{{{
 {
     // are items loaded?
-    if ( !this.items ) {
-        this.items = [];
+	if ( !this.items ) {
+		this.items = [];
 
-        for(var i=0; i<len; ++i)
-            this.appendItem(this.ls[i], i+1);
+		for(var i=0; i<len; ++i) {
+			var item = this.ls[i];
+			this.appendItem(item instanceof Array ? item[0] : item, i+1);
+		}
 
         // add thumbnails
         this.thumbs = [];
@@ -951,18 +959,17 @@ init: function() {},
 
 //! \class Info
 //{{{
-var Info = function(e,counter,itemtitle,resolution,progress,aliases) {
-    this.init(e,counter,itemtitle,resolution,progress,aliases);
+var Info = function(e,counter,itemtitle,resolution,progress) {
+    this.init(e,counter,itemtitle,resolution,progress);
 };
 
 Info.prototype = {
-init: function(e,counter,itemtitle,resolution,progress,aliases)//{{{
+init: function(e,counter,itemtitle,resolution,progress)//{{{
 {
     this.e = e;
 	this.itemtitle = itemtitle;
     this.resolution = resolution;
     this.progress = progress;
-	this.aliases = aliases;
 
 	if (counter) {
 		this.counternow = document.createElement('div');
@@ -1042,14 +1049,11 @@ updateItemTitle: function ()//{{{
     l.id = "link";
 	l.href = path( this.itempath );
 
-	if (this.aliases) {
-		var alias = this.aliases[this.href];
-		if (alias) {
-			var e_alias = document.createElement('div');
-			e_alias.className = "alias";
-			e_alias.appendChild( document.createTextNode(alias) );
-			l.appendChild(e_alias);
-		}
+	if (this.alias) {
+		var e_alias = document.createElement('div');
+		e_alias.className = "alias";
+		e_alias.appendChild( document.createTextNode(this.alias) );
+		l.appendChild(e_alias);
 	}
 
 	// filename
@@ -1071,15 +1075,15 @@ updateStatus: function (status_msg,class_name)//{{{
 
 name: function ()//{{{
 {
-	var alias = this.aliases ? this.aliases[this.href] : null;
-    return alias ? alias+" ("+this.href+")" : this.href;
+    return this.alias ? this.alias+" ("+this.href+")" : this.href;
 },//}}}
 
-updateInfo: function (href,i,len)//{{{
+updateInfo: function (href,i,len,alias)//{{{
 {
     this.href = href;
     this.n = i;
     this.len = len;
+	this.alias = alias;
 	this.countermax.textContent = this.countermax.innerHTML = this.len;
     this.itempath = escape(this.href);
 
@@ -1141,19 +1145,32 @@ function newPathElement(path) {//{{{
     e.className = "path";
 
 	// TODO: "dir1/dir2/a\\b.png" etc.
-	var p = path.match(/(.*)[\/\\](.*)/);
+	var m = path.match(/(.*)[\/\\](.*)/);
 
-	if (p) {
+	if (m) {
+        // item path
 		var dir = document.createElement('div');
 		dir.className = "directory";
-		dir.appendChild( document.createTextNode(breakText(p[1])) );
+		dir.appendChild( document.createTextNode(breakText(m[1])) );
 		e.appendChild(dir);
 	}
 
-    var filename = document.createElement('div');
-    filename.className = "filename";
-    filename.appendChild( document.createTextNode(breakText(p ? p[2] : path)) );
-	e.appendChild(filename);
+    var filename = m ? m[2] : path;
+	var m = filename.match(/(.*)\.([^.]*)/);
+
+    // filename
+    var filename_e = document.createElement('div');
+    filename_e.className = "filename";
+    filename_e.appendChild( document.createTextNode(breakText(m ? m[1] : filename)) );
+	e.appendChild(filename_e);
+
+    // extension
+    if (m) {
+        var ext = document.createElement('div');
+        ext.className = "extension";
+        ext.appendChild( document.createTextNode(breakText(m[2])) );
+        e.appendChild(ext);
+    }
 
 	return e;
 }//}}}
@@ -1175,11 +1192,18 @@ function go (i)//{{{
 
     n = vars['n'] = pg;
 
-    var itemname = ls[n-1];
-    viewer.show( itemname );
+	var item = this.ls[i-1];
+	var itemname, alias;
+	if (item instanceof Array) {
+		var itemname = item[0];
+		var alias = item[1];
+	}
+	else
+		var itemname = item;
+    viewer.show(itemname);
 
     if (info ) {
-        info.updateInfo(itemname,n,len);
+        info.updateInfo(itemname,n,len,alias);
         info.popInfo();
     }
 
@@ -1276,7 +1300,8 @@ function preloadImages()//{{{
         var im = preloaded[i];
         if ( !im ) {
             // type of item must be image
-            var filename = path(ls[i]);
+			var item = this.ls[i];
+            var filename = path(item instanceof Array ? item[0] : item);
             var view = ViewFactory.prototype.newView(filename);
             if (!view || view.type() != "image")
                 continue;
@@ -1423,7 +1448,7 @@ function initDragScroll ()//{{{
 
 function createItemList(e)//{{{
 {
-    itemlist = new ItemList(e,ls,aliases);
+    itemlist = new ItemList(e,ls);
 
     // navigation//{{{
     addKeys(["KP5","5"], "Toggle thumbnail list", toggleList);
@@ -1833,8 +1858,7 @@ function onLoad()//{{{
                 document.getElementById("counter"),
                 document.getElementById("itemtitle"),
                 document.getElementById("resolution"),
-                document.getElementById("progress"),
-				aliases);
+                document.getElementById("progress"));
     }
 
     // viewer
