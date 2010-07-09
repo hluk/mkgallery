@@ -22,6 +22,22 @@ font_fmt = re.compile('\.(otf|ttf)$',re.I)
 vid_fmt = re.compile('\.(mp4|mov|flv|ogg|mp3|wav)$',re.I)
 fontname_re = re.compile('[^a-zA-Z0-9_ ]')
 
+def sort(x,y,state=-1):#{{{
+	if not len(x):
+		return len(y) and -1 or state
+	elif not len(y):
+		return 1
+
+	a,b = x[0],y[0]
+	aa,bb = a.lower(), b.lower()
+	if aa>bb:
+		return 1
+	elif bb>aa:
+		return -1
+
+	return sort(x[1:],y[1:],a>b and 1 or -1)
+#}}}
+
 def copy(src, dest):#{{{
 	if os.path.isdir(src):
 		shutil.copytree( src, dest )
@@ -173,7 +189,9 @@ def addFont(fontfile,css):#{{{
 
 		font = ImageFont.truetype(fontfile,8)
 		name = font.getname()
-		fontname = name[0]+" "+name[1]
+		fontname = name[0]
+		if name[1]:
+			fontname = fontname + " " + name[1]
 	except ImportError:
 		pass
 
@@ -215,18 +233,27 @@ def prepare_html(template,itemfile,css,gdir,files):#{{{
 						aliases[f] = fontname
 				items.append(f.replace("'","\\'"))
 
-	items.sort()
+	items.sort(sort)
 	itemfile.write("var ls=[\n")
 	for item in items:
-		itemfile.write('"'+item.replace('\\','\\\\').replace('"','\\"')+'",\n')
+		try:
+			alias = aliases[item]
+		except:
+			alias = None
+		itemname = item.replace('\\','\\\\').replace('"','\\"')
+		if alias:
+			line = '["%s","%s"]' % (itemname,alias)
+		else:
+			line = '"%s"' % itemname
+		itemfile.write(line+',\n')
 	itemfile.write("];\n");
 
 	itemfile.write('var title = "'+title+'";\n');
 
-	itemfile.write("var aliases={\n")
-	for f,alias in aliases.items():
-		itemfile.write('"'+f+'":"'+alias.replace('\\','\\\\').replace('"','\\"')+'",\n')
-	itemfile.write("};");
+	#itemfile.write("var aliases={\n")
+	#for f,alias in aliases.items():
+		#itemfile.write('"'+f+'":"'+alias.replace('\\','\\\\').replace('"','\\"')+'",\n')
+	#itemfile.write("};");
 #}}}
 
 def create_thumbnails(imgdir,thumbdir,resolution):#{{{
