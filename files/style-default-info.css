@@ -14,9 +14,10 @@
 	-webkit-border-radius: 50px;
     border: 2px solid rgba(0,0,0,0.5);
     padding: 6px;
-    padding-right: 1em;
+    padding-right: 1.5em;
 
     -webkit-transition: opacity 0.5s ease-in-out;
+    -moz-transition: opacity 0.5s ease-in-out;
 }
 .modeViewer #info:hover, .modeViewer #info.focused {
     opacity: 1;
@@ -29,11 +30,11 @@
 	margin-top: 0.5em;
 }
 #counter #max, #counter #now {color: white; font-size: 0.8em;}
-#counter #max {font-size: 0.6em; border-top: 1px solid #aaa; color: #ccc;}
+#counter #max {font-size: 0.6em; border-top: 1px solid #bbb; color: #ddd;}
 .last #counter #now {color: #db8}
 
 /* item directory, filename, alias */
-#itemtitle {z-index: 1; float: right; text-align: left;}
+#itemtitle {z-index: 1; float: left; text-align: left;}
 #itemtitle .path,
 #itemtitle .filename {color: inherit;}
 #itemtitle .directory,
@@ -43,7 +44,12 @@
 #itemtitle .filename {font-weight: bold; font-size: 0.8em;}
 
 /* resolution and zoom or font-size */
-#resolution {display: block; font-size: 0.7em; text-align: left;}
+#resolution {
+    display: block;
+    font-size: 0.7em;
+    text-align: left;
+    margin-left: 2ex;
+}
 #resolution.loading {color: #fd0;}
 #resolution.error   {color: #faa;}
 

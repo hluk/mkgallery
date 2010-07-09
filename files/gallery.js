@@ -100,18 +100,21 @@ zoomChanged: function (zoom_state,zoom_factor)//{{{
         break;
     }
 
-    // center item in window
-    var newtop = ( window.innerHeight - this.view.height )/2;
-    this.e.style.top = (newtop > 0 ? newtop : 0) + "px";
-    var newleft = ( window.innerWidth - this.view.width )/2;
-    this.e.style.left = (newleft > 0 ? newleft : 0) + "px";
-
     if ( this.zoom_state != z ) {
         this.zoom_state = z;
         if (this.onZoomChanged)
             this.onZoomChanged(z);
     }
 
+},//}}}
+
+center: function()//{{{
+{
+    // center item in window
+    var newtop = ( window.innerHeight - this.view.height )/2;
+    this.e.style.top = (newtop > 0 ? newtop : 0) + "px";
+    var newleft = ( window.innerWidth - this.view.width )/2;
+    this.e.style.left = (newleft > 0 ? newleft : 0) + "px";
 },//}}}
 
 append: function (view)//{{{
@@ -348,6 +351,7 @@ zoom: function (how)//{{{
                 (z==1 ? "" : " ["+(Math.floor(z*100))+"%]") );
 
     this._parent.zoomChanged(how,this.zoom_factor);
+    this._parent.center();
 },//}}}
 }
 //}}}
@@ -524,17 +528,6 @@ show: function()//{{{
 
     this.ee = document.createElement("textarea");
 
-    this._parent.e.style.width = "100%";
-    this._parent.e.style.height = "100%";
-    this.e.style.display = "block";
-    this.e.style.width = "80%";
-    this.e.style.height = "80%";
-    this.ee.style.width = "100%";
-    this.ee.style.height = "100%";
-    this.ee.style.border = "0px";
-
-    this.ee.style.overflow = "hidden";
-    this.ee.style.background = "rgba(0,0,0,0)";
     this.ee.value = config['font_test'];
     this.ee.style.fontFamily = this.font;
 
@@ -543,13 +536,17 @@ show: function()//{{{
     this.ee.onfocus = function () {
         view.keydown = document.onkeydown;
         view.keypress = document.onkeypress;
-        document.onkeydown = null;
+        document.onkeydown = function(e){
+            if(e.keyCode == 27)
+                view.ee.blur();
+        };
         document.onkeypress = null;
     };
     this.ee.onblur = function () {
         config['font_test'] = this.value;
         document.onkeydown = view.keydown;
         document.onkeypress = view.keypress;
+        view.updateHeight();
     };
 
     this.e.appendChild(this.ee);
@@ -615,8 +612,7 @@ zoom: function (how)//{{{
     }
 
     this.ee.style.fontSize = zz+"pt";
-    this.height = this.e.offsetHeight;
-    this.ee.style.height = this.ee.scrollHeight;
+    this.updateHeight();
 
     this.zoom_factor = z;
 
@@ -625,6 +621,14 @@ zoom: function (how)//{{{
 
     if ( this._parent.onUpdateStatus )
         this._parent.onUpdateStatus(this.ee.style.fontSize);
+},//}}}
+
+updateHeight: function()//{{{
+{
+    // TODO: better solution
+    var view = this;
+    this.ee.style.height = "50%";
+    setTimeout(function(){view.ee.style.height = view.ee.scrollHeight+"px";},50);
 },//}}}
 }
 //}}}
@@ -1495,6 +1499,11 @@ function createViewer(e,info)//{{{
                 next();
             else
                 window.scrollBy(0,window.innerHeight*9/10);
+        }, modes.viewer);
+    addKeys(["E","e"], "Edit font text", function() {
+			var v = viewer.view;
+			if (v && v.type() == "font")
+				v.ee.focus();
         }, modes.viewer);
     addKeys(["KP1","1"], "Browse to last gallery item", function() {
             if ( n != len )
