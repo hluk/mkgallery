@@ -81,17 +81,21 @@ In this file create array "ls". Each entry of the array can be either string
 --- relative path of a file in directory "items" --- or an array containing
 two entries:
 	- item path,
-	- item alias,
+	- item properties,
 and two optional entries representing thumbnail width and height. Even though
-these two entries are optional you shoud set it because the thumbnails are
+these two entries are optional you shoud set them because the thumbnails are
 dynamically loaded into item list when the list is viewed for the first time.
+
+The item properties are used to set contents of HTML elements. For example:
+	{alias:"Nice photo", description:"This is my <b>favorite</b>!"}
+sets contents of elements with classes "alias" and "description".
 
 For example file "items.js" for gallery with five PNG images contains:
     var ls = [
-        ["face-smile-big.png", "Smile!", 256, 256],
-        ["face-tired.png", "", 256, 256],
+        ["face-smile-big.png", {alias:"Smile!"}, 256, 256],
+        ["face-tired.png", {}, 256, 256],
          "stock_smiley-5.png",
-        ["face-uncertain.png", "Uncertain smiley"],
+        ["face-uncertain.png", {alias:"Uncertain smiley"}],
          "face-angel.png",
     ];
     var title = "Smileys";

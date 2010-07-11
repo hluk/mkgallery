@@ -242,7 +242,7 @@ def prepare_html(template,itemfile,css,gdir,files):#{{{
 	itemfile.write("var ls=[\n")
 	for item,alias in sorted(items.items(),sort):
 		if alias:
-			line = '["%s","%s"]' % (item,alias)
+			line = '["%s",{alias:"%s"}]' % (item,alias)
 		else:
 			line = '"%s"' % item
 		itemfile.write(line+',\n')
@@ -275,7 +275,7 @@ def create_thumbnails(items,imgdir,thumbdir,resolution,itemfile):#{{{
 				im = im.convert("RGBA")
 				im.thumbnail((resolution,resolution), Image.ANTIALIAS)
 				im.save(thumbdir+"/"+os.path.basename(f) + ".png", "PNG", quality=60)
-				lines = lines + ( '["%s","%s",%d,%d],\n' % (f,alias,im.size[0],im.size[1]) )
+				lines = lines + ( '["%s",{alias:"%s"},%d,%d],\n' % (f,alias,im.size[0],im.size[1]) )
 
 				# show progress bar
 				i=i+1

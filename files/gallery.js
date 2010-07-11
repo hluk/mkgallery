@@ -762,12 +762,12 @@ appendItem: function (i)//{{{
     if (ident.length)
         ident.html(i);
 
-	// get item filename, alias, width, height
+	// get item filename, properties, width, height
     var x = this.ls[i-1];
-    var itemname, alias, w, h;
+    var itemname, props, w, h;
     if (x instanceof Array) {
         itemname = x[0];
-        alias = x[1];
+        props = x[1];
 		w = x[2];
 		h = x[3];
     }
@@ -778,15 +778,6 @@ appendItem: function (i)//{{{
 	var e_w = item.find(".thumbnail_width");
 	if ( e_w && w && !item.css("max-width") )
 		item.css("max-width",w+20);
-
-    // item alias
-    var e_alias = item.find(".alias");
-    if (e_alias.length) {
-        if (alias)
-            e_alias.html(alias);
-        else
-            e_alias.hide();
-    }
 
     // filename
     var dir_e = item.find(".directory");
@@ -802,6 +793,18 @@ appendItem: function (i)//{{{
 		if (h)
 			thumb_e.css("height",h+"px");
 	}
+
+    // item properties
+    if (props) {
+        for (var key in props) {
+            var e = item.find("."+key);
+            var v = props[key];
+            if (v)
+                e.html(v);
+            else
+                e.hide();
+        }
+    }
 
     item.appendTo(this.e);
     this.items.push(item);
@@ -822,15 +825,15 @@ toggle: function ()//{{{
         this.thumbs = [];
         this.addThumbnails();
 
-        // select current
-        this.selectItem(n-1);
-        this.selection_needs_update = true;
-
         this.template.remove();
 
         // selection cursor
         this.selection = this.e.find(".selection");
         this.selection.css("position","absolute");
+
+        // select current
+        this.selectItem(n-1);
+        this.selection_needs_update = true;
     }
 
     var lastpos2 = [window.pageXOffset,window.pageYOffset];
@@ -1015,7 +1018,6 @@ init: function(e)//{{{
     this.e = e;
 
 	this.itemlink = e.find(".itemlink");
-	this.alias = e.find(".alias");
 
     this.status = e.find(".status");
 
@@ -1088,10 +1090,23 @@ updateItemTitle: function ()//{{{
     if (this.itemlink.length)
         this.itemlink.attr( "href", path(this.itempath) );
 
-	if (this.alias.length && this.aliasname)
-		this.alias.html(this.aliasname);
-
     createPathElements(this.dir_e,this.filename_e,this.ext_e,this.href);
+},//}}}
+
+updateProperties: function ()//{{{
+{
+    // item properties
+    if (this.props) {
+        for (var key in this.props) {
+            var e = this.e.find("."+key);
+            var v = this.props[key];
+            if (v)
+                e.html(v);
+            else
+                e.hide();
+        }
+    }
+
 },//}}}
 
 updateStatus: function (status_msg,class_name)//{{{
@@ -1116,12 +1131,12 @@ name: function ()//{{{
     return this.aliasname ? this.aliasname+" ("+this.href+")" : this.href;
 },//}}}
 
-updateInfo: function (href,i,len,aliasname)//{{{
+updateInfo: function (href,i,len,properties)//{{{
 {
     this.href = href;
     this.n = i;
     this.len = len;
-	this.aliasname = aliasname;
+	this.props = properties;
 	this.countermax.html(this.len);
     this.itempath = escape(this.href);
 
@@ -1131,6 +1146,7 @@ updateInfo: function (href,i,len,aliasname)//{{{
     this.updateCounter();
     this.updateProgress();
     this.updateItemTitle();
+    this.updateProperties();
 },//}}}
 
 popInfo: function ()//{{{
