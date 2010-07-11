@@ -1,3 +1,4 @@
+var title = "template";
 var ls = [
     "face-smile-big.png",
     "face-tired.png",
@@ -5,5 +6,4 @@ var ls = [
     "face-uncertain.png",
     "face-angel.png",
     ];
-var title = "template";
 

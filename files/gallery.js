@@ -1,35 +1,4 @@
 /*
- * \section HTML elements
- * HTML document should include lines:
-    <script type="text/javascript" src="THIS_FILE.js"></script>
-    <body onload="onLoad()">
- * All other tags are optional.
- *
- * Item (Image/font) view:
-    <div id="canvas"></canvas>
- *
- * Item info:
-    <div id="info">
-        <canvas id="progress"></canvas>
-        <span id="counter"></span>
-        <span id="itemtitle"></span>
-        <span id="resolution"></span>
-    </div>
- *
- * Elements for navigation:
-    <div id="next">Next</div>
-    <div id="prev">Prev</div>
-    <div id="list">List</div>
- *
- * Item list:
-    <div id="itemlist"></div>
- *
- * Help window:
-    <div id="help">
-        <div id="keys"></div>
-        <div id="options"></div>
-    </div>
- *
  * \section caching Caching
  * \par
  * When opened (on any item) the gallery browser should use cache only to store the currently viewed item (i.e. item list is not created and no items are preloaded).
@@ -48,24 +17,6 @@
 
 //! \class Viewer
 //{{{
-/**
- * events
- *
- * \fn onUpdateStatus(msg,class_name)
- * \brief event is triggered after changing status of view/viewer
- * \param msg status text
- * \param class_name class of status text ("loading", "error" or custom)
- *
- * \fn onLoad()
- * \brief event is triggered after item is successfully loaded
- *
- * \fn onError(error_msg);
- * \brief event is triggered after error
- *
- * \fn onZoomChanged(zoom_state)
- * \brief event is triggered after zoom is changed
- * \param zoom_state "fit", "fill" or zoom factor (float)
- */
 var Viewer = function(e,zoom) {
     this.init(e,zoom);
 };
@@ -111,20 +62,18 @@ zoomChanged: function (zoom_state,zoom_factor)//{{{
 center: function()//{{{
 {
     // center item in window
-    var newtop = ( window.innerHeight - this.view.height )/2;
-    this.e.style.top = (newtop > 0 ? newtop : 0) + "px";
-    var newleft = ( window.innerWidth - this.view.width )/2;
-    this.e.style.left = (newleft > 0 ? newleft : 0) + "px";
+    var newtop = ( window.innerHeight - this.view.e.innerHeight() )/2;
+    this.view.e.css("margin-top",(newtop > 0 ? newtop : 0) + "px");
 },//}}}
 
 append: function (view)//{{{
 {
-    this.e.appendChild(view);
+    view.appendTo(this.e);
 },//}}}
 
 remove: function (view)//{{{
 {
-    this.e.removeChild(view);
+    view.remove();
 },//}}}
 
 show: function (filepath)//{{{
@@ -148,6 +97,31 @@ height: function ()//{{{
 {
     return this.view ? this.view.height : 0;
 },//}}}
+
+/** events */
+/** \fn onUpdateStatus(msg,class_name)
+ * \brief event is triggered after changing status of view/viewer
+ * \param msg status text
+ * \param class_name class of status text ("loading", "error" or custom)
+ *
+ */
+onUpdateStatus: function(msg,class_name){},
+
+/** \fn onLoad()
+ * \brief event is triggered after item is successfully loaded
+ */
+onLoad: function(){},
+
+/** \fn onError(error_msg);
+ * \brief event is triggered after error
+ */
+onError: function(error_msg){},
+
+/** \fn onZoomChanged(zoom_state)
+ * \brief event is triggered after zoom is changed
+ * \param zoom_state "fit", "fill" or zoom factor (float)
+ */
+onZoomChanged: function(zoom_state){},
 }
 //}}}
 
@@ -192,7 +166,7 @@ newView: function(filepath) {//{{{
  * \return removes view from parent
  *
  * \fn thumbnail()
- * \brief calls _parent.thumbnailOnLoad(this) after item loaded
+ * \brief triggers event thumbnailOnLoad(this) after thumbnail loaded
  * \return an element representing the thumbnail of item
  *
  * \fn zoom(how)
@@ -228,8 +202,7 @@ show: function()//{{{
     if ( this.e )
         return;
 
-    if ( this._parent.onUpdateStatus )
-        this._parent.onUpdateStatus("loading","loading");
+    this._parent.onUpdateStatus("loading","msg");
 
     // TODO: SVG -- for some reason this doesn't work in Chromium
 	/*
@@ -245,11 +218,11 @@ show: function()//{{{
     //  - GIF: redraw animated images in intervals
     //  - Opera
     if ( userAgent() == userAgents.opera || this.path.search(/\.gif$/i) > -1) {
-        this.e = document.createElement("div");
+        this.e = $("<div></div>");
         this.ctx = {
             drawImage: function (img,x,y,width,height) {
-                           var e = document.getElementById("img");
-                           if (!e)
+                           var e = $("#img");
+                           if (!e.length)
                                view.e.appendChild(img);
                            img.width = width;
                            img.height = height;
@@ -257,25 +230,25 @@ show: function()//{{{
         }
     }
     else {
-        this.e = document.createElement("canvas");
-        this.ctx = this.e.getContext('2d');
+        this.e = $("<canvas></canvas>");
+        this.ctx = this.e[0].getContext('2d');
     }
-    this.e.style.display = "block";
-    this.e.className = "imageview";
-    this.e.name = "view";
+    this.e.css("display","block");
+    this.e.addClass("imageview");
     this._parent.append(this.e);
 
-    this.img = document.createElement("img");
-    this.img.id = "img";
-    this.img.src = escape(this.path);
-    this.img.onload = function () {
+    this.img = $("<img></img>");
+    this.img.attr("id","img");
+    this.img.attr("src",escape(this.path));
+    this.img.load( function () {
+        view._parent.onUpdateStatus(null,"msg");
+
         view.orig_width = this.width ? this.width : this.naturalWidth;
         view.orig_height = this.height ? this.height : this.naturalHeight;
 
         view._parent.zoom();
-        if ( view._parent.onLoad )
-            view._parent.onLoad();
-    };
+        view._parent.onLoad();
+    } );
 },//}}}
 
 remove: function()//{{{
@@ -294,13 +267,15 @@ thumbnail: function()//{{{
 
     var thumbpath = "thumbs/" + this.path.replace(/^.*[\/\\]/,'') + ".png";
 
-    this.thumb = document.createElement("img");
-    this.thumb.src = escape(thumbpath);
-    this.thumb.className = "thumbnail " + this.type();
-    this.thumb.src = escape(thumbpath);
+    this.thumb = $('<img></img>');
+    this.thumb.addClass("thumbnail");
+    this.thumb.addClass(this.type());
 
     var view = this;
-    this.thumb.onerror = this.thumb.onload = function () { view._parent.thumbnailOnLoad(view); };
+    var handler = function () { view.thumbnailOnLoad(view); };
+    this.thumb.load(handler);
+    this.thumb.error(handler);
+    this.thumb.attr( "src", escape(thumbpath) );
 
     return this.thumb;
 },//}}}
@@ -341,18 +316,31 @@ zoom: function (how)//{{{
         break;
     }
 
-    this.width = this.e.width = w*z;
-    this.height = this.e.height = h*z;
-    this.ctx.drawImage(this.img,0,0,this.width,this.height);
+    // clear canvas
+    if(this.width)
+        this.ctx.clearRect(0,0,this.width,this.height);
+
+    this.width = this.e[0].width = w*z;
+    this.height = this.e[0].height = h*z;
+
+    // redraw image
+    this.ctx.drawImage(this.img[0],0,0,this.width,this.height);
     this.zoom_factor = z;
 
-    if ( this._parent.onUpdateStatus )
-        this._parent.onUpdateStatus( this.orig_width+"x"+this.orig_height+
-                (z==1 ? "" : " ["+(Math.floor(z*100))+"%]") );
+    this._parent.onUpdateStatus( this.orig_width+"x"+this.orig_height, "resolution" );
+    this._parent.onUpdateStatus( z==1 ? null : Math.floor(z*100), "zoom" );
 
     this._parent.zoomChanged(how,this.zoom_factor);
     this._parent.center();
 },//}}}
+
+/** events */
+/**
+ * \fn thumbnailOnLoad()
+ * \brief event is triggered after thumbnail is loaded
+ * \param view is caller object
+ */
+thumbnailOnLoad: function(view){},
 }
 //}}}
 
@@ -381,28 +369,28 @@ show: function()//{{{
     if ( this.e )
         return;
 
-    if ( this._parent.onUpdateStatus )
-        this._parent.onUpdateStatus("loading","loading");
+    this._parent.onUpdateStatus("loading","msg");
 
-	this.e = document.createElement("video");
-	this.e.innerHTML = "Your browser does not support the video tag.";
-    this.e.controls = "controls";
-    this.e.style.display = "block";
-    this.e.className = "videoview";
-    this.e.name = "view";
+	this.e = $("<video></video>");
+	this.e.html("Your browser does not support the video tag.");
+    this.e.attr("controls","controls");
+    this.e.css("display","block");
+    this.e.addClass("videoview");
     this._parent.append(this.e);
 
 	if ( getConfig('autoplay',false) )
-		this.e.autoplay = "autoplay";
+		this.e.attr("autoplay","autoplay");
 	if ( getConfig('loop',false) )
-		this.e.loop = "loop";
+		this.e.attr("loop","loop");
 	// TODO: onended event doesn't work -- WHY?
 	if ( getConfig('autonext',false) && next )
-		this.e.onended = next;
+		this.e.bind("ended",next);
 
-    this.e.id = "video";
-    this.e.src = escape(this.path);
-    this.e.onload = function () {
+    this.e.attr("id","video");
+    this.e.attr("src",escape(this.path));
+    this.e.load( function () {
+        view._parent.onUpdateStatus(null,"msg");
+
         view.orig_width = this.videoWidth;
         view.orig_height = this.videoHeight;
 		view.duration = this.duration/60;
@@ -412,13 +400,11 @@ show: function()//{{{
 		view.duration = m+":"+(s.length == 1 ? "0" : "")+s;
 
 		view._parent.zoom();
-        if ( view._parent.onLoad )
-            view._parent.onLoad();
-    };
-    this.e.onerror = function () {
-		if ( view._parent.onUpdateStatus )
-			view._parent.onUpdateStatus( "Unsupported format!", "error" );
-	};
+        view._parent.onLoad();
+    } );
+    this.e.error( function () {
+        view._parent.onUpdateStatus( "Unsupported format!", "error" );
+	} );
 },//}}}
 
 remove: function()//{{{
@@ -435,8 +421,9 @@ thumbnail: function()//{{{
     if ( this.thumb )
         return this.thumb;
 
-    this.thumb = document.createElement("div");
-    this.thumb.className = "thumbnail " + this.type();
+    this.thumb = $('<div></div>');
+    this.thumb.addClass("thumbnail");
+    this.thumb.addClass(this.type());
 
     return this.thumb;
 },//}}}
@@ -447,10 +434,9 @@ zoom: function (how)//{{{
 	var wh = window.innerHeight;
 
     if(!this.orig_width) {
-		this.width = this.e.width = ww;
-		this.height = this.e.height = wh/2;
-		if ( this._parent.onUpdateStatus )
-			this._parent.onUpdateStatus(this.duration);
+		this.width = this.e[0].width = ww;
+		this.height = this.e[0].height = wh/2;
+        this.updateStatus();
 		return;
 	}
 
@@ -483,15 +469,53 @@ zoom: function (how)//{{{
         break;
     }
 
-    this.width = this.e.width = w*z;
-    this.height = this.e.height = h*z;
+    this.width = this.e[0].width = w*z;
+    this.height = this.e[0].height = h*z;
     this.zoom_factor = z;
 
-    if ( this._parent.onUpdateStatus )
-        this._parent.onUpdateStatus( "|" + this.duration + "| " + this.orig_width+"x"+this.orig_height+
-                (z==1 ? "" : " ["+(Math.floor(z*100))+"%]") );
+    this.updateStatus();
 
     this._parent.zoomChanged(how,this.zoom_factor);
+    this._parent.center();
+},//}}}
+
+updateStatus: function()//{{{
+{
+    // resolution
+    this._parent.onUpdateStatus( this.orig_width+"x"+this.orig_height, "resolution" );
+
+    // zoom
+    this._parent.onUpdateStatus( this.zoom_factor != 1 ? null : Math.floor(this.zoom_factor*100), "zoom" );
+
+    // playback speed
+    this._parent.onUpdateStatus(
+            this.e[0].playbackRate == 1.0 ? null : Math.round(this.e[0].playbackRate*100)/100,"speed" );
+
+    // duration
+    this._parent.onUpdateStatus(this.duration, "duration");
+},//}}}
+
+normalSpeed: function()//{{{
+{
+    this.e[0].playbackRate = 1;
+    this.updateStatus();
+},//}}}
+
+faster: function()//{{{
+{
+    this.e[0].playbackRate += 0.1;
+    this.updateStatus();
+},//}}}
+
+slower: function()//{{{
+{
+    this.e[0].playbackRate -= 0.1;
+    this.updateStatus();
+},//}}}
+
+togglePlay: function()//{{{
+{
+    this.e[0].paused ? this.e[0].play() : this.e[0].pause();
 },//}}}
 }
 //}}}
@@ -521,41 +545,35 @@ show: function()//{{{
     if (this.e)
         return;
 
-    this.e = document.createElement("div");
-    this.e.src = escape(this.path);
-    this.e.className = "fontview";
-    this.e.name = "view";
+    this.e = $('<textarea></textarea>');
+    this.e.attr("src", escape(this.path));
+    this.e.addClass("fontview");
 
-    this.ee = document.createElement("textarea");
-
-    this.ee.value = config['font_test'];
-    this.ee.style.fontFamily = this.font;
+    this.e.attr("value",config['font_test']);
+    this.e.css("font-family",this.font);
 
     // disable keyboard navigation when textarea focused
     var view = this;
-    this.ee.onfocus = function () {
+    this.e.focus( function () {
         view.keydown = document.onkeydown;
         view.keypress = document.onkeypress;
         document.onkeydown = function(e){
             if(e.keyCode == 27)
-                view.ee.blur();
+                view.e.blur();
         };
         document.onkeypress = null;
-    };
-    this.ee.onblur = function () {
+    } );
+    this.e.blur( function () {
         config['font_test'] = this.value;
         document.onkeydown = view.keydown;
         document.onkeypress = view.keypress;
         view.updateHeight();
-    };
-
-    this.e.appendChild(this.ee);
+    } );
 
     this._parent.append(this.e);
     this._parent.zoom();
 
-    if ( this._parent.onLoad )
-        this._parent.onLoad();
+    this._parent.onLoad();
 },//}}}
 
 remove: function()//{{{
@@ -573,13 +591,15 @@ thumbnail: function()//{{{
         return this.thumb;
 
     var font = this.path.replace(/.*\//gi, "").replace(".","-");
-    this.thumb = document.createElement("div");
-    this.thumb.className = "thumbnail " + this.type();
-    this.thumb.style.maxWidth = getConfig('thumbnail_max_width',300) + "px";
-    this.thumb.style.fontFamily = this.font;
-    this.thumb.innerHTML = config['thumbnail_font_test'];
 
-    this._parent.thumbnailOnLoad(this);
+    this.thumb = $('<div></div>');
+    this.thumb.addClass("thumbnail");
+    this.thumb.addClass(this.type());
+    this.thumb.css("max-width", getConfig('thumbnail_max_width',300) + "px");
+    this.thumb.css("font-family", this.font);
+    this.thumb.html(config['thumbnail_font_test']);
+
+    this.thumbnailOnLoad(this);
 
     return this.thumb;
 },//}}}
@@ -611,25 +631,38 @@ zoom: function (how)//{{{
         break;
     }
 
-    this.ee.style.fontSize = zz+"pt";
+    this.e.css("font-size",zz+"pt");
     this.updateHeight();
 
     this.zoom_factor = z;
 
     this._parent.zoomChanged(how,this.zoom_factor);
-    this._parent.e.style.left = "0px";
+    this._parent.center();
 
-    if ( this._parent.onUpdateStatus )
-        this._parent.onUpdateStatus(this.ee.style.fontSize);
+    this._parent.onUpdateStatus( this.e.css("font-size"), "fontsize" );
 },//}}}
 
 updateHeight: function()//{{{
 {
     // TODO: better solution
+    this.e.hide();
     var view = this;
-    this.ee.style.height = "50%";
-    setTimeout(function(){view.ee.style.height = view.ee.scrollHeight+"px";},50);
+    this.e.css("height","50%");
+    window.setTimeout(
+        function(){
+            view.e.show();
+            view.e.css("height",view.e[0].scrollHeight+"px");
+            view._parent.center(view.e.innerHeight());
+        },10);
 },//}}}
+
+/** events */
+/**
+ * \fn thumbnailOnLoad()
+ * \brief event is triggered after thumbnail is loaded
+ * \param view is caller object
+ */
+thumbnailOnLoad: function(view){},
 }
 //}}}
 
@@ -640,9 +673,16 @@ var ItemList = function(e,items) { this.init(e,items); };
 ItemList.prototype = {
 init: function (e,items)//{{{
 {
+    // itemlist element
     this.e = e;
     if (!this.e)
         return null;
+
+    // item template element
+    this.template = e.find(".item");
+    if (!this.template.length)
+        return null;
+
     this.ls = items;
 
     this.lastpos = [0,0];
@@ -657,7 +697,7 @@ get: function(i)//{{{
 
 hidden: function()//{{{
 {
-    return this.e.className == "";
+    return !this.e.hasClass("focused");
 },//}}}
 
 size: function ()//{{{
@@ -667,7 +707,7 @@ size: function ()//{{{
 
 submitSelected: function()//{{{
 {
-    go(this.selected+1);
+    this.onSubmit(this.selected+1);
 },//}}}
 
 addThumbnails: function (items, i)//{{{
@@ -679,89 +719,92 @@ addThumbnails: function (items, i)//{{{
     if ( !items )
         items = this.items;
 
-	var item = this.ls[i];
-    var thumb = this.viewFactory.newView( item instanceof Array ? item[0] : item );
-    thumb.dataNum = i;
-    var e = thumb.thumbnail();
-    // show thumbnail only if src exists
-    e.style.display = "none";
-    items[i].appendChild(e);
+    var thumb_e = items[i].find(".thumbnail");
+    if (thumb_e.length) {
+        var item = this.ls[i];
+		var filename = item instanceof Array ? item[0] : item;
+        var thumb = this.viewFactory.newView(filename);
+        thumb.dataNum = i;
+
+        var t = this;
+		thumb.thumbnailOnLoad = function(view) {t.thumbnailOnLoad(view)};
+
+        var e = thumb.thumbnail();
+        // show thumbnail only if src exists
+		//e.css("display","none");
+        e.appendTo(thumb_e);
+    }
 },//}}}
 
 thumbnailOnLoad: function(thumb)//{{{
 {
-    this.thumbs.push( thumb.thumbnail() );
-
     var i = thumb.dataNum;
     // recursively load thumbnails from currently viewed
     // - flood load:
-    //      previous and next thumbnails (from current) are loaded in paralel
+    //      previous and next thumbnails (from the current) are loaded in parallel
     if (i+1>=n)
         this.addThumbnails(this.items, i+1);
     if (i+1<=n)
         this.addThumbnails(this.items, i-1);
 },//}}}
 
-appendItem: function (itemname, i)//{{{
+appendItem: function (i)//{{{
 {
-    var item = document.createElement('div');
-    item.dataNum = i;
-    item.className = "item";
-    item.onclick = function() {
-        go(this.dataNum);
-    }
+    var item = this.template.clone();
+    item.data("number",i);
+    var list = this;
+    item.click( function() {
+        list.onSubmit(item.data("number"));
+    });
 
     // image identification
-    var ident = document.createElement('div');
-    ident.className = "itemident";
-    ident.innerHTML = i;
+    var ident = item.find(".itemident");
+    if (ident.length)
+        ident.html(i);
 
-    // item text
-    var txt = document.createElement('div');
-    txt.className = "itemname";
-    txt.style.maxWidth = getConfig('thumbnail_max_width',300) + "px";
-
-	var x = this.ls[i-1];
-	var itemname, alias;
-	if (x instanceof Array) {
-		itemname = x[0];
-		alias = x[1];
-	}
-	else
-		itemname = x;
-
-	// item alias
-	if (alias) {
-		var e_alias = document.createElement('div');
-		e_alias.className = "alias";
-		e_alias.appendChild( document.createTextNode(alias) );
-		txt.appendChild(e_alias);
-	}
-
-	// filename
-	var e = newPathElement(itemname);
-    txt.appendChild(e);
-
-    item.appendChild(ident);
-    item.appendChild(txt);
-
-    this.e.appendChild(item);
-    this.items.push(item);
-},//}}}
-
-reloadThumbnails: function ()//{{{
-{
-    var thumb;
-    var minwidth = getConfig('thumbnail_min_width',100);
-    var maxwidth = getConfig('thumbnail_max_width',300);
-    while ( thumb = this.thumbs.pop() ) {
-        //thumb.style.maxWidth = maxwidth;
-        if ( thumb.width != 0 )
-            thumb.style.display = "";
-        thumb.style.maxWidth = Math.max( minwidth, Math.min(thumb.width,maxwidth) ) + "px";
+	// get item filename, alias, width, height
+    var x = this.ls[i-1];
+    var itemname, alias, w, h;
+    if (x instanceof Array) {
+        itemname = x[0];
+        alias = x[1];
+		w = x[2];
+		h = x[3];
     }
-    this.updateSelection();
-    this.ensureCurrentVisible();
+    else
+        itemname = x;
+
+	// set item max-width
+	var e_w = item.find(".thumbnail_width");
+	if ( e_w && w && !item.css("max-width") )
+		item.css("max-width",w+20);
+
+    // item alias
+    var e_alias = item.find(".alias");
+    if (e_alias.length) {
+        if (alias)
+            e_alias.html(alias);
+        else
+            e_alias.hide();
+    }
+
+    // filename
+    var dir_e = item.find(".directory");
+    var filename_e = item.find(".filename");
+    var ext_e = item.find(".extension");
+    createPathElements(dir_e,filename_e,ext_e,itemname);
+
+	// thumbnail size
+    var thumb_e = item.find(".thumbnail");
+	if (thumb_e) {
+		if (w)
+			thumb_e.css("width",w+"px");
+		if (h)
+			thumb_e.css("height",h+"px");
+	}
+
+    item.appendTo(this.e);
+    this.items.push(item);
 },//}}}
 
 toggle: function ()//{{{
@@ -772,31 +815,30 @@ toggle: function ()//{{{
 
 		for(var i=0; i<len; ++i) {
 			var item = this.ls[i];
-			this.appendItem(item instanceof Array ? item[0] : item, i+1);
+			this.appendItem(i+1);
 		}
 
         // add thumbnails
         this.thumbs = [];
         this.addThumbnails();
 
-        // moving selection cursor is faster than changing style of current item
-        this.selection = document.createElement("div");
-        this.selection.id = "selection";
-        this.e.appendChild(this.selection);
-
         // select current
         this.selectItem(n-1);
         this.selection_needs_update = true;
+
+        this.template.remove();
+
+        // selection cursor
+        this.selection = this.e.find(".selection");
+        this.selection.css("position","absolute");
     }
 
     var lastpos2 = [window.pageXOffset,window.pageYOffset];
-    this.e.className = this.hidden() ? "focused" : "";
+    this.e.toggleClass("focused");
     window.scrollTo( this.lastpos[0], this.lastpos[1] );
     this.lastpos = lastpos2;
 
     if ( !this.hidden() ) {
-        if ( this.thumbs.length )
-            this.reloadThumbnails();
         if ( this.selection_needs_update ) {
             this.updateSelection();
             this.ensureCurrentVisible();
@@ -812,8 +854,9 @@ resize: function ()//{{{
 ensureCurrentVisible: function ()//{{{
 {
     var e = this.items[this.selected];
-    var y = getTop(e);
-    var d = y + e.offsetHeight - window.pageYOffset - window.innerHeight;
+    // TODO: scroll horizontally to item
+    var y = e.position().top;
+    var d = y + e.innerHeight() - window.pageYOffset - window.innerHeight;
     if ( d > 0 )
         window.scrollBy(0,d);
     if ( y < window.pageYOffset )
@@ -838,26 +881,28 @@ selectItem: function (i)//{{{
     var e = this.items[i];
 
     if(sel)
-        sel.id = "";
-    e.id = "selected";
+        sel.attr("id","");
+    e.attr("id","selected");
     this.selected = i;
 
     if ( this.hidden() )
         this.selection_needs_update = true;
     else {
+        var pos = e.offset();
         // move selection cursor
-        this.selection.style.left = getLeft(e)+"px";
-        this.selection.style.top = getTop(e)+"px";
-        this.selection.style.width = e.offsetWidth+"px";
-        this.selection.style.height = e.offsetHeight+"px";
+        this.selection.css( "left", pos.left+"px" );
+        this.selection.css( "top", pos.top+"px" );
+        this.selection.css( "width", e.innerWidth()+"px" );
+        this.selection.css( "height", e.innerHeight()+"px" );
     }
 },//}}}
 
 listVertically: function (direction)//{{{
 {
     var sel = this.items[this.selected];
-    var x = getLeft(sel) - window.pageXOffset + sel.offsetWidth/2;
-    var y = Math.floor(getTop(sel) + sel.offsetHeight/2);
+    var pos = sel.position();
+    var x = pos.left - window.pageXOffset + sel.innerWidth()/2;
+    var y = Math.floor(pos.top + sel.innerHeight()/2);
     var ny
     var dist = 99999; // smallest X distance
     var newdist;
@@ -867,16 +912,17 @@ listVertically: function (direction)//{{{
     var i;
     for( i = this.selected+direction; i < this.items.length && i >= 0; i+=direction) {
         var e = this.items[i];
+        pos = e.position();
 
         if ( newdist == null ) {
-            ny = getTop(e) + e.offsetHeight/2;
+            ny = pos.top + e.innerHeight()/2;
             if ( (direction > 0 && ny-y < 10) || (direction < 0 && y-ny < 10) )
                 continue;
         }
-        else if( ny - getTop(e) - e.offsetHeight/2 > 10 )
+        else if( ny - pos.top - e.innerHeight()/2 > 10 )
             break;
 
-        var newdist = Math.abs( getLeft(e) + e.offsetWidth/2 - x );
+        var newdist = Math.abs( pos.left + e.innerWidth()/2 - x );
         if ( newdist > dist )
             break;
 
@@ -928,18 +974,18 @@ listLeft: function ()//{{{
 
 listPageDown: function ()//{{{
 {
-    var min_pos = this.selection.offsetTop+window.innerHeight;
+    var min_pos = this.selection.offset().top+window.innerHeight;
     var i = this.selected;
-    while ( ++i < len && min_pos > this.get(i).offsetTop );
+    while ( ++i < len && min_pos > this.get(i).offset().top );
     this.selectItem(i-1);
     this.ensureCurrentVisible();
 },//}}}
 
 listPageUp: function ()//{{{
 {
-    var min_pos = this.selection.offsetTop-window.innerHeight;
+    var min_pos = this.selection.offset().top-window.innerHeight;
     var i = this.selected;
-    while ( --i > 0 && min_pos < this.get(i).offsetTop );
+    while ( --i > 0 && min_pos < this.get(i).offset().top );
     this.selectItem(i+1);
     this.ensureCurrentVisible();
 },//}}}
@@ -959,35 +1005,34 @@ init: function() {},
 
 //! \class Info
 //{{{
-var Info = function(e,counter,itemtitle,resolution,progress) {
-    this.init(e,counter,itemtitle,resolution,progress);
+var Info = function(e) {
+    this.init(e);
 };
 
 Info.prototype = {
-init: function(e,counter,itemtitle,resolution,progress)//{{{
+init: function(e)//{{{
 {
     this.e = e;
-	this.itemtitle = itemtitle;
-    this.resolution = resolution;
-    this.progress = progress;
 
-	if (counter) {
-		this.counternow = document.createElement('div');
-		this.counternow.id = "now";
-		counter.appendChild(this.counternow);
+	this.itemlink = e.find(".itemlink");
+	this.alias = e.find(".alias");
 
-		this.countermax = document.createElement('div');
-		this.countermax.id = "max";
-		counter.appendChild(this.countermax);
+    this.status = e.find(".status");
 
-		this.counter = counter;
-	}
+    this.progress = e[0].getElementsByClassName("progress")[0];
+    this.counter = e.find(".counter");
+    this.counternow = this.e.find(".counternow");
+    this.countermax = this.e.find(".countermax");
+
+    this.dir_e = e.find(".directory");
+    this.filename_e = e.find(".filename");
+    this.ext_e = e.find(".extension");
 },//}}}
 
 updateCounter: function ()//{{{
 {
-    if ( this.counter )
-		this.counternow.textContent = this.counternow.innerHTML = this.n;
+    if (this.counternow)
+		this.counternow.html(this.n);
 },//}}}
 
 updateProgress: function ()//{{{
@@ -1031,61 +1076,57 @@ updateProgress: function ()//{{{
     ctx.restore();
 
     // move counter to center of the cicle
-    if (!this.counter)
-        return;
-
-    this.counter.style.position = "absolute";
-    this.counter.style.left = (x-this.counter.offsetWidth/2)+"px";
-    this.counter.style.top = (y-this.counter.offsetHeight/2)+"px";
+    if (this.counter.length) {
+        this.counter.css("position", "absolute");
+        this.counter.css("left", (x-this.counter.innerWidth()/2)+"px");
+        this.counter.css("top", (y-this.counter.innerHeight()/2)+"px");
+    }
 },//}}}
 
 updateItemTitle: function ()//{{{
 {
-	var l = document.getElementById("link");
-    if (l)
-        this.itemtitle.removeChild(l);
+    if (this.itemlink.length)
+        this.itemlink.attr( "href", path(this.itempath) );
 
-    l = document.createElement('a');
-    l.id = "link";
-	l.href = path( this.itempath );
+	if (this.alias.length && this.aliasname)
+		this.alias.html(this.aliasname);
 
-	if (this.alias) {
-		var e_alias = document.createElement('div');
-		e_alias.className = "alias";
-		e_alias.appendChild( document.createTextNode(this.alias) );
-		l.appendChild(e_alias);
-	}
-
-	// filename
-	var e = newPathElement(this.href);
-	l.appendChild(e);
-
-	this.itemtitle.appendChild(l);
+    createPathElements(this.dir_e,this.filename_e,this.ext_e,this.href);
 },//}}}
 
 updateStatus: function (status_msg,class_name)//{{{
 {
-    if (!this.resolution)
+    if (!this.status.length)
         return;
 
-    this.resolution.textContent = this.resolution.innerHTML = status_msg;
-    this.resolution.className = class_name;
-    this.popInfo();
+    var e = this.status.find( "."+(class_name ? class_name : "msg") );
+    if(e.length) {
+        if( status_msg != null ) {
+            e.html(status_msg);
+            e.show();
+        }
+        else
+            e.hide();
+        this.popInfo();
+    }
 },//}}}
 
 name: function ()//{{{
 {
-    return this.alias ? this.alias+" ("+this.href+")" : this.href;
+    return this.aliasname ? this.aliasname+" ("+this.href+")" : this.href;
 },//}}}
 
-updateInfo: function (href,i,len,alias)//{{{
+updateInfo: function (href,i,len,aliasname)//{{{
 {
     this.href = href;
     this.n = i;
     this.len = len;
-	this.alias = alias;
-	this.countermax.textContent = this.countermax.innerHTML = this.len;
+	this.aliasname = aliasname;
+	this.countermax.html(this.len);
     this.itempath = escape(this.href);
+
+    // reset status
+    this.status.children().hide();
 
     this.updateCounter();
     this.updateProgress();
@@ -1096,16 +1137,24 @@ popInfo: function ()//{{{
 {
     if (this.info_t)
         clearTimeout(this.info_t);
-    this.e.className = "focused";
+    if ( !this.e.hasClass("focused") )
+        this.e.addClass("focused");
 
     var t = this;
-    this.info_t = setTimeout(function(){t.e.className = "";},4000);
+    this.info_t = window.setTimeout(function(){t.e.removeClass("focused");},4000);
 },//}}}
 
 hidden: function()//{{{
 {
-    return this.e.className != "focused";
+    return !this.e.hasClass("focused");
 },//}}}
+
+/** events */
+/** \fn onSubmit(n)
+ * \brief event is triggered after selecting item (pressing enter or mouse click)
+ * \param n identification of submitted item
+ */
+onSubmit: function(n){},
 }
 //}}}
 
@@ -1140,39 +1189,30 @@ function breakText(text) {//{{{
 	return text.replace(/[\.\/_-]/g,'$&\u200B');
 }//}}}
 
-function newPathElement(path) {//{{{
-    var e = document.createElement('div');
-    e.className = "path";
-
+function createPathElements(dir_e,filename_e,ext_e,path) {//{{{
 	// TODO: "dir1/dir2/a\\b.png" etc.
 	var m = path.match(/(.*)[\/\\](.*)/);
 
-	if (m) {
-        // item path
-		var dir = document.createElement('div');
-		dir.className = "directory";
-		dir.appendChild( document.createTextNode(breakText(m[1])) );
-		e.appendChild(dir);
-	}
+    var dir = m ? breakText(m[1]) : "";
+    if (dir_e.length) {
+        if (dir) {
+            dir_e.html(dir);
+            dir_e.show();
+        }
+        else
+            dir_e.hide();
+    }
 
     var filename = m ? m[2] : path;
 	var m = filename.match(/(.*)\.([^.]*)/);
 
     // filename
-    var filename_e = document.createElement('div');
-    filename_e.className = "filename";
-    filename_e.appendChild( document.createTextNode(breakText(m ? m[1] : filename)) );
-	e.appendChild(filename_e);
+    if (filename_e.length)
+        filename_e.html( breakText(m ? m[1] : filename) );
 
     // extension
-    if (m) {
-        var ext = document.createElement('div');
-        ext.className = "extension";
-        ext.appendChild( document.createTextNode(breakText(m[2])) );
-        e.appendChild(ext);
-    }
-
-	return e;
+    if (ext_e.length)
+        ext_e.html(m ? breakText(m[2]) : "");
 }//}}}
 
 function getPage (i)//{{{
@@ -1184,13 +1224,10 @@ function go (i)//{{{
 {
 	var pg = getPage(i);
 
-    if (itemlist) {
-        if( !itemlist.hidden() )
-            toggleList();
-        itemlist.selectItem(pg-1);
-    }
-
     n = vars['n'] = pg;
+
+    if ( itemlist && !itemlist.hidden() )
+        toggleList();
 
 	var item = this.ls[i-1];
 	var itemname, alias;
@@ -1200,7 +1237,6 @@ function go (i)//{{{
 	}
 	else
 		var itemname = item;
-    viewer.show(itemname);
 
     if (info ) {
         info.updateInfo(itemname,n,len,alias);
@@ -1210,6 +1246,8 @@ function go (i)//{{{
     updateTitle();
 	updateUrl(1000);
 	updateClassName();
+
+    viewer.show(itemname);
 
     window.scrollTo(0,0);
 }//}}}
@@ -1346,6 +1384,7 @@ keycodes[34] = "PageDown";
 keycodes[35] = "End";
 keycodes[36] = "Home";
 if ( userAgent() == userAgents.webkit ) {
+    keycodes[96] =  "KP0";
     keycodes[97] =  "KP1";
     keycodes[98] =  "KP2";
     keycodes[99] =  "KP3";
@@ -1423,7 +1462,7 @@ function initDragScroll ()//{{{
     document.addEventListener("mousemove",dragScroll,false);
 
     function startDragScroll(e) {
-        if (e.button == 0 && (e.target.id == "canvas" || e.target.className == "imageview")) {
+        if (e.button == 0 && (e.target.id == "canvas" || e.target.className.match(/view$/))) {
             dragging = true;
             x = window.pageXOffset + e.clientX;
             y = window.pageYOffset + e.clientY;
@@ -1446,9 +1485,15 @@ function initDragScroll ()//{{{
 }//}}}
 //}}}
 
-function createItemList(e)//{{{
+function createItemList()//{{{
 {
+    var e = $("#itemlist");
+    if (!e.length)
+        return;
+
     itemlist = new ItemList(e,ls);
+
+    itemlist.onSubmit = go;
 
     // navigation//{{{
     addKeys(["KP5","5"], "Toggle thumbnail list", toggleList);
@@ -1519,7 +1564,7 @@ function createViewer(e,info)//{{{
     addKeys(["Space"], "Move window down/Next gallery item/Play or pause", function() {
 			var v = viewer.view;
 			if (v && v.type() == "video")
-				v.e.paused ? v.e.play() : v.e.pause();
+				v.togglePlay();
 			else if ( window.pageYOffset+window.innerHeight == document.documentElement.scrollHeight )
                 next();
             else
@@ -1541,8 +1586,8 @@ function createViewer(e,info)//{{{
             if ( n != len )
                 go(n+5);
         }, modes.viewer);
-    addKeys(["KP4","4","K","k"], "Next", prev, modes.viewer);
-    addKeys(["KP6","6","Enter","J","k"], "Previous", next, modes.viewer);
+    addKeys(["KP4","4","K","k"], "Previous", prev, modes.viewer);
+    addKeys(["KP6","6","Enter","J","k"], "Next", next, modes.viewer);
     addKeys(["KP7","7"], "Browse to first gallery item", function() {
             if ( n != 1 )
                 go(1);
@@ -1555,6 +1600,11 @@ function createViewer(e,info)//{{{
     addKeys(["KP9","9"], "Browse to fifth previous gallery item", function() {
             if ( n != 1 )
                 go(n-5);
+        }, modes.viewer);
+    addKeys(["KP0","0"], "Normal speed playback", function() {
+			var v = viewer.view;
+			if (v && v.type() == "video")
+				v.normalSpeed();
         }, modes.viewer);
     addKeys(["+"], "Zoom in", function() {
             viewer.zoom("+");
@@ -1574,15 +1624,8 @@ function createViewer(e,info)//{{{
     //}}}
 }//}}}
 
-function createNavigation (enext, eprev, elist)//{{{
+function createNavigation ()//{{{
 {
-    if (enext)
-        enext.onclick = next;
-    if (eprev)
-        eprev.onclick = prev;
-    if (elist && itemlist)
-        elist.onclick = toggleList;
-
     // keyboard
     if ( userAgent() == userAgents.webkit )
         document.onkeydown = keyPress;
@@ -1599,14 +1642,20 @@ function createNavigation (enext, eprev, elist)//{{{
     addKeys(["Escape","?","H","h"], "Hide help", function() {
             toggleHelp(true);
             }, modes.help);
-    addKeys(["Left"], "Move window left/Previous gallery item", function () {
-            if ( !viewer.width() || viewer.width() <= window.innerWidth )
+    addKeys(["Left"], "Move window left/Slower playback/Previous gallery item", function () {
+			var v = viewer.view;
+			if (v && v.type() == "video")
+				v.slower();
+            else if ( !viewer.width() || viewer.width() <= window.innerWidth )
                 prev();
             else
                 window.scrollBy(-window.innerWidth/4,0);
         });
-    addKeys(["Right"], "Move window right/Next gallery item", function() {
-            if ( !viewer.width() || viewer.width() <= window.innerWidth )
+    addKeys(["Right"], "Move window right/Faster playback/Next gallery item", function() {
+			var v = viewer.view;
+			if (v && v.type() == "video")
+				v.faster();
+            else if ( !viewer.width() || viewer.width() <= window.innerWidth )
                 next();
             else
                 window.scrollBy(window.innerWidth/4,0);
@@ -1681,7 +1730,7 @@ function createConfigHelp(e)//{{{
     // configuration//{{{
     var confdesc = {
         "Images": {
-        'zoom_step': "zoom factor",
+        'zoom_step': "zoom multiplier",
         'preload_images': "number of images to preload",
         },
 
@@ -1847,19 +1896,12 @@ function onLoad()//{{{
     document.body.style.overflow = "hidden";
 
     // item list
-    e = document.getElementById("itemlist")
-    if (e)
-        createItemList(e);
+    createItemList();
 
     // info
-    e = document.getElementById("info");
-    if (e) {
-        info = new Info(e,
-                document.getElementById("counter"),
-                document.getElementById("itemtitle"),
-                document.getElementById("resolution"),
-                document.getElementById("progress"));
-    }
+    e = $("#info");
+    if (e)
+        info = new Info(e);
 
     // viewer
     e = document.getElementById("canvas");
@@ -1873,10 +1915,7 @@ function onLoad()//{{{
     b.onbeforeunload = function() { updateUrl(); };
 
     // navigation
-    createNavigation(
-			document.getElementById("next"),
-			document.getElementById("prev"),
-			document.getElementById("list") );
+    createNavigation();
 
     go(n);
 }//}}}

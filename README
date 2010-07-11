@@ -1,6 +1,6 @@
 mkgallery python script
 =======================
-usage: mkgallery.py [options] [directories|filenames]
+usage: ./mkgallery.py [options] [directories|filenames]
 
     Creates HTML gallery containing images and fonts recursively
     found in given directories and files or in the current directory.
@@ -8,21 +8,23 @@ usage: mkgallery.py [options] [directories|filenames]
     If BROWSER environment variable is set, the gallery is
     automatically viewed using web browser $BROWSER.
 
-    For program to be able to generate thumbnails and font names,
+    For the program to be able to generate thumbnails and font names,
     you must have Python Imaging Library (PIL) is installed.
 
 options:
     -h, --help              prints this help
-    -t, --title=<title>     gallery title and directory name
+    -t, --title=<title>     gallery title
                               (default: 'default')
-    -r, --resolution=<res>  resolution for thumbnails in pixels
-                              (default: 300)
-    -d, --directory=<dir>   gallery is saved (%s is replaced by <title>)
-                              (default: '/home/lukas/dev/gallery/galleries/%s')
-    -u, --url=<url>         url location for web browser (%s is replaced by <title>)
-                              (default: 'http://127.0.0.1:8080/galleries/%s')
+    -d, --directory=<dir>   path to gallery (%s is replaced by <title>)
+                              (default: '300')
     --template=<dir>        path to template html and support files
-                              (default: '/home/lukas/dev/gallery')
+                              (default: './galleries/%s')
+    -u, --url=<url>         url location for web browser (%s is replaced by <title>)
+                              (default: 'file:///<path_to_gallery>/index.html')
+    -r, --resolution=<res>  resolution for thumbnails in pixels
+                              (default: .)
+    -c, --copy              copy files instead of creating symbolic links
+	-f, --force             overwrites existing gallery
 
     -r 0, --resolution=0    don't generate thumbnails
     -u "", --url=""         don't launch web browser
@@ -30,13 +32,22 @@ options:
 
 Creating gallery manually
 =========================
-To create new gallery (without using the python script) just copy images and fonts to subdirectory "items" and edit file "items.js" and "fonts.js" (see next sections).
+To create new gallery (without using the python script) just copy images,
+fonts, audio and video files to subdirectory "items" and edit files "items.js"
+and "fonts.js" (see next sections).
 
-The default HTML file ("template.html") can be modified so that gallery doesn't contain list of items, navigation elements, information label, help or even viewer.
+The default HTML file ("template.html") can be modified so that gallery doesn't
+contain list of items, navigation elements, information label, help or even
+viewer.
 
-Specific options can be modified in file "config.js" or overridden in URL hash (the part after hash sign, e.g. "http://.../index.html#preload_images=5&zoom_step=0.25").
+Specific options can be modified in file "config.js" or overridden in URL hash
+(the part after hash sign, e.g.
+".../index.html#preload_images=5&zoom_step=0.25").
 
-The gallery appearance can be changed using default CSS files in directory "files".
+The gallery appearance can be changed in default CSS files in directory
+"files". The gallery elements like viewer, information bar, item list, help or
+navigation can be modified or completely removed from HTML file. For further
+information see the default commented HTML file "template.html".
 
 Directory "thumbs" contains thumbnails of images in gallery (thumbnail have same filename as the image).
 
@@ -63,32 +74,37 @@ Default directory structure is:
     /thumbs:
         ...
 
+
 items.js
 --------
-In this file create array "ls" containing relative path of each file in directory "items".
+In this file create array "ls". Each entry of the array can be either string
+--- relative path of a file in directory "items" --- or an array containing
+two entries:
+	- item path,
+	- item alias,
+and two optional entries representing thumbnail width and height. Even though
+these two entries are optional you shoud set it because the thumbnails are
+dynamically loaded into item list when the list is viewed for the first time.
 
-For example contents of file "items.js" for gallery with five PNG images is:
+For example file "items.js" for gallery with five PNG images contains:
     var ls = [
-        "face-smile-big.png",
-        "face-tired.png",
-        "stock_smiley-5.png",
-        "face-uncertain.png",
-        "face-angel.png",
+        ["face-smile-big.png", "Smile!", 256, 256],
+        ["face-tired.png", "", 256, 256],
+         "stock_smiley-5.png",
+        ["face-uncertain.png", "Uncertain smiley"],
+         "face-angel.png",
     ];
-
-Optional variables are "title" (title of gallery; default value is "default") and "aliases" (aliases for items).
-For example:
     var title = "Smileys";
-    var aliases = {
-        "face-smile-big.png": "Smile!",
-        "face-uncertain.png": "Uncertain smiley",
-    };
 
-fonts.js
+The variables "title" is optional (title of gallery; default value is "default").
+
+
+fonts.css
 --------
-This file contains definitions of CSS "font-face" for defining own fonts.
+This file contains font definitions.
 For example:
     @font-face{font-family:fonts_LinLibertine_Re_otf;src:url('items/fonts/LinLibertine_Re.otf');}
 
-The font name must be same as path (relative to "items" directory) to the font with all characters that are not a letter, a digit or space replaced with underscore.
+The font name must be same as path to the font relative to "items" directory
+with all characters that are not a letter, a digit or space replaced with underscore.
 

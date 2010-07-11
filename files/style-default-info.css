@@ -13,7 +13,6 @@
 	-moz-border-radius: 50px;
 	-webkit-border-radius: 50px;
     border: 2px solid rgba(0,0,0,0.5);
-    padding: 6px;
     padding-right: 1.5em;
 
     -webkit-transition: opacity 0.5s ease-in-out;
@@ -22,46 +21,54 @@
 .modeViewer #info:hover, .modeViewer #info.focused {
     opacity: 1;
 }
+#info:hover {
+    background-color: black;
+    -webkit-box-shadow: 0px 0px 10px #7bf;
+    -moz-box-shadow: 0px 0px 10px #7bf;
+}
 
 /* current item and number of items */
-#counter {
+.counter {
     text-align: center;
-	margin: 6px; /* same value as info.padding */
+	margin: 10px; /* same as progress.margin*/
     font-weight: bold;
-	margin-top: 0.5em;
+	margin-top: 0.8em;
+    position: relative;
+    top:0;
+    left:0;
 }
-#counter #max, #counter #now {color: white; font-size: 0.8em;}
-#counter #max {font-size: 0.6em; border-top: 1px solid #bbb; color: #ddd;}
-.last #counter #now {color: #db8}
+.countermax, .counternow {color: white; font-size: 0.8em;}
+.countermax {font-size: 0.6em; border-top: 1px solid #bbb; color: #ddd;}
+.last .counternow {color: #db8}
 
 /* item directory, filename, alias */
-#itemtitle {z-index: 1; float: left; text-align: left;}
-#itemtitle .path,
-#itemtitle .extension,
-#itemtitle .filename {color: inherit;}
-#itemtitle .directory,
-#itemtitle .extension,
-#itemtitle .filename {font-family: monospace;}
-#itemtitle .alias {font-size: 0.8em; color: #fd0; margin-bottom: 0.3em;}
-#itemtitle .directory {font-size: 0.7em; color: #7da;}
-#itemtitle .extension {
+.itemlink {text-decoration: none; z-index: 1; float: left; text-align: left;}
+.itemlink .directory,
+.itemlink .extension,
+.itemlink .filename {font-family: monospace;}
+.itemlink .alias {font-size: 0.8em; color: #fd0;}
+.itemlink .filename { color: #9de;}
+.itemlink .extension {color: #8fb;}
+.itemlink .directory {color: #ccc; font-size: 0.7em;}
+.itemlink .extension {
     display: inline;
-    color: #fd0;
     font-size: 0.7em;
     margin-left: 0.5em;
 }
-#itemtitle .filename {display: inline; font-weight: bold; font-size: 0.8em;}
+.itemlink .filename {display: inline; font-weight: bold; font-size: 0.8em;}
 
 /* resolution and zoom or font-size */
-#resolution {
-    display: block;
-    font-size: 0.7em;
+.status * {
+    font-size: 0.65em;
     text-align: left;
-    margin-left: 2ex;
 }
-#resolution.loading {color: #fd0;}
-#resolution.error   {color: #faa;}
+.status .loading {color: #fd0;}
+.status .error   {color: #faa;}
+.status .zoom:before {content: "[";}
+.status .zoom:after {content: "%]";}
+.status .duration:before {content: "|";}
+.status .duration:after {content: "|";}
 
 /* progress circle */
-#progress {float: left; margin-right: 0.5em;}
+.progress {float: left; margin: 10px;}
 

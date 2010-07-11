@@ -1,42 +1,119 @@
 <!DOCTYPE HTML>
 <html>
-<head>
-<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-<meta http-equiv="Cache-control" content="no-cache">
-<meta http-equiv="Pragma" content="no-cache">
-<meta http-equiv="expires" content="0">
-<link rel="stylesheet" type="text/css" href="fonts.css" />
-<link rel="stylesheet" type="text/css" href="files/style-default.css" media="screen" />
-<link rel="stylesheet" type="text/css" href="files/style-default-info.css" media="screen" />
-<link rel="stylesheet" type="text/css" href="files/style-default-help.css" media="screen" />
-<link rel="stylesheet" type="text/css" href="files/style-default-list.css" media="screen" />
-<link rel="stylesheet" type="text/css" href="files/style-default-navigation.css" media="screen" />
-<link rel="stylesheet" type="text/css" href="files/style-print.css" media="print" />
-<link rel="stylesheet" type="text/css" href="files/style-print-list.css" media="print" />
-<link rel="shortcut icon" type="image/png" href="files/favicon.png" />
-<script type="text/javascript" src="items.js"></script>
-<script type="text/javascript" src="config.js"></script>
-<script type="text/javascript" src="files/gallery.js"></script>
-</head>
-<body onload="onLoad()">
-    <div id="info">
-        <canvas id="progress"></canvas>
-        <span id="counter"></span>
-        <span id="itemtitle"></span>
-        <span id="resolution"></span>
-    </div>
+	<head>
+		<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+		<meta http-equiv="Cache-control" content="no-cache">
+		<meta http-equiv="Pragma" content="no-cache">
+		<meta http-equiv="expires" content="0">
+		<link rel="shortcut icon" type="image/png" href="files/favicon.png" />
+		<script type="text/javascript" src="files/jquery-1.4.2.min.js"></script>
 
-    <div class="navigation" id="next">Next &gt;</div>
-    <div class="navigation" id="prev">&lt; Prev</div>
-    <div class="navigation" id="list">List</div>
+		<!-- CSS with font-faces -->
+		<link rel="stylesheet" type="text/css" href="fonts.css" />
 
-    <div id="canvas"></div>
-    <div id="itemlist"></div>
-    <div id="help">
-        <h1>Help</h1>
-        <div id="keys"><h2>Keys</h2></div>
-        <div id="options"><h2>Options</h2></div>
-        <div id="about"><h2>About</h2></div>
-    </div>
-</body>
+		<!-- default CSS -->
+		<link rel="stylesheet" type="text/css" href="files/style-default.css" media="screen" />
+		<link rel="stylesheet" type="text/css" href="files/style-default-info.css" media="screen" />
+		<link rel="stylesheet" type="text/css" href="files/style-default-help.css" media="screen" />
+		<link rel="stylesheet" type="text/css" href="files/style-default-list.css" media="screen" />
+		<link rel="stylesheet" type="text/css" href="files/style-default-navigation.css" media="screen" />
+
+		<!-- printer-friendly CSS version -->
+		<link rel="stylesheet" type="text/css" href="files/style-print.css" media="print" />
+		<link rel="stylesheet" type="text/css" href="files/style-print-list.css" media="print" />
+
+		<!-- gallery title and list of items:
+		var title = "gallery title";
+		var ls = [
+			"path1",
+			["path2", "alias2"],
+			["path3", "alias3", thumbnail3_width, thumbnail3_height],
+			"path4",
+			...
+		];
+		-->
+		<script type="text/javascript" src="items.js"></script>
+
+		<!-- user configuration (can be overriden in URL hash) -->
+		<script type="text/javascript" src="config.js"></script>
+
+		<!-- core script -->
+		<script type="text/javascript" src="files/gallery.js"></script>
+	</head>
+
+	<!--
+	Elements with comments are used in "gallery.js" script.
+	Other elements are used for better navigation or orientation.
+	All elements are optional.
+	-->
+	<body onload="onLoad()"><!-- onLoad function initialises gallery -->
+		<div id="canvas"></div><!-- item view (image, font, video, audio) -->
+
+
+		<div id="info">
+			<canvas class="progress"></canvas><!-- progress circle -->
+
+			<div class="counter"><!-- centered in circle -->
+				<div class="counternow"></div><!-- current item number -->
+				<div class="countermax"></div><!-- number of items -->
+			</div>
+
+			<a class="itemlink"><!-- item hyperlink -->
+				<div class="alias"></div><!-- item alias -->
+				<div class="filename"></div><!-- item filename (without directory and extension) -->
+				<div class="extension"></div><!-- item filename extension -->
+				<div class="directory"></div><!-- item directory -->
+			</a>
+
+			<div class="status"><!-- container for all status messages -->
+				<span class="resolution"></span><!-- item resolution -->
+				<span class="fontsize"></span><!-- font size -->
+				<span class="duration"></span><!-- duration -->
+				<span class="zoom"></span><!-- zoom level in percent -->
+				<span class="speed"></span><!-- speed factor -->
+				<span class="error"></span><!-- error message -->
+				<span class="msg"></span><!-- general message -->
+			</div>
+		</div>
+
+
+		<div id="itemlist"><!-- container item list -->
+			<div class="selection"></div><!-- selection cursor -->
+
+			<div class="item"><!-- template for all items in list -->
+				<div class="itemident"></div><!-- item identification number -->
+				<div class="thumbnail_width"><!-- max-width of this is set to thumbnail width -->
+					<div class="alias"></div><!-- same as above -->
+					<div class="filename"></div><!-- same as above -->
+					<div class="extension"></div><!-- same as above -->
+					<div class="directory">.</div><!-- same as above -->
+				</div>
+				<div class="thumbnail"></div><!-- item preview -->
+			</div>
+
+			<div class="navigation" id="list" onclick="toggleList()">Hide list</div>
+		</div>
+
+
+		<div id="help"><!-- container help window -->
+			<h1>Help</h1>
+
+			<div id="keys"><!-- shortcuts -->
+				<h2>Keys</h2>
+			</div>
+
+			<div id="options"><!-- user configuration -->
+				<h2>Options</h2>
+			</div>
+
+			<div id="about"><!-- about application -->
+				<h2>About</h2>
+			</div>
+		</div>
+
+
+		<div class="navigation" id="next" onclick="prev()">Next &gt;</div>
+		<div class="navigation" id="prev" onclick="next()">&lt; Prev</div>
+		<div class="navigation" id="list" onclick="toggleList()">List</div>
+	</body>
 </html>

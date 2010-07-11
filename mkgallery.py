@@ -38,6 +38,10 @@ def sort(x,y,state=-1):#{{{
 	return sort(x[1:],y[1:],a>b and 1 or -1)
 #}}}
 
+def escape(s):#{{{
+	return s.replace('\\','\\\\').replace('"','\\"')
+#}}}
+
 def copy(src, dest):#{{{
 	if os.path.isdir(src):
 		shutil.copytree( src, dest )
@@ -56,7 +60,7 @@ usage: %s [options] [directories|filenames]
     If BROWSER environment variable is set, the gallery is
     automatically viewed using web browser $BROWSER.
 
-    For program to be able to generate thumbnails and font names,
+    For the program to be able to generate thumbnails and font names,
     you must have Python Imaging Library (PIL) is installed.
 
 options:
@@ -182,7 +186,7 @@ def prepare_gallery(d,gdir,force):#{{{
 #}}}
 
 def addFont(fontfile,css):#{{{
-	fontname = None
+	fontname = ""
 
 	try:
 		from PIL import ImageFont
@@ -201,8 +205,7 @@ def addFont(fontfile,css):#{{{
 #}}}
 
 def prepare_html(template,itemfile,css,gdir,files):#{{{
-	items = []
-	aliases = {}
+	items = {}
 	imgdir = gdir+"/items"
 	abs_gdir = os.path.abspath(gdir)
 
@@ -213,12 +216,15 @@ def prepare_html(template,itemfile,css,gdir,files):#{{{
 			# ignore gallery directory
 			if abs_f.startswith(abs_gdir):
 				continue
+
+			# filetype (image, font, audio/video)
 			isimg = isfont = isvid = False
 			isimg = img_fmt.search(f) != None
 			if not isimg:
 				isfont = font_fmt.search(f) != None
 				if not isfont:
 					isvid = vid_fmt.search(f) != None
+
 			if isimg or isfont or isvid:
 				fdir = imgdir+"/"+os.path.dirname(f)
 				if not os.path.isdir(fdir):
@@ -226,65 +232,68 @@ def prepare_html(template,itemfile,css,gdir,files):#{{{
 				cp( abs_f, fdir+"/" + os.path.basename(f) )
 
 				# if file is font: create font-face line in css
+				alias = ""
 				if isfont:
-					fontname = addFont(f,css);
-					# add font name
-					if fontname:
-						aliases[f] = fontname
-				items.append(f.replace("'","\\'"))
+					alias = addFont(f,css);
 
-	items.sort(sort)
+				items[escape(f)] = alias
+
+	itemfile.write('var title = "'+title+'";\n');
 	itemfile.write("var ls=[\n")
-	for item in items:
-		try:
-			alias = aliases[item]
-		except:
-			alias = None
-		itemname = item.replace('\\','\\\\').replace('"','\\"')
+	for item,alias in sorted(items.items(),sort):
 		if alias:
-			line = '["%s","%s"]' % (itemname,alias)
+			line = '["%s","%s"]' % (item,alias)
 		else:
-			line = '"%s"' % itemname
+			line = '"%s"' % item
 		itemfile.write(line+',\n')
 	itemfile.write("];\n");
 
-	itemfile.write('var title = "'+title+'";\n');
-
-	#itemfile.write("var aliases={\n")
-	#for f,alias in aliases.items():
-		#itemfile.write('"'+f+'":"'+alias.replace('\\','\\\\').replace('"','\\"')+'",\n')
-	#itemfile.write("};");
+	return items
 #}}}
 
-def create_thumbnails(imgdir,thumbdir,resolution):#{{{
+def create_thumbnails(items,imgdir,thumbdir,resolution,itemfile):#{{{
 	try:
 		from PIL import Image
 
-		images = []
-		for f in walk(imgdir):
-			if img_fmt.search(f):
-				images.append(f)
+		# number of images
+		n = len( filter(img_fmt.search,items.keys()) )
+		if n == 0:
+			return # no images
 
-		n = len(images)
-		if n == 0: return
-
+		# create thumbnail directory
 		os.makedirs(thumbdir)
 
 		i = 0
 		bar = ">" + (" "*progress_len)
-		sys.stdout.write( "Creating thumbnails: [%s] %d/%d\r"%(bar,0,n) );
-		for f in images:
-			im = Image.open(f)
-			im = im.convert("RGBA")
-			im.thumbnail((resolution,resolution), Image.ANTIALIAS)
-			im.save(thumbdir+"/"+os.path.basename(f) + ".png", "PNG", quality=60)
+		sys.stdout.write( "Creating thumbnails: [%s] %d/%d\r"%(bar,0,n) )
 
-			# TODO: show progress bar
-			i=i+1
-			l = i*progress_len/n
-			bar = ("="*l) + ">" + (" "*(progress_len-l))
-			sys.stdout.write( "Creating thumbnails: [%s] %d/%d%s"%(bar,i,n,i==n and "\n" or "\r") );
-			sys.stdout.flush()
+		lines = "var ls=[\n"
+		for f,alias in sorted(items.items(), sort):
+			if img_fmt.search(f):
+				# create thumbnail
+				im = Image.open(imgdir+"/"+f)
+				im = im.convert("RGBA")
+				im.thumbnail((resolution,resolution), Image.ANTIALIAS)
+				im.save(thumbdir+"/"+os.path.basename(f) + ".png", "PNG", quality=60)
+				lines = lines + ( '["%s","%s",%d,%d],\n' % (f,alias,im.size[0],im.size[1]) )
+
+				# show progress bar
+				i=i+1
+				l = i*progress_len/n
+				bar = ("="*l) + ">" + (" "*(progress_len-l))
+				sys.stdout.write( "Creating thumbnails: [%s] %d/%d%s"%(bar,i,n,i==n and "\n" or "\r") );
+				sys.stdout.flush()
+			elif alias:
+				lines = lines + ( '["%s","%s"],\n' % (f,alias) )
+			else:
+				lines = lines + ( '"%s",\n' % f )
+		lines = lines + "];\n"
+
+		# rewrite items.js
+		itemfile.seek(0)
+		itemfile.truncate()
+		itemfile.write('var title = "'+title+'";\n');
+		itemfile.write(lines)
 
 		print("Thumbnails successfully generated.")
 	except ImportError:
@@ -303,20 +312,22 @@ def main(argv):#{{{
 	itemfile = open( gdir+"/items.js", "w" )
 	css = open( gdir+"/fonts.css", "w" )
 
-	prepare_html(template,itemfile,css,gdir,files)
+	items = prepare_html(template,itemfile,css,gdir,files)
 
 	template.close()
-	itemfile.close()
 	css.close()
 
 	if url:
+		itemfile.flush()
 		launch_browser(url)
 
 	thumbdir = gdir+"/thumbs"
 	if os.path.isdir(thumbdir):
 		shutil.rmtree(thumbdir)
 	if resolution>0:
-		create_thumbnails(gdir+"/items",thumbdir,resolution)
+		create_thumbnails(items, gdir+"/items",thumbdir,resolution,itemfile)
+
+	itemfile.close()
 
 	print("New gallery was created in: '"+gdir+"'")
 #}}}
