@@ -14,8 +14,6 @@
     color: #ddd;
 }
 
-html,body {height: 100%;}
-
 body {
     margin: 0px;
     /*background-color: #222;*/
@@ -31,15 +29,16 @@ a {font-weight: inherit; color: inherit; font-size: inherit; font-family: inheri
     display: none;
     /*position: relative; [> view can be in the middle <]*/
 
-    min-width: 100%;
-    min-height: 100%;
+    /*min-width: 100%;*/
+    /*min-height: 100%;*/
+    /*margin: 0px;*/
 }
 .modeViewer #canvas {display: block;}
 .imageview {margin: auto;}
 .videoview {margin: auto;}
 .fontview { 
     display: block;
-    z-index: 1; /* on top -- always focusable */
+    z-index: 1; /* always focusable */
     margin: auto;
 
     width: 60%;

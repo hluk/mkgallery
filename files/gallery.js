@@ -1581,7 +1581,7 @@ function createViewer(e,info)//{{{
 			var v = viewer.view;
 			if (v && v.type() == "video")
 				v.togglePlay();
-			else if ( window.pageYOffset+window.innerHeight == document.documentElement.scrollHeight )
+			else if ( window.pageYOffset+window.innerHeight >= document.documentElement.scrollHeight )
                 next();
             else
                 window.scrollBy(0,window.innerHeight*9/10);
