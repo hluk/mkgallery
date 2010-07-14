@@ -13,7 +13,10 @@
 
 .item {
     text-align: center;
+
     display: inline-block;
+    /*float: left;*/
+
     vertical-align: middle;
     padding: 4px;
     padding-top: 0px;
@@ -23,10 +26,17 @@
     color: black;
 	min-width: 100px;
 }
-.item:hover {
-    background-color: rgba(0,255,200,0.5);
+.item, .selection {
     -moz-border-radius: 6px;
     -webkit-border-radius: 6px;
+    -webkit-transition: left .1s ease-in-out, top .1s ease-in-out, width .1s ease-in-out, height .1s ease-in-out;
+}
+.item:hover {
+    background-color: rgba(0,255,0,0.3);
+}
+.selection {
+	z-index: -2;
+	background-color: #6bf;
 }
 
 .itemident {
@@ -38,49 +48,28 @@
     font-weight: bold;
 
     margin: 0.5em;
+    margin-bottom: 0em;
     padding: 0.3em;
     -moz-border-radius: 20px;
     -webkit-border-radius: 20px;
     color: black;
     background-color: white;
-    min-width: 14px;
+    min-width: 1.2em;
 }
 
 .thumbnail_width {
     margin: 0.5em;
-    overflow: hidden;
     z-index: 2;
     text-align: left;
-	font-weight: bold;
 }
 .item .alias {color: white;}
 .item .path,
 .item .directory,
 .item .extension,
 .item .filename {font-family: monospace;}
-.item .directory {font-size: 0.7em; color: #888;}
-.item .filename {font-size: 0.8em; display: inline;}
-.item .extension {display: inline; margin-left: 0.5em; font-size: 0.6em; color: #fd0;}
-.item .alias {font-size: 0.9em;}
-
-#selected .extension,
-#selected .directory {color: #444;}
-#selected .filename {color: black;}
-.item .alias {margin-bottom: 0.3em;}
-#selected .item .alias {color: white !important;}
-.selection {
-	z-index: -2;
-	background-color: #6bf;
-	-moz-border-radius: 6px;
-	-webkit-border-radius: 6px;
-}
-#selected {
-	-webkit-box-shadow: 0px 0px 0px white;
-}
-#selected .itemident {
-	color: white;
-	background-color: black;
-}
+.item .directory {font-size: 0.8em; color: #888;}
+.item .filename {font-size: 0.9em; display: inline; color: #ddd}
+.item .extension {display: inline; margin-left: 0.5em; font-size: 0.7em; color: #fd0;}
 
 .thumbnail {
     vertical-align: middle;
@@ -91,9 +80,24 @@
 }
 .thumbnail.image {}
 .thumbnail.font {
-    /*-webkit-transition: color 0.3s ease-in-out;*/
+    -webkit-transition: color 0.3s ease-in-out;
     border: 1px solid black;
     background-color: #ddd;
     padding: 0.5em;
+}
+
+#selected .extension,
+#selected .directory {color: #444;}
+#selected .filename {color: black;}
+#selected .item .alias {color: white;}
+#selected {
+	-webkit-box-shadow: 0px 0px 0px white;
+}
+#selected .itemident {
+	color: white;
+	background-color: black;
+}
+#selected .thumbnail.font {
+	background-color: white;
 }
 

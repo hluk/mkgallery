@@ -639,7 +639,8 @@ zoom: function (how)//{{{
     this._parent.zoomChanged(how,this.zoom_factor);
     this._parent.center();
 
-    this._parent.onUpdateStatus( this.e.css("font-size"), "fontsize" );
+    // for firefox this.e.css("font-size") is "...px"
+    this._parent.onUpdateStatus( this.e[0].style.fontSize, "fontsize" );
 },//}}}
 
 updateHeight: function()//{{{
@@ -833,7 +834,6 @@ toggle: function ()//{{{
 
         // select current
         this.selectItem(n-1);
-        this.selection_needs_update = true;
     }
 
     var lastpos2 = [window.pageXOffset,window.pageYOffset];

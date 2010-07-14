@@ -2,6 +2,15 @@
     position: fixed;
     z-index: 1;
 }
+#prev, #next {
+    bottom: 0px;
+}
+#next {
+    right: 0px;
+}
+#prev {
+    left: 0px;
+}
 #next, #prev, #list {
     opacity: 0;
     display: block;
@@ -12,24 +21,24 @@
     font-size: 20pt;
     text-shadow: black 0px 0px 0.5em;
     cursor: pointer;
-    padding: 0.5em;
+    padding: 1em;
     position: fixed;
 
-	background: rgba(0,0,0,0.5);
+	background-color: rgba(0,0,0,0.5);
 	-moz-border-radius: 6px;
 	-webkit-border-radius: 6px;
 	border: 3px solid black;
 
     -webkit-transition: opacity 0.3s ease-in-out;
 }
-#prev {bottom: 0px; left: 0px;}
-#next {bottom: 0px; right: 0px;}
 #list {top: 0px; right: 0px;}
-#prev:hover, #prev.focused,
 #next:hover, #next.focused,
+#prev:hover, #prev.focused,
 #list:hover, #list.focused {
     opacity: 1;
 }
+/* hide "next" on last item */
 .last #next {display: none;}
+/* hide "prev" on first item */
 .item1 #prev {display: none;}
 

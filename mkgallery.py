@@ -284,7 +284,7 @@ def create_thumbnails(items,imgdir,thumbdir,resolution,itemfile):#{{{
 				sys.stdout.write( "Creating thumbnails: [%s] %d/%d%s"%(bar,i,n,i==n and "\n" or "\r") );
 				sys.stdout.flush()
 			elif alias:
-				lines = lines + ( '["%s","%s"],\n' % (f,alias) )
+				lines = lines + ('["%s",{alias:"%s"}],\n' % (f,alias))
 			else:
 				lines = lines + ( '"%s",\n' % f )
 		lines = lines + "];\n"
