@@ -61,7 +61,7 @@ usage: %s [options] [directories|filenames]
     automatically viewed using web browser $BROWSER.
 
     For the program to be able to generate thumbnails and font names,
-    you must have Python Imaging Library (PIL) is installed.
+    the Python Imaging Library (PIL) must be installed.
 
 options:
     -h, --help              prints this help
@@ -76,11 +76,11 @@ options:
     -r, --resolution=<res>  resolution for thumbnails in pixels
                               (default: %s)
     -c, --copy              copy files instead of creating symbolic links
-	-f, --force             overwrites existing gallery
+    -f, --force             overwrites existing gallery
 
     -r 0, --resolution=0    don't generate thumbnails
     -u "", --url=""         don't launch web browser
-"""	% (sys.argv[0], title, resolution, gdir, url, d) )
+"""	% (sys.argv[0], title, gdir, d, url, resolution) )
 #}}}
 
 def walk(root):#{{{
@@ -119,7 +119,7 @@ def parse_args(argv):#{{{
 	for opt, arg in opts:
 		if opt in ("-h", "--help"):
 			usage()
-			sys.exit(2)
+			sys.exit(0)
 		elif opt in ("-t", "--title"):
 			title = arg
 		elif opt in ("-d", "--directory"):
