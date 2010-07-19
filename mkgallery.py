@@ -14,29 +14,16 @@ create_liks = True; # create symbolic links instead of copy
 cp = os.symlink # default is create symbolic links
 force = False # don't delete files
 
-rmerror = "ERROR: Existing gallery contains files that aren't symbolic links!\n"+\
+rm_error = "ERROR: Existing gallery contains files that aren't symbolic links!\n"+\
           "       Use -f (--force) to remove all files."
+
+import_error = "WARNING: Generating {0} was unsuccessfull! To generate {0} Python Imaging Library needs to be installed."
+pil_fonts = pil_thumbs = True
 
 img_fmt  = re.compile('\.(jpg|png|gif|svg)$',re.I)
 font_fmt = re.compile('\.(otf|ttf)$',re.I)
 vid_fmt = re.compile('\.(mp4|mov|flv|ogg|mp3|wav)$',re.I)
 fontname_re = re.compile('[^a-zA-Z0-9_ ]')
-
-def sort(x,y,state=-1):#{{{
-	if not len(x):
-		return len(y) and -1 or state
-	elif not len(y):
-		return 1
-
-	a,b = x[0],y[0]
-	aa,bb = a.lower(), b.lower()
-	if aa>bb:
-		return 1
-	elif bb>aa:
-		return -1
-
-	return sort(x[1:],y[1:],a>b and 1 or -1)
-#}}}
 
 def escape(s):#{{{
 	return s.replace('\\','\\\\').replace('"','\\"')
@@ -150,7 +137,7 @@ def parse_args(argv):#{{{
 #}}}
 
 def prepare_gallery(d,gdir,force):#{{{
-	global rmerror
+	global rm_error
 	try:
 		if not os.path.isdir(gdir):
 			os.makedirs(gdir)
@@ -167,8 +154,8 @@ def prepare_gallery(d,gdir,force):#{{{
 				if force:
 					shutil.rmtree(link)
 				else:
-					exit(rmerror)
-			cp( f, link )
+					exit(rm_error)
+			cp( os.path.abspath(f), link )
 
 		# clean items directory
 		itemdir = gdir+"/items"
@@ -176,7 +163,7 @@ def prepare_gallery(d,gdir,force):#{{{
 			for f in walk(itemdir):
 				# TODO: port
 				if not (os.path.islink(f) or force):
-					exit(rmerror)
+					exit(rm_error)
 			shutil.rmtree(itemdir)
 		os.mkdir(itemdir)
 
@@ -186,18 +173,22 @@ def prepare_gallery(d,gdir,force):#{{{
 #}}}
 
 def addFont(fontfile,css):#{{{
+	global pil_fonts
+
 	fontname = ""
 
-	try:
-		from PIL import ImageFont
+	if pil_fonts:
+		try:
+			from PIL import ImageFont
 
-		font = ImageFont.truetype(fontfile,8)
-		name = font.getname()
-		fontname = name[0]
-		if name[1]:
-			fontname = fontname + " " + name[1]
-	except ImportError:
-		pass
+			font = ImageFont.truetype(fontfile,8)
+			name = font.getname()
+			fontname = name[0]
+			if name[1]:
+				fontname = fontname + " " + name[1]
+		except ImportError:
+			print( import_error.format("font names") )
+			pil_fonts = False
 
 	css.write("@font-face{font-family:"+fontname_re.sub("_",fontfile)+";src:url('items/"+fontfile+"');}\n")
 
@@ -240,7 +231,8 @@ def prepare_html(template,itemfile,css,gdir,files):#{{{
 
 	itemfile.write('var title = "'+title+'";\n');
 	itemfile.write("var ls=[\n")
-	for item,alias in sorted(items.items(),sort):
+	for item in sorted(items,key=str.lower):
+		alias = items[item]
 		if alias:
 			line = '["%s",{alias:"%s"}]' % (item,alias)
 		else:
@@ -252,6 +244,11 @@ def prepare_html(template,itemfile,css,gdir,files):#{{{
 #}}}
 
 def create_thumbnails(items,imgdir,thumbdir,resolution,itemfile):#{{{
+	global pil_thumbs
+
+	if not pil_thumbs:
+		return
+
 	try:
 		from PIL import Image
 
@@ -297,8 +294,8 @@ def create_thumbnails(items,imgdir,thumbdir,resolution,itemfile):#{{{
 
 		print("Thumbnails successfully generated.")
 	except ImportError:
-		print("Warning: Generating thumbnails was unsuccessfull!")
-		raise
+		print( import_error.format("thumbnails") )
+		pil_thumbs = False
 #}}}
 
 def main(argv):#{{{
