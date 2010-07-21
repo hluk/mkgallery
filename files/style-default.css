@@ -7,26 +7,23 @@
 /*@import url('http://typekit.com/css/a/default/all/579.css');*/
 /*@import url('http://typekit.com/css/a/default/all/457.css');*/
 
-* {
-    /*font-family: font-family-579-1, font-family-579-2, Aller, Verdana, Arial, Helvetica;*/
-    font-family: sans-serif;
-}
-
 body {
     margin: 0px;
     /*background-color: #222;*/
     /*www.tartanmaker.com www.stripegenerator.com http://squidfingers.com/patterns/*/
     background-image: url('bg3.png');
     background-repeat: repeat;
+    font-family: sans-serif;
 }
 
 a {font-weight: inherit; color: inherit; font-size: inherit; font-family: inherit;}
 
 /* viewer */
-#canvas {
-    display: none;
-}
+
+/* viewer visible only in Viewer mode */
+#canvas {display: none;}
 .modeViewer #canvas {display: block;}
+
 .imageview {margin: auto;}
 .videoview {margin: auto;}
 .fontview { 

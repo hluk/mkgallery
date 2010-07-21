@@ -265,7 +265,8 @@ def create_thumbnails(items,imgdir,thumbdir,resolution,itemfile):#{{{
 		sys.stdout.write( "Creating thumbnails: [%s] %d/%d\r"%(bar,0,n) )
 
 		lines = "var ls=[\n"
-		for f,alias in sorted(items.items(), sort):
+		for f in sorted(items,key=str.lower):
+			alias = items[f]
 			if img_fmt.search(f):
 				# create thumbnail
 				im = Image.open(imgdir+"/"+f)

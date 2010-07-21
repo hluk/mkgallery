@@ -166,7 +166,7 @@ newView: function(filepath) {//{{{
  * \return removes view from parent
  *
  * \fn thumbnail()
- * \brief triggers event thumbnailOnLoad(this) after thumbnail loaded
+ * \brief triggers event thumbnailOnLoad() after thumbnail loaded
  * \return an element representing the thumbnail of item
  *
  * \fn zoom(how)
@@ -214,33 +214,32 @@ show: function()//{{{
 	}
 	*/
 
+    var e;
     // don't use canvas in some cases:
     //  - GIF: redraw animated images in intervals
     //  - Opera
     if ( userAgent() == userAgents.opera || this.path.search(/\.gif$/i) > -1) {
-        this.e = $("<div></div>");
+        e = this.e = $("<img></img>");
         this.ctx = {
             drawImage: function (img,x,y,width,height) {
-                           var e = $("#img");
-                           if (!e.length)
-                               view.e.appendChild(img);
-                           img.width = width;
-                           img.height = height;
-                       }
+                           e.attr("src",img.src);
+                           e.width = width;
+                           e.height = height;
+                       },
         }
     }
     else {
-        this.e = $("<canvas></canvas>");
+        e = this.e = $("<canvas></canvas>");
         this.ctx = this.e[0].getContext('2d');
     }
-    this.e.css("display","block");
-    this.e.addClass("imageview");
+    e.css("display","block");
+    e.addClass("imageview");
     this._parent.append(this.e);
 
-    this.img = $("<img></img>");
-    this.img.attr("id","img");
-    this.img.attr("src",escape(this.path));
-    this.img.load( function () {
+    var img = this.img = $("<img></img>");
+    img.attr("id","img");
+    img.attr("src",escape(this.path));
+    img.load( function () {
         view._parent.onUpdateStatus(null,"msg");
 
         view.orig_width = this.width ? this.width : this.naturalWidth;
@@ -262,20 +261,16 @@ remove: function()//{{{
 
 thumbnail: function()//{{{
 {
-    if ( this.thumb )
-        return this.thumb;
+    if ( !this.thumb ) {
+        var thumbpath = "thumbs/" + this.path.replace(/^.*[\/\\]/,'') + ".png";
 
-    var thumbpath = "thumbs/" + this.path.replace(/^.*[\/\\]/,'') + ".png";
+        thumb = this.thumb = $('<img></img>');
+        thumb.addClass("thumbnail " + this.type());
 
-    this.thumb = $('<img></img>');
-    this.thumb.addClass("thumbnail");
-    this.thumb.addClass(this.type());
-
-    var view = this;
-    var handler = function () { view.thumbnailOnLoad(view); };
-    this.thumb.load(handler);
-    this.thumb.error(handler);
-    this.thumb.attr( "src", escape(thumbpath) );
+        thumb.load(this.thumbnailOnLoad);
+        thumb.error(this.thumbnailOnLoad);
+        thumb.attr( "src", escape(thumbpath) );
+    }
 
     return this.thumb;
 },//}}}
@@ -317,7 +312,7 @@ zoom: function (how)//{{{
     }
 
     // clear canvas
-    if(this.width)
+    if(this.width && this.ctx.clearRect)
         this.ctx.clearRect(0,0,this.width,this.height);
 
     this.width = this.e[0].width = w*z;
@@ -338,9 +333,8 @@ zoom: function (how)//{{{
 /**
  * \fn thumbnailOnLoad()
  * \brief event is triggered after thumbnail is loaded
- * \param view is caller object
  */
-thumbnailOnLoad: function(view){},
+thumbnailOnLoad: function(){},
 }
 //}}}
 
@@ -418,12 +412,12 @@ remove: function()//{{{
 
 thumbnail: function()//{{{
 {
-    if ( this.thumb )
-        return this.thumb;
+    if ( !this.thumb ) {
+        thumb = this.thumb = $('<div></div>');
+        thumb.addClass("thumbnail " + this.type());
 
-    this.thumb = $('<div></div>');
-    this.thumb.addClass("thumbnail");
-    this.thumb.addClass(this.type());
+        this.thumbnailOnLoad();
+    }
 
     return this.thumb;
 },//}}}
@@ -517,6 +511,13 @@ togglePlay: function()//{{{
 {
     this.e[0].paused ? this.e[0].play() : this.e[0].pause();
 },//}}}
+
+/** events */
+/**
+ * \fn thumbnailOnLoad()
+ * \brief event is triggered after thumbnail is loaded
+ */
+thumbnailOnLoad: function(){},
 }
 //}}}
 
@@ -587,19 +588,19 @@ remove: function()//{{{
 
 thumbnail: function()//{{{
 {
-    if ( this.thumb )
-        return this.thumb;
+    if ( !this.thumb ) {
+        var font = this.path.replace(/.*\//gi, "").replace(".","-");
 
-    var font = this.path.replace(/.*\//gi, "").replace(".","-");
+        thumb = this.thumb = $('<div></div>');
+        thumb.addClass("thumbnail " + this.type());
+        thumb.css({
+                "max-width": getConfig('thumbnail_max_width',300) + "px",
+                "font-family": this.font
+                });
+        thumb.html(config['thumbnail_font_test']);
 
-    this.thumb = $('<div></div>');
-    this.thumb.addClass("thumbnail");
-    this.thumb.addClass(this.type());
-    this.thumb.css("max-width", getConfig('thumbnail_max_width',300) + "px");
-    this.thumb.css("font-family", this.font);
-    this.thumb.html(config['thumbnail_font_test']);
-
-    this.thumbnailOnLoad(this);
+        this.thumbnailOnLoad();
+    }
 
     return this.thumb;
 },//}}}
@@ -646,14 +647,15 @@ zoom: function (how)//{{{
 updateHeight: function()//{{{
 {
     // TODO: better solution
-    this.e.hide();
     var view = this;
-    this.e.css("height","50%");
+    var e = this.e;
+    e.hide();
+    e.css("height","50%");
     window.setTimeout(
         function(){
-            view.e.show();
-            view.e.css("height",view.e[0].scrollHeight+"px");
-            view._parent.center(view.e.innerHeight());
+            e.show();
+            e.css("height",e[0].scrollHeight+"px");
+            view._parent.center(e.innerHeight());
         },10);
 },//}}}
 
@@ -661,9 +663,8 @@ updateHeight: function()//{{{
 /**
  * \fn thumbnailOnLoad()
  * \brief event is triggered after thumbnail is loaded
- * \param view is caller object
  */
-thumbnailOnLoad: function(view){},
+thumbnailOnLoad: function(){},
 }
 //}}}
 
@@ -680,8 +681,26 @@ init: function (e,items)//{{{
         return null;
 
     // item template element
-    this.template = e.find(".item");
-    if (!this.template.length)
+    var item = this.template = e.find(".item");
+    var e;
+    if (this.template.length) {
+        e = item.find(".itemident");
+        if (e.length)
+            this.e_ident = e;
+
+        e = item.find(".thumbnail_width");
+        if (e.length)
+            this.e_w = e;
+
+        this.e_dir = item.find(".directory");
+        this.e_filename = item.find(".filename");
+        this.e_ext = item.find(".extension");
+
+        e = item.find(".thumbnail");
+        if (e.length)
+            this.e_thumb = e;
+    }
+    else
         return null;
 
     this.ls = items;
@@ -711,95 +730,79 @@ submitSelected: function()//{{{
     this.onSubmit(this.selected+1);
 },//}}}
 
-addThumbnails: function (items, i)//{{{
+addThumbnails: function (i)//{{{
 {
     if ( i == null )
         i = n-1;
     if ( i<0 || i>=len )
         return;
-    if ( !items )
-        items = this.items;
+
+    items = this.items;
 
     var thumb_e = items[i].find(".thumbnail");
     if (thumb_e.length) {
         var item = this.ls[i];
 		var filename = item instanceof Array ? item[0] : item;
         var thumb = this.viewFactory.newView(filename);
-        thumb.dataNum = i;
 
         var t = this;
-		thumb.thumbnailOnLoad = function(view) {t.thumbnailOnLoad(view)};
+        thumb.thumbnailOnLoad = function() {
+            // recursively load thumbnails from currently viewed
+            // - flood load:
+            //      previous and next thumbnails (from the current) are loaded in parallel
+            if (i+1>=n)
+                t.addThumbnails(i+1);
+            if (i+1<=n)
+                t.addThumbnails(i-1);
+        };
 
-        var e = thumb.thumbnail();
-        // show thumbnail only if src exists
-		//e.css("display","none");
-        e.appendTo(thumb_e);
+        thumb.thumbnail().appendTo(thumb_e);
     }
 },//}}}
 
-thumbnailOnLoad: function(thumb)//{{{
+newItem: function (i,props)//{{{
 {
-    var i = thumb.dataNum;
-    // recursively load thumbnails from currently viewed
-    // - flood load:
-    //      previous and next thumbnails (from the current) are loaded in parallel
-    if (i+1>=n)
-        this.addThumbnails(this.items, i+1);
-    if (i+1<=n)
-        this.addThumbnails(this.items, i-1);
-},//}}}
-
-appendItem: function (i)//{{{
-{
-    var item = this.template.clone();
-    item.data("number",i);
-    var list = this;
-    item.click( function() {
-        list.onSubmit(item.data("number"));
-    });
+    var e;
+    var item = this.template;
 
     // image identification
-    var ident = item.find(".itemident");
-    if (ident.length)
-        ident.html(i);
+    e = this.e_ident;
+    if (e)
+        e.html(i);
 
-	// get item filename, properties, width, height
-    var x = this.ls[i-1];
-    var itemname, props, w, h;
-    if (x instanceof Array) {
-        itemname = x[0];
-        props = x[1];
-		w = x[2];
-		h = x[3];
+	// get item filename, user tags, width, height
+    var itemname, tags, w, h;
+    if (props instanceof Array) {
+        itemname = props[0];
+        tags = props[1];
+		w = props[2];
+		h = props[3];
     }
     else
-        itemname = x;
+        itemname = props;
 
-	// set item max-width
-	var e_w = item.find(".thumbnail_width");
-	if ( e_w && w && !item.css("max-width") )
-		item.css("max-width",w+20);
+	// set .thumbnail_width max-width
+    e = this.e_w;
+	if (e)
+		e.css("max-width",w>100 ? w+20+"px" : "");
 
     // filename
-    var dir_e = item.find(".directory");
-    var filename_e = item.find(".filename");
-    var ext_e = item.find(".extension");
-    createPathElements(dir_e,filename_e,ext_e,itemname);
+    createPathElements(
+        this.e_dir,
+        this.e_filename,
+        this.e_ext,
+        itemname);
 
 	// thumbnail size
-    var thumb_e = item.find(".thumbnail");
-	if (thumb_e) {
-		if (w)
-			thumb_e.css("width",w+"px");
-		if (h)
-			thumb_e.css("height",h+"px");
-	}
+    e = this.e_thumb;
+	if (e)
+        e.css( {"width": w ? w+"px" : "", "height": h ? h+"px" : ""} );
 
-    // item properties
-    if (props) {
-        for (var key in props) {
-            var e = item.find("."+key);
-            var v = props[key];
+    // user tags
+    if (tags) {
+        for (var key in tags) {
+            e = item.find("."+key);
+            var v = tags[key];
             if (v)
                 e.html(v);
             else
@@ -807,20 +810,42 @@ appendItem: function (i)//{{{
         }
     }
 
-    item.appendTo(this.e);
-    this.items.push(item);
+    // clone item
+    item = item.clone();
+
+    // mouse click event
+    var t = this;
+    item.click( function() {
+        t.onSubmit(i);
+    });
+
+    return item;
+},//}}}
+
+appendItems: function()//{{{
+{
+    var e = this.e;
+    var ls = this.ls;
+    var items = this.items = [];
+
+    // avoid changing the document each time item is added
+    e.css("display","none");
+
+    for(var i=0; i<len; ++i) {
+        var item = this.newItem(i+1,ls[i]);
+        item.appendTo(e);
+        items.push(item);
+    }
+
+    e.css("display","");
 },//}}}
 
 toggle: function ()//{{{
 {
     // are items loaded?
 	if ( !this.items ) {
-		this.items = [];
-
-		for(var i=0; i<len; ++i) {
-			var item = this.ls[i];
-			this.appendItem(i+1);
-		}
+        // add items to gallery
+        this.appendItems();
 
         // add thumbnails
         this.thumbs = [];
@@ -872,7 +897,20 @@ updateSelection: function ()//{{{
         this.selection_needs_update = true;
     else {
         this.selection_needs_update = false;
-        this.selectItem(this.selected);
+
+        var e = this.items[this.selected];
+
+        e.attr("id","selected");
+
+        var pos = e.offset();
+
+        // move selection cursor
+        this.selection.css({
+            "left": pos.left+"px",
+            "top": pos.top+"px",
+            "width": e.innerWidth()+"px",
+            "height": e.innerHeight()+"px"
+            });
     }
 },//}}}
 
@@ -880,24 +918,15 @@ selectItem: function (i)//{{{
 {
     if (!this.items)
         return;
-    var sel = this.items[this.selected];
-    var e = this.items[i];
 
+    // remove id="selected" from previously selected item
+    var sel = this.items[this.selected];
     if(sel)
         sel.attr("id","");
-    e.attr("id","selected");
+
     this.selected = i;
 
-    if ( this.hidden() )
-        this.selection_needs_update = true;
-    else {
-        var pos = e.offset();
-        // move selection cursor
-        this.selection.css( "left", pos.left+"px" );
-        this.selection.css( "top", pos.top+"px" );
-        this.selection.css( "width", e.innerWidth()+"px" );
-        this.selection.css( "height", e.innerHeight()+"px" );
-    }
+    this.updateSelection();
 },//}}}
 
 listVertically: function (direction)//{{{
@@ -913,8 +942,9 @@ listVertically: function (direction)//{{{
     // select item on next/previous line,
     // item has smallest X distance from curently selected
     var i;
-    for( i = this.selected+direction; i < this.items.length && i >= 0; i+=direction) {
-        var e = this.items[i];
+    var it = this.items;
+    for( i = this.selected+direction, len = it.length; i < len && i >= 0; i+=direction) {
+        var e = it[i];
         pos = e.position();
 
         if ( newdist == null ) {
@@ -1153,8 +1183,8 @@ popInfo: function ()//{{{
 {
     if (this.info_t)
         clearTimeout(this.info_t);
-    if ( !this.e.hasClass("focused") )
-        this.e.addClass("focused");
+
+    this.e.addClass("focused");
 
     var t = this;
     this.info_t = window.setTimeout(function(){t.e.removeClass("focused");},4000);
@@ -1200,16 +1230,15 @@ function path (filename)//{{{
     return "items/" + filename;
 }//}}}
 
-function breakText(text) {//{{{
-	// break filename ideally at characters / _ - .
-	return text.replace(/[\.\/_-]/g,'$&\u200B');
-}//}}}
-
 function createPathElements(dir_e,filename_e,ext_e,path) {//{{{
-	// TODO: "dir1/dir2/a\\b.png" etc.
-	var m = path.match(/(.*)[\/\\](.*)/);
+    var m;
 
-    var dir = m ? breakText(m[1]) : "";
+    m = path.lastIndexOf("/");
+    if (m==-1)
+        m  = path.lastIndexOf("\\");
+
+    // directory
+    var dir = path.substring(0,m);
     if (dir_e.length) {
         if (dir) {
             dir_e.html(dir);
@@ -1219,16 +1248,17 @@ function createPathElements(dir_e,filename_e,ext_e,path) {//{{{
             dir_e.hide();
     }
 
-    var filename = m ? m[2] : path;
-	var m = filename.match(/(.*)\.([^.]*)/);
+    var filename = path.substring(m+1,path.length);
+
+    m = filename.lastIndexOf(".");
 
     // filename
     if (filename_e.length)
-        filename_e.html( breakText(m ? m[1] : filename) );
+        filename_e.html( filename.substring(0,m) );
 
     // extension
     if (ext_e.length)
-        ext_e.html(m ? breakText(m[2]) : "");
+        ext_e.html( filename.substring(m+1,filename.length) );
 }//}}}
 
 function getPage (i)//{{{
@@ -1242,8 +1272,12 @@ function go (i)//{{{
 
     n = vars['n'] = pg;
 
-    if ( itemlist && !itemlist.hidden() )
-        toggleList();
+    // hide item list and select current item
+    if ( itemlist ) {
+        if ( !itemlist.hidden() )
+            toggleList();
+        itemlist.selectItem(i-1);
+    }
 
 	var item = this.ls[i-1];
 	var itemname, alias;

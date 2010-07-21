@@ -12,6 +12,7 @@
 #itemlist.focused {display: block;}
 
 .item {
+    display: none;
     text-align: center;
 
     display: inline-block;
@@ -24,7 +25,8 @@
     margin-left: 2px;
     cursor: pointer;
     color: black;
-	min-width: 100px;
+
+	min-width: 150px;
 }
 .item, .selection {
     -moz-border-radius: 6px;
@@ -61,6 +63,7 @@
     margin: 0.5em;
     z-index: 2;
     text-align: left;
+    word-wrap: break-word;
 }
 .item .alias {color: white;}
 .item .path,
