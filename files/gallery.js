@@ -268,7 +268,8 @@ thumbnail: function()//{{{
         thumb.addClass("thumbnail " + this.type());
 
         thumb.load(this.thumbnailOnLoad);
-        thumb.error(this.thumbnailOnLoad);
+		var t = this;
+        thumb.error( function() { t.thumbnailOnLoad(true); } );
         thumb.attr( "src", escape(thumbpath) );
     }
 
@@ -333,8 +334,9 @@ zoom: function (how)//{{{
 /**
  * \fn thumbnailOnLoad()
  * \brief event is triggered after thumbnail is loaded
+ * \param error true if error occured
  */
-thumbnailOnLoad: function(){},
+thumbnailOnLoad: function(error){},
 }
 //}}}
 
@@ -746,7 +748,12 @@ addThumbnails: function (i)//{{{
         var thumb = this.viewFactory.newView(filename);
 
         var t = this;
-        thumb.thumbnailOnLoad = function() {
+        thumb.thumbnailOnError = function() {
+			thumb_e.css("display","none");
+		}
+        thumb.thumbnailOnLoad = function(error) {
+			if (!error)
+				thumb_e.css("display","");
             // recursively load thumbnails from currently viewed
             // - flood load:
             //      previous and next thumbnails (from the current) are loaded in parallel
@@ -796,7 +803,7 @@ newItem: function (i,props)//{{{
 	// thumbnail size
     e = this.e_thumb;
 	if (e)
-        e.css( {"width": w ? w+"px" : "", "height": h ? h+"px" : ""} );
+        e.css( {"display": (w && h) ? "" : "none", "width": w ? w+"px" : "", "height": h ? h+"px" : ""} );
 
     // user tags
     if (tags) {
