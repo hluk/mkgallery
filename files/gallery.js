@@ -1025,17 +1025,6 @@ listPageUp: function ()//{{{
 }
 //}}}
 
-//! \class Item
-//{{{
-var Item = function() {
-    return new Item.prototype.init();
-};
-
-Item.prototype = {
-init: function() {},
-}
-//}}}
-
 //! \class Info
 //{{{
 var Info = function(e) {
@@ -1343,42 +1332,18 @@ function updateUrl (timeout)//{{{
     }
 }//}}}
 
-function getTop(e)//{{{
-{
-    var result = 0;
-
-    do {
-        result += e.offsetTop;
-        e = e.offsetParent;
-    } while(e);
-
-    return result;
-}//}}}
-
-function getLeft(e)//{{{
-{
-    var result = 0;
-
-    do {
-        result += e.offsetLeft;
-        e = e.offsetParent;
-    } while(e);
-
-    return result;
-}//}}}
-
 function preloadImages()//{{{
 {
     if (preloaded == null) {
         // don't preload images when started
-        preloaded = [];
+        preloaded = {};
         return;
     }
 
     var maxnum = getConfig('preload_images',2);
     var num = maxnum - (n+2) % maxnum;
 
-    var new_preloaded = [];
+    var new_preloaded = {};
     var end = Math.min(n+num,len);
     var begin = Math.max(n-maxnum+num+1,0);
     for(var i = begin; i < n; ++i)

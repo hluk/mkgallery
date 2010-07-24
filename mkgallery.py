@@ -204,8 +204,8 @@ def prepare_html(template,itemfile,css,gdir,files):#{{{
 	for ff in files:
 		for f in walk(ff):
 			abs_f = os.path.abspath(f)
-			# ignore gallery directory
-			if abs_f.startswith(abs_gdir):
+			# ignore gallery generated directories
+			if abs_f.startswith(abs_gdir+"/items/") or abs_f.startswith(abs_gdir+"/files/"):
 				continue
 
 			# filetype (image, font, audio/video)
