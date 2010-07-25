@@ -16,4 +16,7 @@ config = {
 'autoplay': false,
 'loop': false,
 'autonext': false,
+
+'pop_info_delay': 4000,
+'pop_preview_delay': 1000,
 }
