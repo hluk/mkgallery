@@ -58,10 +58,19 @@ a {font-weight: inherit; color: inherit; font-size: inherit; font-family: inheri
     -moz-transition: opacity 0.5s ease-in-out;
 }
 
-.preview .window {
-    border: 2px dashed #08f;
-    margin: -2px;
-    background-color: rgba(0,0,255,0.1);
+.preview .window .window_border {
+    border: 2px dashed white;
+
+    background-color: rgba(255,255,255,0.1);
+
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    bottom: -2px;
+    right: -2px;
+
+    -webkit-box-shadow: 0px 0px 15px rgba(0,0,0,0.8);
+    -moz-box-shadow: 0px 0px 15px rgba(0,0,0,0.8);
 }
 
 .preview img {

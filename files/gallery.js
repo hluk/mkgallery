@@ -192,30 +192,33 @@ createPreview: function(filepath)//{{{
 
 popPreview: function()//{{{
 {
-    var p = this.preview;
-    if (!p)
+    var img = this.preview_img;
+    if ( !(img && img.attr("src")) )
         return;
-
-    if (this.preview_t)
-        clearTimeout(this.preview_t);
-
-    p.addClass("focused");
 
     // highlights the part of the image in window
     var win = this.preview_win;
     if (win) {
+        var imgw = img.innerWidth();
+        var imgh = img.innerHeight();
         var ww = window.innerWidth;
         var wh = window.innerHeight;
         var w = this.view.width;
         var h = this.view.height;
-        var b = document.getElementsByTagName("body")[0];
+        var doc = document.documentElement;
         win.css({
-                "height": h<wh ? "100%" : (100*wh/h)+"%",
-                "width": w<ww ? "100%" : (100*ww/w)+"%",
-                "top": h<wh ? "0px" : 100*(window.pageYOffset)/b.scrollHeight+"%",
-                "left":w<ww ? "0px" : 100*(window.pageXOffset)/b.scrollWidth+"%",
+                "height": Math.floor( h<wh ? imgh : (imgh*wh/h) ) +"px",
+                "width":  Math.floor( w<ww ? imgw : (imgw*ww/w) ) +"px",
+                "top":    Math.floor( h<wh ? "0" : imgh*window.pageYOffset/doc.scrollHeight) +"px",
+                "left":   Math.floor( w<ww ? "0" : imgw*window.pageXOffset/doc.scrollWidth) +"px",
               });
     }
+
+    if (this.preview_t)
+        clearTimeout(this.preview_t);
+
+    var p = this.preview;
+    p.addClass("focused");
 
     var t = this;
     this.preview_t = window.setTimeout(function(){p.removeClass("focused");},
