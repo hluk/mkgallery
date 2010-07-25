@@ -928,11 +928,8 @@ addThumbnails: function (i)//{{{
         var thumb = this.viewFactory.newView(filename);
 
         var t = this;
-        thumb.thumbnailOnError = function() {
-			thumb_e.css("display","none");
-		}
         thumb.thumbnailOnLoad = function(error) {
-			if (!error)
+			if (error !== true)
 				thumb_e.css("display","");
             // recursively load thumbnails from currently viewed
             // - flood load:
@@ -971,7 +968,7 @@ newItem: function (i,props)//{{{
 	// set .thumbnail_width max-width
     e = this.e_w;
 	if (e)
-		e.css("max-width",w>100 ? w+20+"px" : "");
+		e.css("max-width",(w>100 ? w+20 : getConfig('thumbnail_max_width',300)) +"px");
 
     // filename
     createPathElements(
@@ -983,7 +980,11 @@ newItem: function (i,props)//{{{
 	// thumbnail size
     e = this.e_thumb;
 	if (e)
-        e.css( {"display": (w && h) ? "" : "none", "width": w ? w+"px" : "", "height": h ? h+"px" : ""} );
+        e.css({
+				"display": (w && h) ? "" : "none",
+				"width": w ? w+"px" : "",
+				"height": h ? h+"px" : ""
+			});
 
     // user tags
     if (tags) {
@@ -1717,9 +1718,10 @@ function createViewer(e,preview,info)//{{{
 
     // navigation//{{{
     addKeys(["PageUp"], "", function() {
-            viewer.scrollBy(0,-window.innerHeight);
             if ( window.pageYOffset == 0 )
                 info.popInfo();
+			else
+				viewer.scrollBy(0,-window.innerHeight);
         }, modes.viewer);
     addKeys(["PageDown"], "", function() {
             viewer.scrollBy(0,window.innerHeight);
@@ -1728,8 +1730,10 @@ function createViewer(e,preview,info)//{{{
             window.scrollTo(0,b.scrollHeight);
         }, modes.viewer);
     addKeys(["Home"], "", function() {
-            window.scrollTo(0,0);
-            info.popInfo();
+            if ( window.pageYOffset == 0 )
+                info.popInfo();
+			else
+				window.scrollTo(0,0);
         }, modes.viewer);
     addKeys(["Space"], "Move window down/Next gallery item/Play or pause", function() {
 			var v = viewer.view;
@@ -1763,9 +1767,10 @@ function createViewer(e,preview,info)//{{{
                 go(1);
         }, modes.viewer);
     addKeys(["KP8","8"], "", function() {
-            viewer.scrollBy(0,-window.innerHeight/4);
             if ( window.pageYOffset == 0 )
                 info.popInfo();
+			else
+				viewer.scrollBy(0,-window.innerHeight/4);
         }, modes.viewer);
     addKeys(["KP9","9"], "Browse to fifth previous gallery item", function() {
             if ( n != 1 )
@@ -1832,9 +1837,10 @@ function createNavigation ()//{{{
                 viewer.scrollBy(window.innerWidth/4,0);
         });
     addKeys(["Up"], "Move window up", function() {
-            viewer.scrollBy(0,-window.innerHeight/4);
             if ( window.pageYOffset == 0 )
                 info.popInfo();
+			else
+				viewer.scrollBy(0,-window.innerHeight/4);
         });
     addKeys(["Down"], "Move window down", function() {
             viewer.scrollBy(0,window.innerHeight/4);

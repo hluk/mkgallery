@@ -272,7 +272,12 @@ def create_thumbnails(items,imgdir,thumbdir,resolution,itemfile):#{{{
 			if img_fmt.search(f):
 				# create thumbnail
 				im = Image.open(imgdir+"/"+f)
-				im = im.convert("RGBA")
+
+				# better scaling quality when image is in RGB or RGBA
+				if not im.mode.startswith("RGB"):
+					im = im.convert("RGB")
+
+				# scale and save
 				im.thumbnail((resolution,resolution), Image.ANTIALIAS)
 				im.save(thumbdir+"/"+os.path.basename(f) + ".png", "PNG", quality=60)
 				lines = lines + ( '["%s",{alias:"%s"},%d,%d],\n' % (f,alias,im.size[0],im.size[1]) )
