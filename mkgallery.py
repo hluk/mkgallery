@@ -195,6 +195,30 @@ def addFont(fontfile,css):#{{{
 	return fontname
 #}}}
 
+def itemline(filename,alias=None,width=None,height=None):#{{{
+	isarray = alias or width
+
+	# begin item line
+	line = isarray and '[' or ''
+
+	# filename
+	# TODO: escape double quotes
+	line = line + '"' + filename + '"'
+
+	# alias
+	if alias:
+		line = line + ',{alias:"'+alias+'"}'
+
+	# width and height
+	if width:
+		line = line + ','+str(width)+','+str(height)
+
+	# end item line
+	line = line + (isarray and ']' or '') + ",\n"
+
+	return line
+#}}}
+
 def prepare_html(template,itemfile,css,gdir,files):#{{{
 	items = {}
 	imgdir = gdir+"/items"
@@ -235,14 +259,26 @@ def prepare_html(template,itemfile,css,gdir,files):#{{{
 	itemfile.write("var ls=[\n")
 	for item in sorted(items,key=str.lower):
 		alias = items[item]
-		if alias:
-			line = '["%s",{alias:"%s"}]' % (item,alias)
-		else:
-			line = '"%s"' % item
-		itemfile.write(line+',\n')
+		itemfile.write( itemline(item,alias) )
 	itemfile.write("];\n");
 
 	return items
+#}}}
+
+def create_thumbnail(filename,resolution,outfilename):#{{{
+	from PIL import Image
+
+	im = Image.open(filename)
+
+	# better scaling quality when image is in RGB or RGBA
+	if not im.mode.startswith("RGB"):
+		im = im.convert("RGB")
+
+	# scale and save
+	im.thumbnail((resolution,resolution), Image.ANTIALIAS)
+	im.save(outfilename + ".png", "PNG", quality=60)
+
+	return im.size
 #}}}
 
 def create_thumbnails(items,imgdir,thumbdir,resolution,itemfile):#{{{
@@ -252,8 +288,6 @@ def create_thumbnails(items,imgdir,thumbdir,resolution,itemfile):#{{{
 		return
 
 	try:
-		from PIL import Image
-
 		# number of images
 		n = len( filter(img_fmt.search,items.keys()) )
 		if n == 0:
@@ -270,17 +304,13 @@ def create_thumbnails(items,imgdir,thumbdir,resolution,itemfile):#{{{
 		for f in sorted(items,key=str.lower):
 			alias = items[f]
 			if img_fmt.search(f):
-				# create thumbnail
-				im = Image.open(imgdir+"/"+f)
-
-				# better scaling quality when image is in RGB or RGBA
-				if not im.mode.startswith("RGB"):
-					im = im.convert("RGB")
-
-				# scale and save
-				im.thumbnail((resolution,resolution), Image.ANTIALIAS)
-				im.save(thumbdir+"/"+os.path.basename(f) + ".png", "PNG", quality=60)
-				lines = lines + ( '["%s",{alias:"%s"},%d,%d],\n' % (f,alias,im.size[0],im.size[1]) )
+				try:
+					size = create_thumbnail(imgdir+"/"+f, resolution, thumbdir+"/"+os.path.basename(f))
+					lines = lines + itemline(f,alias,size[0],size[1])
+				except Exception as e:
+					print("ERROR: "+str(e)+" (file: \""+f+"\")")
+					lines = lines + itemline(f,alias)
+					pass
 
 				# show progress bar
 				i=i+1
@@ -288,10 +318,7 @@ def create_thumbnails(items,imgdir,thumbdir,resolution,itemfile):#{{{
 				bar = ("="*l) + ">" + (" "*(progress_len-l))
 				sys.stdout.write( "Creating thumbnails: [%s] %d/%d%s"%(bar,i,n,i==n and "\n" or "\r") );
 				sys.stdout.flush()
-			elif alias:
-				lines = lines + ('["%s",{alias:"%s"}],\n' % (f,alias))
-			else:
-				lines = lines + ( '"%s",\n' % f )
+			lines = lines + itemline(f,alias)
 		lines = lines + "];\n"
 
 		# rewrite items.js
