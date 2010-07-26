@@ -51,15 +51,15 @@ a {font-weight: inherit; color: inherit; font-size: inherit; font-family: inheri
     opacity: 0;
 
     position: fixed;
-    bottom: 20px;
-    right: 20px;
+    bottom: 10px;
+    right: 10px;
 
-    -webkit-transition: opacity 0.5s ease-in-out;
-    -moz-transition: opacity 0.5s ease-in-out;
+    -webkit-transition: opacity 1s ease-in-out;
+    -moz-transition: opacity 1s ease-in-out;
 }
 
 .preview .window .window_border {
-    border: 2px dashed white;
+    border: 2px dashed red;
 
     background-color: rgba(255,255,255,0.1);
 
@@ -75,7 +75,11 @@ a {font-weight: inherit; color: inherit; font-size: inherit; font-family: inheri
 
 .preview img {
     max-width: 200px;
+    max-height: 600px;
+
     border: 2px solid black;
+    -webkit-box-shadow: 0px 0px 20px rgba(0,0,0,0.6);
+    -moz-box-shadow: 0px 0px 20px rgba(0,0,0,0.6);
 }
 
 .preview:hover, .preview.focused {

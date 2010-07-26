@@ -244,16 +244,6 @@ center: function()//{{{
     this.view.e.css("margin-top",(newtop > 0 ? newtop : 0) + "px");
 },//}}}
 
-append: function (view)//{{{
-{
-    view.appendTo(this.e);
-},//}}}
-
-remove: function (view)//{{{
-{
-    view.remove();
-},//}}}
-
 show: function (filepath)//{{{
 {
     if (this.view)
@@ -414,7 +404,7 @@ show: function()//{{{
     }
     e.css("display","block");
     e.addClass("imageview");
-    this._parent.append(this.e);
+    e.appendTo(this._parent.e);
 
     var img = this.img = $("<img></img>");
     img.attr("id","img");
@@ -432,11 +422,9 @@ show: function()//{{{
 
 remove: function()//{{{
 {
-    if ( !this.e )
-        return;
-
-    this._parent.remove(this.e);
-    this.e = null;
+    var e = this.e;
+    if ( e )
+        e.remove();
 },//}}}
 
 thumbnail: function()//{{{
@@ -547,12 +535,12 @@ show: function()//{{{
 
     this._parent.onUpdateStatus("loading","msg");
 
-	this.e = $("<video></video>");
-	this.e.html("Your browser does not support the video tag.");
-    this.e.attr("controls","controls");
-    this.e.css("display","block");
-    this.e.addClass("videoview");
-    this._parent.append(this.e);
+	e = this.e = $("<video></video>");
+	e.html("Your browser does not support the video tag.");
+    e.attr("controls","controls");
+    e.css("display","block");
+    e.addClass("videoview");
+    e.appendTo(this._parent.e);
 
 	if ( getConfig('autoplay',false) )
 		this.e.attr("autoplay","autoplay");
@@ -585,11 +573,9 @@ show: function()//{{{
 
 remove: function()//{{{
 {
-    if ( !this.e )
-        return;
-
-    this._parent.remove(this.e);
-    this.e = null;
+    var e = this.e;
+    if ( e )
+        e.remove();
 },//}}}
 
 thumbnail: function()//{{{
@@ -728,16 +714,16 @@ show: function()//{{{
     if (this.e)
         return;
 
-    this.e = $('<textarea></textarea>');
-    this.e.attr("src", escape(this.path));
-    this.e.addClass("fontview");
+    e = this.e = $('<textarea></textarea>');
+    e.attr("src", escape(this.path));
+    e.addClass("fontview");
 
-    this.e.attr("value",config['font_test']);
-    this.e.css("font-family",this.font);
+    e.attr( "value", getConfig('font_test', '+-1234567890, abcdefghijklmnopqrstuvwxyz, ABCDEFGHIJKLMNOPQRSTUVWXYZ, ?!.#$\\/"\'') );
+    e.css("font-family",this.font);
 
     // disable keyboard navigation when textarea focused
     var view = this;
-    this.e.focus( function () {
+    e.focus( function () {
         view.keydown = document.onkeydown;
         view.keypress = document.onkeypress;
         document.onkeydown = function(e){
@@ -746,14 +732,14 @@ show: function()//{{{
         };
         document.onkeypress = null;
     } );
-    this.e.blur( function () {
+    e.blur( function () {
         config['font_test'] = this.value;
         document.onkeydown = view.keydown;
         document.onkeypress = view.keypress;
         view.updateHeight();
     } );
 
-    this._parent.append(this.e);
+    e.appentTo(this._parent.e);
     this._parent.zoom();
 
     this._parent.onLoad();
@@ -761,11 +747,9 @@ show: function()//{{{
 
 remove: function()//{{{
 {
-    if ( !this.e )
-        return;
-
-    this._parent.remove(this.e);
-    this.e = null;
+    var e = this.e;
+    if ( e )
+        e.remove();
 },//}}}
 
 thumbnail: function()//{{{
@@ -779,7 +763,8 @@ thumbnail: function()//{{{
                 "max-width": getConfig('thumbnail_max_width',300) + "px",
                 "font-family": this.font
                 });
-        thumb.html(config['thumbnail_font_test']);
+        thumb.html( getConfig('thumbnail_font_test',
+                    '+-1234567890, abcdefghijklmnopqrstuvwxyz, ABCDEFGHIJKLMNOPQRSTUVWXYZ, ?!.#$\\/"\'') );
 
         this.thumbnailOnLoad();
     }
@@ -1249,38 +1234,42 @@ updateProgress: function ()//{{{
     if ( !this.progress )
         return;
 
+    var r = getConfig('progress_radius',22);
+    var w1 = getConfig('progress_width',8);
+    var w2 = getConfig('progress_inner_width',8);
+    var blur = getConfig('progress_blur',10);
+
     var ctx = this.progress.getContext("2d");
     var pi = 3.1415;
     var angle = 2*pi*this.n/this.len;
-    var r = getConfig('progress_radius',22);
-    var w = getConfig('progress_width',8);
-    var x = r;
-    var y = r;
+    var x = r+blur/2;
+    var y = r+blur/2;
 
-    this.progress.setAttribute("width", r*2);
-    this.progress.setAttribute("height", r*2);
+    this.progress.setAttribute("width", r*2+blur);
+    this.progress.setAttribute("height", r*2+blur);
 
     ctx.save();
 
     //ctx.clearRect(x-r,y-r,2*r,2*r);
 
-    ctx.beginPath();
+    // empty pie
+    ctx.shadowBlur = blur;
+    ctx.shadowColor = "black";
+    ctx.lineWidth = w1;
+    ctx.strokeStyle = getConfig('progress_bg',"rgba(200,200,200,0.4)");
     ctx.moveTo(x, y);
-    ctx.arc(x, y, r, 0, 2*pi, false);
-    ctx.fillStyle = getConfig('progress_bg',"rgba(200,200,200,0.4)");
-    ctx.fill();
-
     ctx.beginPath();
+    ctx.arc(x, y, r-w1/2, 0, 2*pi, false);
+    ctx.stroke();
+
+    // filled part of pie
+    ctx.shadowColor = getConfig('progress_fg',"rgba(255,200,0,0.8)");
+    ctx.lineWidth = w2;
+    ctx.strokeStyle = getConfig('progress_fg',"rgba(255,200,0,0.8)");
     ctx.moveTo(x, y);
-    ctx.arc(x, y, r, -pi/2, angle-pi/2, false);
-    ctx.fillStyle = getConfig('progress_fg',"rgba(255,200,0,0.8)");
-    ctx.fill();
-
-    ctx.fillStyle = "white";
     ctx.beginPath();
-    ctx.globalCompositeOperation = "destination-out";
-    ctx.arc(x, y, r-w, 0, 2*pi, false);
-    ctx.fill();
+    ctx.arc(x, y, r-w1/2, -pi/2, angle-pi/2, false);
+    ctx.stroke();
 
     ctx.restore();
 
@@ -1395,12 +1384,28 @@ else
     return userAgents.unknown;
 }//}}}
 
-function getConfig (i,d)//{{{
+function getConfig (name,default_value)//{{{
 {
-    var x = vars[i];
-    if (x==null)
-        x = config[i];
-    return (x==null) ? d : x;
+    var x;
+
+    if ( (x = _config[name]) ||
+         (x = vars[name])    ||
+         (x = config[name]) )
+    {
+        // value should be same type as the default value
+        switch( typeof(default_value) ) {
+            case "string":
+                return ""+x;
+            break;
+            case "number":
+                return parseFloat(x);
+            break;
+            default:
+                return x;
+        }
+    }
+
+    return default_value;
 }//}}}
 
 function path (filename)//{{{
@@ -1673,16 +1678,16 @@ function createItemList()//{{{
     addKeys(["Enter"], "Go to selected item", function() {
             itemlist.submitSelected();
         }, modes.itemlist);
-    addKeys(["Left","KP4","4"], "Move cursor left", function() {
+    addKeys(["Left","KP4","4","a","A"], "Move cursor left", function() {
             itemlist.listLeft();
         }, modes.itemlist);
-    addKeys(["Right","KP6","6"], "Move cursor right", function() {
+    addKeys(["Right","KP6","6","d","D"], "Move cursor right", function() {
             itemlist.listRight();
         }, modes.itemlist);
-    addKeys(["Up","KP8","8"], "Move cursor up", function() {
+    addKeys(["Up","KP8","8","w","W"], "Move cursor up", function() {
             itemlist.listUp();
         }, modes.itemlist);
-    addKeys(["Down","KP2","2"], "Move cursor down", function() {
+    addKeys(["Down","KP2","2","s","S"], "Move cursor down", function() {
             itemlist.listDown();
         }, modes.itemlist);
     addKeys(["PageUp","KP9","9"], "Previous page", function() {
@@ -1753,24 +1758,15 @@ function createViewer(e,preview,info)//{{{
             if ( n != len )
                 go(len);
         }, modes.viewer);
-    addKeys(["KP2","2"], "", function() {
-            viewer.scrollBy(0,window.innerHeight/4);
-        }, modes.viewer);
     addKeys(["KP3","3"], "Browse to fifth next gallery item", function() {
             if ( n != len )
                 go(n+5);
         }, modes.viewer);
-    addKeys(["KP4","4","K","k"], "Previous", prev, modes.viewer);
-    addKeys(["KP6","6","Enter","J","k"], "Next", next, modes.viewer);
+    addKeys(["KP4","4","k","K","q","Q"], "Previous", prev, modes.viewer);
+    addKeys(["KP6","6","Enter","j","J","e","E"], "Next", next, modes.viewer);
     addKeys(["KP7","7"], "Browse to first gallery item", function() {
             if ( n != 1 )
                 go(1);
-        }, modes.viewer);
-    addKeys(["KP8","8"], "", function() {
-            if ( window.pageYOffset == 0 )
-                info.popInfo();
-			else
-				viewer.scrollBy(0,-window.innerHeight/4);
         }, modes.viewer);
     addKeys(["KP9","9"], "Browse to fifth previous gallery item", function() {
             if ( n != 1 )
@@ -1814,11 +1810,11 @@ function createNavigation ()//{{{
     if (viewer)
         viewer.initDragScroll();
 
-    addKeys(["?","H","h"], "Show this help", toggleHelp);
-    addKeys(["Escape","?","H","h"], "Hide help", function() {
+    addKeys(["?","h","H"], "Show this help", toggleHelp);
+    addKeys(["Escape","?","h","H"], "Hide help", function() {
             toggleHelp(true);
             }, modes.help);
-    addKeys(["Left"], "Move window left/Slower playback/Previous gallery item", function () {
+    addKeys(["Left","a","A"], "Move window left/Slower playback/Previous gallery item", function () {
 			var v = viewer.view;
 			if (v && v.type() == "video")
 				v.slower();
@@ -1827,7 +1823,7 @@ function createNavigation ()//{{{
             else
                 viewer.scrollBy(-window.innerWidth/4,0);
         });
-    addKeys(["Right"], "Move window right/Faster playback/Next gallery item", function() {
+    addKeys(["Right","d","D"], "Move window right/Faster playback/Next gallery item", function() {
 			var v = viewer.view;
 			if (v && v.type() == "video")
 				v.faster();
@@ -1836,13 +1832,13 @@ function createNavigation ()//{{{
             else
                 viewer.scrollBy(window.innerWidth/4,0);
         });
-    addKeys(["Up"], "Move window up", function() {
+    addKeys(["KP8","8","Up","w","W"], "Move window up", function() {
             if ( window.pageYOffset == 0 )
                 info.popInfo();
 			else
 				viewer.scrollBy(0,-window.innerHeight/4);
         });
-    addKeys(["Down"], "Move window down", function() {
+    addKeys(["KP2","2","Down","s","S"], "Move window down", function() {
             viewer.scrollBy(0,window.innerHeight/4);
         });
 }//}}}
@@ -2105,7 +2101,7 @@ var hash;
 var vars = getUrlVars();
 
 // page number
-var n = getPage( parseInt(vars['n']) );
+var n = getPage( getConfig('n',0) );
 
 // zoom
 var zoom_step = getConfig('zoom_step',0.125);
