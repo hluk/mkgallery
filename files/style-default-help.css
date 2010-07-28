@@ -1,7 +1,8 @@
-#help a {font-size: 8pt; color: #7bf; text-decoration: none;}
-#help a:hover {color: #ff0;}
-#help a:visited {color: #7bf;}
-#help a:visited:hover {color: #ff0;}
+.help {color: white; font-family: sans; font-size: 12pt;}
+.help a {font-size: 8pt; color: #7bf; text-decoration: none;}
+.help a:hover {color: #ff0;}
+.help a:visited {color: #7bf;}
+.help a:visited:hover {color: #ff0;}
 
 h1, h2, h3 {
     /*font-family: font-family-457-1, font-family-457-2, Aller Display;*/
@@ -9,7 +10,6 @@ h1, h2, h3 {
 }
 h1 {
 	font-size: 2em;
-	color: white;
     text-align: center;
 }
 h2 {
@@ -24,7 +24,7 @@ h3 {
 	border-bottom: 2px solid #bbb;
 }
 
-#help {
+.help {
 	display: none;
 	z-index: 3; /* on top */
 
@@ -41,14 +41,14 @@ h3 {
 
     text-align: center;
 }
-#help.focused {display: block;}
-#help .category {
+.help.focused {display: block;}
+.help .category {
 	text-align: left;
     display: inline-block;
 	padding: 1em;
 }
-#help .key {}
-#help #keys .which {
+.help .key {}
+.help .keys .which {
 	display: inline;
 	display: inline-block;
 
@@ -72,12 +72,12 @@ h3 {
 	border-top: 2px solid white;
 	border-left: 2px solid white;
 }
-#help #keys,
-#help #options,
-#help #about {
+.help .keys,
+.help .options,
+.help .about {
 	border-top: 2px dashed #aaa;
 }
-#help #options .which {
+.help .options .which {
 	display: inline;
 	display: inline-block;
 	color: yellow;
@@ -85,13 +85,13 @@ h3 {
 	font-weight: bold;
     /*font-family: DejaVu Sans Mono, Inconsolata, Consolas, monospace;*/
     font-family: monospace;
-	font-size: 0.65em;
+	font-size: 0.7em;
 
 	margin-right: 1em;
 	padding-left: 0.1em;
 	padding-right: 0.1em;
 }
-#help #about .category {margin: 2em;}
-#help #about .which {color: #8fd;}
-#help .desc {display: inline; font-size: 0.7em;}
+.help .about .category {margin: 2em;}
+.help .about .which {color: #8fd;}
+.help .desc {display: inline; font-size: 0.8em;}
 

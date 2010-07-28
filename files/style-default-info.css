@@ -2,7 +2,7 @@
     opacity: 0;
     z-index: 2;
 
-    position: absolute;
+    position: fixed;
     top: 1em;
     left: 1em;
 
@@ -20,7 +20,7 @@
 .modeViewer #info:hover, .modeViewer #info.focused {
     opacity: 1;
 }
-#info:hover {
+.modeViewer #info:hover {
     background-color: rgba(0,100,200,0.4);
     -webkit-box-shadow: 0px 0px 20px #7bf;
     -moz-box-shadow: 0px 0px 20px #7bf;

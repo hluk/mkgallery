@@ -79,12 +79,6 @@ zoomChanged: function (zoom_state,zoom_factor)//{{{
 
 },//}}}
 
-scrollBy: function(x,y)//{{{
-{
-    window.scrollBy(x,y);
-    this.popPreview();
-},//}}}
-
 initDragScroll: function ()//{{{
 {
     var x,y;
@@ -113,7 +107,7 @@ initDragScroll: function ()//{{{
     }
 
     function dragScroll(e) {
-        window.scroll(x-e.clientX,y-e.clientY);
+        window.scrollTo(x-e.clientX,y-e.clientY);
         t.popPreview();
         e.preventDefault();
     }
@@ -157,7 +151,7 @@ initPreviewDragScroll: function ()//{{{
         var x = pos.left+win.innerWidth()/2;
         var y = pos.top+win.innerHeight()/2;
 
-        window.scroll(
+        window.scrollTo(
                 z*(e.clientX+window.pageXOffset-x),
                 z*(e.clientY+window.pageYOffset-y) );
         t.popPreview();
@@ -190,11 +184,11 @@ createPreview: function(filepath)//{{{
     p.show();
 },//}}}
 
-popPreview: function()//{{{
+updatePreview: function()//{{{
 {
     var img = this.preview_img;
     if ( !(img && img.attr("src")) )
-        return;
+        return false;
 
     // highlights the part of the image in window
     var win = this.preview_win;
@@ -213,6 +207,14 @@ popPreview: function()//{{{
                 "left":   Math.floor( w<ww ? "0" : imgw*window.pageXOffset/doc.scrollWidth) +"px",
               });
     }
+
+    return true;
+},//}}}
+
+popPreview: function()//{{{
+{
+    if ( !this.updatePreview() )
+        return;
 
     if (this.preview_t)
         clearTimeout(this.preview_t);
@@ -1103,6 +1105,7 @@ selectItem: function (i)//{{{
     this.selected = i;
 
     this.updateSelection();
+    this.ensureCurrentVisible();
 },//}}}
 
 listVertically: function (direction)//{{{
@@ -1144,7 +1147,6 @@ listVertically: function (direction)//{{{
 
     // select new
     this.selectItem(i-direction);
-    this.ensureCurrentVisible();
 },//}}}
 
 listDown: function ()//{{{
@@ -1166,7 +1168,6 @@ listRight: function ()//{{{
 
     // deselect current and select new
     this.selectItem(i);
-    this.ensureCurrentVisible();
 },//}}}
 
 listLeft: function ()//{{{
@@ -1178,7 +1179,6 @@ listLeft: function ()//{{{
 
     // deselect current and select new
     this.selectItem(i);
-    this.ensureCurrentVisible();
 },//}}}
 
 listPageDown: function ()//{{{
@@ -1187,7 +1187,6 @@ listPageDown: function ()//{{{
     var i = this.selected;
     while ( ++i < len && min_pos > this.get(i).offset().top );
     this.selectItem(i-1);
-    this.ensureCurrentVisible();
 },//}}}
 
 listPageUp: function ()//{{{
@@ -1196,7 +1195,6 @@ listPageUp: function ()//{{{
     var i = this.selected;
     while ( --i > 0 && min_pos < this.get(i).offset().top );
     this.selectItem(i+1);
-    this.ensureCurrentVisible();
 },//}}}
 }
 //}}}
@@ -1457,6 +1455,19 @@ function go (i)//{{{
 
     n = vars['n'] = pg;
 
+    // TODO: fix memory leaks!!!
+    // reload window on every nth item
+    var r = getConfig('reload_every');
+    if (r) {
+        if (m > 0 && r && m%r == 0) {
+            m = 0;
+            updateUrl();
+            location.reload();
+        }
+        else
+            m += 1;
+    }
+
     // hide item list and select current item
     if ( itemlist ) {
         if ( !itemlist.hidden() )
@@ -1521,16 +1532,8 @@ function updateUrl (timeout)//{{{
         // if url is updated immediately, user cannot browse images rapidly
 		if (url_t)
 			clearTimeout(url_t);
-		if (timeout) {
+		if (timeout)
             url_t = window.setTimeout( 'if( hash == "'+hash+'" ) location.hash = "#'+hash+'";',timeout );
-            // TODO: memory leaks!!! -- reload window on every 30th item
-            if (n%30 || preloaded === null)
-                url_t = window.setTimeout( 'if( hash == "'+hash+'" ) location.hash = "#'+hash+'";',timeout );
-            else {
-                location.hash = "#"+hash;
-                location.reload();
-            }
-        }
 		else
 			location.hash = "#"+hash;
     }
@@ -1587,10 +1590,126 @@ function toggleList()//{{{
 		updateClassName();
     }
 }//}}}
+
+function scrollDown(how)//{{{
+{
+    return scroll(0,how ? how : window.innerWidth/4);
+}//}}}
+
+function scrollUp(how)//{{{
+{
+    return scroll(0,how ? how : -window.innerWidth/4);
+}//}}}
+
+function scrollLeft(how)//{{{
+{
+    return scroll(how ? how : -window.innerHeight/4,0);
+}//}}}
+
+function scrollRight(how)//{{{
+{
+    return scroll(how ? how : window.innerWidth/4,0);
+}//}}}
+
+function scroll(x,y)//{{{
+{
+    if (!viewer) return false;
+
+    var d = x ? window.pageXOffset : window.pageYOffset;
+    window.scrollBy(x,y);
+    viewer.updatePreview();
+
+    return d != (x ? window.pageXOffset : window.pageYOffset);
+}//}}}
+
+function editText()//{{{
+{
+    if (!viewer)
+        return false;
+
+    var v = viewer.view;
+    if (!v || v.type() != "font")
+        return false;
+
+    v.ee.focus();
+    return true;
+}//}}}
+
+function videoTogglePlay()//{{{
+{
+    if (!viewer)
+        return false;
+
+    var v = viewer.view;
+    if (!v || v.type() != "video")
+        return false;
+
+    v.togglePlay();
+    return true;
+}//}}}
+
+function videoSpeed(d)//{{{
+{
+    if (!viewer)
+        return false;
+
+    var v = viewer.view;
+    if (!v || v.type() != "video")
+        return false;
+
+    if (d>0)
+        v.faster();
+    if (d<0)
+        v.slower();
+    else
+        v.normalSpeed();
+    return true;
+}//}}}
+
+function videoFaster()//{{{
+{
+    videoSpeed(1);
+}//}}}
+
+function videoSlower()//{{{
+{
+    videoSpeed(-1);
+}//}}}
+
+function back()//{{{
+{
+    history.back();
+    window.setTimeout("location.reload();",100);
+}//}}}
+
+function forward()//{{{
+{
+    history.forward();
+    window.setTimeout("location.reload();",100);
+}//}}}
+
+function popInfo()//{{{
+{
+    if (!info)
+        return false;
+
+    info.popInfo();
+    return true;
+}//}}}
+
+function popPreview()//{{{
+{
+    if (!viewer)
+        return false;
+
+    viewer.popPreview();
+    return true;
+}//}}}
+
 //}}}
 
 // INTERACTION//{{{
-var keycodes = []
+var keycodes = []//{{{
 keycodes[13] = "Enter";
 keycodes[27] = "Escape";
 keycodes[32] = "Space";
@@ -1619,31 +1738,44 @@ if ( userAgent() == userAgents.webkit ) {
     keycodes[110] = ".";
     keycodes[111] = "/";
     keycodes[191] = "?";
-}
-
-function next()//{{{
-{
-    if ( n != len )
-        go(n+1);
 }//}}}
 
-function prev()//{{{
+function next ()//{{{
 {
-    if ( n != 1 )
-        go(n-1);
+    if ( n == len )
+        return false;
+
+    go(n+1);
+    return true;
+}//}}}
+
+function prev ()//{{{
+{
+    if ( n == 1 )
+        return false;
+
+    go(n-1);
+    return true;
 }//}}}
 
 function keyPress (e)//{{{
 {
-    if ( e.ctrlKey || e.altKey || e.metaKey )
-        return;
-
 	var keycode = e.keyCode ? e.keyCode : e.which;
 	var keyname;
 
     keyname = keycodes[keycode];
     if ( !keyname )
 		keyname = String.fromCharCode(keycode);
+
+    keyname = keyname.toUpperCase()
+    if ( e.altKey )
+        keyname = "A-"+keyname
+    if ( e.ctrlKey )
+        keyname = "C-"+keyname
+    if ( e.metaKey )
+        keyname = "M-"+keyname
+    if ( e.shiftKey )
+        keyname = "S-"+keyname
 
     //DEBUG:
     //info.updateStatus(keycode+": "+keyname);
@@ -1657,7 +1789,11 @@ function keyPress (e)//{{{
         var fn = k[keyname];
         if (!fn) continue;
 
-        fn();
+        var t = typeof(fn);
+        if (t == "string")
+            eval(fn);
+        else if (t == "function")
+            fn();
         e.preventDefault();
         break;
     }
@@ -1670,6 +1806,31 @@ function onMouseWheel (e) {//{{{
     if ( window.pageYOffset == 0 )
         info.popInfo();
 }//}}}
+
+function addKeys (newkeys, desc, fn, keymode)//{{{
+{
+    if (!keys)
+        keys = {};
+    if (!keymode)
+        keymode = modes.any;
+
+    var ekeys = keys[keymode];
+    if (!ekeys)
+        ekeys = keys[keymode] = {};
+
+    var k = newkeys instanceof Array ? newkeys : [newkeys];
+    for (var i in k)
+        ekeys[k[i].toUpperCase()] = fn;
+
+    // key description
+    if (!desc) return;
+    if (!keydesc)
+        keydesc = {};
+    var modekeydesc = keydesc[keymode];
+    if (!modekeydesc)
+        modekeydesc = keydesc[keymode] = {};
+    modekeydesc[desc] = k;
+}//}}}
 //}}}
 
 function createItemList()//{{{
@@ -1681,40 +1842,6 @@ function createItemList()//{{{
     itemlist = new ItemList(e,ls);
 
     itemlist.onSubmit = go;
-
-    // navigation//{{{
-    addKeys(["KP5","5"], "Toggle thumbnail list", toggleList);
-    addKeys(["Escape"], "", toggleList, modes.itemlist);
-    addKeys(["Enter"], "Go to selected item", function() {
-            itemlist.submitSelected();
-        }, modes.itemlist);
-    addKeys(["Left","KP4","4","a","A"], "Move cursor left", function() {
-            itemlist.listLeft();
-        }, modes.itemlist);
-    addKeys(["Right","KP6","6","d","D"], "Move cursor right", function() {
-            itemlist.listRight();
-        }, modes.itemlist);
-    addKeys(["Up","KP8","8","w","W"], "Move cursor up", function() {
-            itemlist.listUp();
-        }, modes.itemlist);
-    addKeys(["Down","KP2","2","s","S"], "Move cursor down", function() {
-            itemlist.listDown();
-        }, modes.itemlist);
-    addKeys(["PageUp","KP9","9"], "Previous page", function() {
-            itemlist.listPageUp();
-        }, modes.itemlist);
-    addKeys(["PageDown","KP3","3"], "Next page", function() {
-            itemlist.listPageDown();
-        }, modes.itemlist);
-    addKeys(["End","KP1","1"], "Move cursor on last thumbnail", function() {
-            itemlist.selectItem(itemlist.size()-1);
-            itemlist.ensureCurrentVisible();
-        }, modes.itemlist);
-    addKeys(["Home","KP7","7"], "Move cursor on first thumbnail", function() {
-            itemlist.selectItem(0);
-            itemlist.ensureCurrentVisible();
-        }, modes.itemlist);
-    //}}}
 }//}}}
 
 function createViewer(e,preview,info)//{{{
@@ -1730,79 +1857,6 @@ function createViewer(e,preview,info)//{{{
     }
 
     viewer.onZoomChanged = function(state) { if (vars['zoom'] == state) return; vars['zoom'] = state; updateUrl(1000); }
-
-    // navigation//{{{
-    addKeys(["PageUp"], "", function() {
-            if ( window.pageYOffset == 0 )
-                info.popInfo();
-			else
-				viewer.scrollBy(0,-window.innerHeight);
-        }, modes.viewer);
-    addKeys(["PageDown"], "", function() {
-            viewer.scrollBy(0,window.innerHeight);
-        }, modes.viewer);
-    addKeys(["End"], "", function() {
-            window.scrollTo(0,b.scrollHeight);
-        }, modes.viewer);
-    addKeys(["Home"], "", function() {
-            if ( window.pageYOffset == 0 )
-                info.popInfo();
-			else
-				window.scrollTo(0,0);
-        }, modes.viewer);
-    addKeys(["Space"], "Move window down/Next gallery item/Play or pause", function() {
-			var v = viewer.view;
-			if (v && v.type() == "video")
-				v.togglePlay();
-			else if ( window.pageYOffset+window.innerHeight >= document.documentElement.scrollHeight )
-                next();
-            else
-                viewer.scrollBy(0,window.innerHeight*9/10);
-        }, modes.viewer);
-    addKeys(["E","e"], "Edit font text", function() {
-			var v = viewer.view;
-			if (v && v.type() == "font")
-				v.ee.focus();
-        }, modes.viewer);
-    addKeys(["KP1","1"], "Browse to last gallery item", function() {
-            if ( n != len )
-                go(len);
-        }, modes.viewer);
-    addKeys(["KP3","3"], "Browse to fifth next gallery item", function() {
-            if ( n != len )
-                go(n+5);
-        }, modes.viewer);
-    addKeys(["KP4","4","k","K","q","Q"], "Previous", prev, modes.viewer);
-    addKeys(["KP6","6","Enter","j","J","e","E"], "Next", next, modes.viewer);
-    addKeys(["KP7","7"], "Browse to first gallery item", function() {
-            if ( n != 1 )
-                go(1);
-        }, modes.viewer);
-    addKeys(["KP9","9"], "Browse to fifth previous gallery item", function() {
-            if ( n != 1 )
-                go(n-5);
-        }, modes.viewer);
-    addKeys(["KP0","0"], "Normal speed playback", function() {
-			var v = viewer.view;
-			if (v && v.type() == "video")
-				v.normalSpeed();
-        }, modes.viewer);
-    addKeys(["+"], "Zoom in", function() {
-            viewer.zoom("+");
-        }, modes.viewer);
-    addKeys(["-"], "Zoom out", function() {
-            viewer.zoom("-");
-        }, modes.viewer);
-    addKeys(["*"], "Zoom to original size", function() {
-            viewer.zoom(1);
-        }, modes.viewer);
-    addKeys(["/"], "Zoom to fit", function() {
-            viewer.zoom("fit");
-        }, modes.viewer);
-    addKeys(["."], "Zoom to fill", function() {
-            viewer.zoom("fill");
-        }, modes.viewer);
-    //}}}
 }//}}}
 
 function createNavigation ()//{{{
@@ -1817,93 +1871,38 @@ function createNavigation ()//{{{
     window.onmousewheel = document.onmousewheel = onMouseWheel;
     window.addEventListener('DOMMouseScroll', onmousewheel, false);
 
+    // drag scroll
     if (viewer)
         viewer.initDragScroll();
 
-    addKeys(["?","h","H"], "Show this help", toggleHelp);
-    addKeys(["Escape","?","h","H"], "Hide help", function() {
-            toggleHelp(true);
-            }, modes.help);
-    addKeys(["Left","a","A"], "Move window left/Slower playback/Previous gallery item", function () {
-			var v = viewer.view;
-			if (v && v.type() == "video")
-				v.slower();
-            else if ( !viewer.width() || viewer.width() <= window.innerWidth )
-                prev();
-            else
-                viewer.scrollBy(-window.innerWidth/4,0);
-        });
-    addKeys(["Right","d","D"], "Move window right/Faster playback/Next gallery item", function() {
-			var v = viewer.view;
-			if (v && v.type() == "video")
-				v.faster();
-            else if ( !viewer.width() || viewer.width() <= window.innerWidth )
-                next();
-            else
-                viewer.scrollBy(window.innerWidth/4,0);
-        });
-    addKeys(["KP8","8","Up","w","W"], "Move window up", function() {
-            if ( window.pageYOffset == 0 )
-                info.popInfo();
-			else
-				viewer.scrollBy(0,-window.innerHeight/4);
-        });
-    addKeys(["KP2","2","Down","s","S"], "Move window down", function() {
-            viewer.scrollBy(0,window.innerHeight/4);
-        });
-}//}}}
+    if (!controls)
+        return;
 
-function addKeys(newkeys, desc, fn, keymode)//{{{
-{
-    if (!keys)
-        keys = {};
-    if (!keymode)
-        keymode = modes.any;
-
-    var ekeys = keys[keymode];
-    if (!ekeys)
-        ekeys = keys[keymode] = {};
-
-    for (var i in newkeys) {
-        ekeys[newkeys[i]] = fn;
+    // user controls
+    for (var m in controls) {
+        var km = controls[m];
+        for (var i in controls[m]) {
+            var k = km[i];
+            addKeys(k[0],k[2],k[1],m);
+        }
     }
-
-    // key description
-    if (!desc) return;
-    if (!keydesc)
-        keydesc = {};
-    var modekeydesc = keydesc[keymode];
-    if (!modekeydesc)
-        modekeydesc = keydesc[keymode] = {};
-    modekeydesc[desc] = newkeys;
 }//}}}
 
 function createKeyHelp(e)//{{{
 {
     for (var i in modes) {
-        var cat = document.createElement("div");
-        cat.className = "category";
-        e.appendChild(cat);
+        var cat = $('<div class="category"></div>');
+        cat.appendTo(e);
 
-        var h3 = document.createElement("h3");
-        h3.innerHTML = modes[i];
-        cat.appendChild(h3);
+        $('<h3>'+modes[i]+'</h3>').appendTo(cat);
 
         var modekeydesc = keydesc[modes[i]];
         for (var j in modekeydesc) {
-            var key = document.createElement("div");
-            key.className = "key";
-            cat.appendChild(key);
+            var key = $('<div class="key"></div>');
+            key.appendTo(cat);
 
-            var which = document.createElement("div");
-            which.className = "which";
-            which.innerHTML = modekeydesc[j].join(", ");
-            key.appendChild(which);
-
-            var desc = document.createElement("desc");
-            desc.className = "desc";
-            desc.innerHTML = j;
-            key.appendChild(desc);
+            $('<div class="which">'+modekeydesc[j].join(", ")+'</div>').appendTo(key);
+            $('<div class="desc">'+j+'</div>').appendTo(key);
         }
     }
 }//}}}
@@ -1943,113 +1942,79 @@ function createConfigHelp(e)//{{{
     };//}}}
 
     for (var i in confdesc) {
-        var cat = document.createElement("div");
-        cat.className = "category";
-        e.appendChild(cat);
+        var cat = $('<div class="category"></div>');
+        cat.appendTo(e);
 
-        var h3 = document.createElement("h3");
-        h3.innerHTML = i;
-        cat.appendChild(h3);
+        var h3 = $("<h3>"+i+"</h3>");
+        h3.appendTo(cat);
 
         var desc = confdesc[i];
         for (var j in desc) {
-            var opt = document.createElement("div");
-            opt.className = "option";
-            cat.appendChild(opt);
+            var opt = $('<div class="option"></div>');
+            opt.appendTo(cat);
 
-            var which = document.createElement("div");
-            which.className = "which";
-            which.innerHTML = j;
-            opt.appendChild(which);
+            var which = $('<div class="which">'+j+'</div>');
+            which.appendTo(opt);
 
-            var desc = document.createElement("desc");
-            desc.className = "desc";
-            desc.innerHTML = confdesc[i][j];
-            opt.appendChild(desc);
+            var desc = $('<div class="desc">'+confdesc[i][j]+'</div>');
+            desc.appendTo(opt);
         }
     }
 }//}}}
 
 function createAbout(e)//{{{
 {
-	var cat = document.createElement("div");
-	cat.className = "category";
-	e.appendChild(cat);
+    var content = [
+        ["gallery created with","mkgallery v1.0"],
+        ["author","Lukáš Holeček"],
+        ["e-mail",'<a href="mailto:hluk@email.cz">hluk@email.cz</a>'],
+    ];
 
-	var which = document.createElement("div");
-	which.className = "which";
-	which.innerHTML = "gallery created with";
-	cat.appendChild(which);
+    for (var i in content) {
+        var x = content[i];
+        var cat = $('<div class="category"></div>');
+        cat.appendTo(e);
 
-	var desc = document.createElement("desc");
-	desc.className = "desc";
-	desc.innerHTML = "mkgallery v1.0";
-	cat.appendChild(desc);
+        var which = $('<div class="which">'+x[0]+'</div>');
+        which.appendTo(cat);
 
-	var cat = document.createElement("div");
-	cat.className = "category";
-	e.appendChild(cat);
-
-	var which = document.createElement("div");
-	which.className = "which";
-	which.innerHTML = "author";
-	cat.appendChild(which);
-
-	var desc = document.createElement("desc");
-	desc.className = "desc";
-	desc.innerHTML = "Lukáš Holeček";
-	cat.appendChild(desc);
-
-	var cat = document.createElement("div");
-	cat.className = "category";
-	e.appendChild(cat);
-
-	var which = document.createElement("div");
-	which.className = "which";
-	which.innerHTML = "e-mail";
-	cat.appendChild(which);
-
-	var desc = document.createElement("desc");
-	desc.className = "desc";
-	desc.innerHTML = "<a href=\"mailto:hluk@email.cz\">hluk@email.cz</a>";
-	cat.appendChild(desc);
+        var desc = $('<div class="desc">'+x[1]+'</div>');
+        desc.appendTo(cat);
+    }
 }//}}}
 
 function createHelp(e)//{{{
 {
-    var ekeys = document.getElementById("keys");
-    if (ekeys)
+    var ekeys = e.find(".keys");
+    if (ekeys.length)
         createKeyHelp(ekeys);
 
-    var econf = document.getElementById("options");
-    if (econf)
+    var econf = e.find(".options");
+    if (econf.length)
         createConfigHelp(econf);
 
-    var eother = document.getElementById("about");
-    if (eother)
+    var eother = e.find(".about");
+    if (eother.length)
         createAbout(eother);
-
-    // disable showing item list in help mode
-    addKeys(["KP5","5"], "", function() {}, modes.help);
 }//}}}
 
-function toggleHelp(hide)//{{{
+function toggleHelp()//{{{
 {
     // key bindings
     if (!help) {
-        help = document.getElementById("help");
-        if (!help)
+        help = $(".help");
+        if (!help.length)
             return;
         createHelp(help);
     }
 
-    if ( help && !(hide && !help.className) ) {
-        if (hide) {
-            help.className = "";
+    if ( help.length ) {
+        if ( help.hasClass("focused") ) {
+            help.removeClass("focused");
             mode.pop();
         }
         else {
-            help.className = "focused";
+            help.addClass("focused");
             mode.push(modes.help);
         }
 		updateClassName();
@@ -2112,6 +2077,7 @@ var vars = getUrlVars();
 
 // page number
 var n = getPage( getConfig('n',0) );
+var m = 0;
 
 // zoom
 var zoom_step = getConfig('zoom_step',0.125);

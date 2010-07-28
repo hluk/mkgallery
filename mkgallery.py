@@ -18,7 +18,6 @@ rm_error = "ERROR: Existing gallery contains files that aren't symbolic links!\n
           "       Use -f (--force) to remove all files."
 
 import_error = "WARNING: Generating {0} was unsuccessfull! To generate {0} Python Imaging Library needs to be installed."
-pil_fonts = pil_thumbs = True
 
 re_img  = re.compile('\.(jpg|png|gif|svg)$',re.I)
 re_font = re.compile('\.(otf|ttf)$',re.I)
@@ -81,14 +80,11 @@ def walk(root):#{{{
 #}}}
 
 def launch_browser(url):#{{{
+	browser = os.environ['BROWSER']
+	print("Lauching web browser ("+browser+").")
+
 	try:
-		if os.fork() == 0:
-			browser = os.environ['BROWSER']
-			print("Lauching web browser ("+browser+").")
-			if not url.lower().endswith("index.html"):
-				url = url+"/index.html"
-			# TODO: port
-			os.execv("/usr/bin/env",("/usr/bin/env",browser,url))
+		os.spawnlp(os.P_WAIT, browser, browser, url)
 	except:
 		pass
 #}}}
@@ -169,27 +165,28 @@ def prepare_gallery(d,gdir,force):#{{{
 		os.mkdir(itemdir)
 
 		shutil.copyfile(d+"/config.js", gdir+"/config.js")
+		shutil.copyfile(d+"/controls.js", gdir+"/controls.js")
 	except:
 		raise
 #}}}
 
 def addFont(fontfile,css):#{{{
-	global pil_fonts, re_fontname
+	global re_fontname
 
 	fontname = ""
 
-	if pil_fonts:
-		try:
-			from PIL import ImageFont
+	try:
+		from PIL import ImageFont
 
-			font = ImageFont.truetype(fontfile,8)
-			name = font.getname()
-			fontname = name[0]
-			if name[1]:
-				fontname = fontname + " " + name[1]
-		except ImportError:
-			print( import_error.format("font names") )
-			pil_fonts = False
+		font = ImageFont.truetype(fontfile,8)
+		name = font.getname()
+		fontname = name[0]
+		if name[1]:
+			fontname = fontname + " " + name[1]
+	except ImportError:
+		pass
+	except Exception as e:
+		print("ERROR: "+str(e)+" (file: \""+fontfile+"\")")
 
 	css.write("@font-face{font-family:"+re_fontname.sub("_",fontfile)+";src:url('items/"+fontfile+"');}\n")
 
@@ -207,8 +204,8 @@ def itemline(filename,alias=None,width=None,height=None):#{{{
 	line = line + '"' + ( is_local(filename) and ("items/"+filename) or filename ) + '"'
 
 	# alias
-	if alias:
-		line = line + ',{alias:"'+alias+'"}'
+	# TODO: escape double quotes
+	line = line + ',{' + ( alias and ('alias:"'+alias+'"') or '' ) + '}'
 
 	# width and height
 	if width:
@@ -292,53 +289,46 @@ def create_thumbnail(filename,resolution,outfilename):#{{{
 def create_thumbnails(items,imgdir,thumbdir,resolution,itemfile):#{{{
 	global pil_thumbs
 
-	if not pil_thumbs:
-		return
+	# number of images
+	n = sum( 1 for _ in filter(re_img.search,items.keys()) )
+	if n == 0:
+		return # no images
 
-	try:
-		# number of images
-		n = len( filter(re_img.search,items.keys()) )
-		if n == 0:
-			return # no images
+	# create thumbnail directory
+	os.makedirs(thumbdir)
 
-		# create thumbnail directory
-		os.makedirs(thumbdir)
+	i = 0
+	bar = ">" + (" "*progress_len)
+	sys.stdout.write( "Creating thumbnails: [%s] %d/%d\r"%(bar,0,n) )
 
-		i = 0
-		bar = ">" + (" "*progress_len)
-		sys.stdout.write( "Creating thumbnails: [%s] %d/%d\r"%(bar,0,n) )
+	lines = "var ls=[\n"
+	for f in sorted(items,key=str.lower):
+		alias = items[f]
+		w = h = 0
+		if re_img.search(f):
+			try:
+				w,h = create_thumbnail(imgdir+"/"+f, resolution, thumbdir+"/"+os.path.basename(f))
+			except ImportError:
+				pass
+			except Exception as e:
+				print("ERROR: "+str(e)+" (file: \""+f+"\")")
 
-		lines = "var ls=[\n"
-		for f in sorted(items,key=str.lower):
-			alias = items[f]
-			if re_img.search(f):
-				try:
-					size = create_thumbnail(imgdir+"/"+f, resolution, thumbdir+"/"+os.path.basename(f))
-					lines = lines + itemline(f,alias,size[0],size[1])
-				except Exception as e:
-					print("ERROR: "+str(e)+" (file: \""+f+"\")")
-					lines = lines + itemline(f,alias)
-					pass
+			# show progress bar
+			i=i+1
+			l = int(i*progress_len/n)
+			bar = ("="*l) + ">" + (" "*(progress_len-l))
+			sys.stdout.write( "Creating thumbnails: [%s] %d/%d%s"%(bar,i,n,i==n and "\n" or "\r") );
+			sys.stdout.flush()
+		lines = lines + itemline(f,alias,w,h)
+	lines = lines + "];\n"
 
-				# show progress bar
-				i=i+1
-				l = i*progress_len/n
-				bar = ("="*l) + ">" + (" "*(progress_len-l))
-				sys.stdout.write( "Creating thumbnails: [%s] %d/%d%s"%(bar,i,n,i==n and "\n" or "\r") );
-				sys.stdout.flush()
-			lines = lines + itemline(f,alias)
-		lines = lines + "];\n"
+	# rewrite items.js
+	itemfile.seek(0)
+	itemfile.truncate()
+	itemfile.write('var title = "'+title+'";\n');
+	itemfile.write(lines)
 
-		# rewrite items.js
-		itemfile.seek(0)
-		itemfile.truncate()
-		itemfile.write('var title = "'+title+'";\n');
-		itemfile.write(lines)
-
-		print("Thumbnails successfully generated.")
-	except ImportError:
-		print( import_error.format("thumbnails") )
-		pil_thumbs = False
+	print("Thumbnails successfully generated.")
 #}}}
 
 def main(argv):#{{{
