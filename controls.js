@@ -42,11 +42,11 @@ Viewer: [
     [["KP7","7"], "go(1)", "Browse to first gallery item"],
     [["KP9","9"], "go(n-5)", "Browse to fifth previous gallery item"],
     [["KP0","0"], "videoSpeed(0)", "Normal speed playback"],
-    ["+", "viewer.zoom('+')", "Zoom in"],
-    ["-", "viewer.zoom('-')", "Zoom out"],
-    ["*", "viewer.zoom(1)", "Zoom to original size"],
-    ["/", "viewer.zoom('fit')", "Zoom to fit"],
-    [".", "viewer.zoom('fill')", "Zoom to fill"],
+    ["+", "zoom('+')", "Zoom in"],
+    ["-", "zoom('-')", "Zoom out"],
+    ["*", "zoom(1)", "Zoom to original size"],
+    ["/", "zoom('fit')", "Zoom to fit"],
+    [".", "zoom('fill')", "Zoom to fill"],
 ],
 
 // item list

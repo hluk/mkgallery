@@ -66,17 +66,12 @@ zoomChanged: function (zoom_state,zoom_factor)//{{{
             this.onZoomChanged(z);
     }
 
-    // show preview if:
-    // - preview element exists,
-    // - item is image and
-    // - image doesn't fit in the window
-    if ( this.view.type() == "image" &&
+    if ( signal && this.view.type() == "image" &&
          ( window.innerHeight < this.view.e.innerHeight() ||
            window.innerWidth < this.view.e.innerWidth() ) )
-        this.popPreview();
+        signal("too_big");
     else
         this.hidePreview();
-
 },//}}}
 
 initDragScroll: function ()//{{{
@@ -154,7 +149,8 @@ initPreviewDragScroll: function ()//{{{
         window.scrollTo(
                 z*(e.clientX+window.pageXOffset-x),
                 z*(e.clientY+window.pageYOffset-y) );
-        t.popPreview();
+        if (signal)
+            signal("scroll");
         e.preventDefault();
     }
 },//}}}
@@ -1315,7 +1311,6 @@ updateStatus: function (status_msg,class_name)//{{{
         }
         else
             e.hide();
-        this.popInfo();
     }
 },//}}}
 
@@ -1484,10 +1479,7 @@ function go (i)//{{{
 	else
 		var itemname = item;
 
-    if (info ) {
-        info.updateInfo(itemname,n,len,props);
-        info.popInfo();
-    }
+    updateInfo(itemname,n,len,props);
 
     updateTitle();
 	updateUrl(1000);
@@ -1496,7 +1488,21 @@ function go (i)//{{{
     viewer.show(itemname);
 
     window.scrollTo(0,0);
+
+    signal("go");
+    if (n==1)
+        signal("first");
+    if (n==len)
+        signal("last");
 }//}}}
+
+function updateInfo(itemname,n,len,props) {
+    if(!info)
+        return;
+
+    info.updateInfo(itemname,n,len,props);
+    signal("info_update");
+}
 
 function updateTitle ()//{{{
 {
@@ -1611,7 +1617,7 @@ function scrollRight(how)//{{{
     return scroll(how ? how : window.innerWidth/4,0);
 }//}}}
 
-function scroll(x,y)//{{{
+function scroll (x,y)//{{{
 {
     if (!viewer) return false;
 
@@ -1619,8 +1625,31 @@ function scroll(x,y)//{{{
     window.scrollBy(x,y);
     viewer.updatePreview();
 
-    return d != (x ? window.pageXOffset : window.pageYOffset);
+    var newd = (x ? window.pageXOffset : window.pageYOffset);
+    if (y) {
+        if (newd == 0)
+            signal("top");
+        if (newd+window.innerHeight >= document.documentElement.scrollHeight)
+            signal("bottom");
+    }
+
+    if (d != newd) {
+        signal("scroll");
+        return true
+    }
+    else
+        return false;
 }//}}}
+
+function zoom(how)
+{
+    if (!viewer)
+        return false;
+
+    viewer.zoom(how);
+    signal("zoom");
+    return true;
+}
 
 function editText()//{{{
 {
@@ -1635,7 +1664,7 @@ function editText()//{{{
     return true;
 }//}}}
 
-function videoTogglePlay()//{{{
+function videoTogglePlay ()//{{{
 {
     if (!viewer)
         return false;
@@ -1645,10 +1674,11 @@ function videoTogglePlay()//{{{
         return false;
 
     v.togglePlay();
+    signal("video_play");
     return true;
 }//}}}
 
-function videoSpeed(d)//{{{
+function videoSpeed (d)//{{{
 {
     if (!viewer)
         return false;
@@ -1666,29 +1696,29 @@ function videoSpeed(d)//{{{
     return true;
 }//}}}
 
-function videoFaster()//{{{
+function videoFaster ()//{{{
 {
     videoSpeed(1);
 }//}}}
 
-function videoSlower()//{{{
+function videoSlower ()//{{{
 {
     videoSpeed(-1);
 }//}}}
 
-function back()//{{{
+function back ()//{{{
 {
     history.back();
     window.setTimeout("location.reload();",100);
 }//}}}
 
-function forward()//{{{
+function forward ()//{{{
 {
     history.forward();
     window.setTimeout("location.reload();",100);
 }//}}}
 
-function popInfo()//{{{
+function popInfo ()//{{{
 {
     if (!info)
         return false;
@@ -1697,13 +1727,29 @@ function popInfo()//{{{
     return true;
 }//}}}
 
-function popPreview()//{{{
+function popPreview ()//{{{
 {
     if (!viewer)
         return false;
 
     viewer.popPreview();
     return true;
+}//}}}
+
+function signal (sgn)//{{{
+{
+    if (!events)
+        return;
+
+    var fn = events[sgn];
+    if (!fn)
+        return;
+
+    var t = typeof(fn);
+    if (t == "string")
+        eval(fn);
+    else if (t == "function")
+        fn();
 }//}}}
 
 //}}}
@@ -1745,6 +1791,7 @@ function next ()//{{{
     if ( n == len )
         return false;
 
+    signal("next");
     go(n+1);
     return true;
 }//}}}
@@ -1754,6 +1801,7 @@ function prev ()//{{{
     if ( n == 1 )
         return false;
 
+    signal("prev");
     go(n-1);
     return true;
 }//}}}
@@ -1801,10 +1849,8 @@ function keyPress (e)//{{{
 
 function onMouseWheel (e) {//{{{
     var delta = e.detail ? -e.detail*4 : e.wheelDelta/3;
-    window.scroll(window.pageXOffset,window.pageYOffset-delta);
+    scroll(0,-delta);
     e.preventDefault();
-    if ( window.pageYOffset == 0 )
-        info.popInfo();
 }//}}}
 
 function addKeys (newkeys, desc, fn, keymode)//{{{
@@ -2027,6 +2073,7 @@ function onResize()//{{{
         viewer.zoom();
     if (itemlist)
         itemlist.resize();
+    signal("resized");
 }//}}}
 
 function onLoad()//{{{

@@ -166,6 +166,7 @@ def prepare_gallery(d,gdir,force):#{{{
 
 		shutil.copyfile(d+"/config.js", gdir+"/config.js")
 		shutil.copyfile(d+"/controls.js", gdir+"/controls.js")
+		shutil.copyfile(d+"/events.js", gdir+"/events.js")
 	except:
 		raise
 #}}}
