@@ -20,10 +20,11 @@ rm_error = "ERROR: Existing gallery contains files that aren't symbolic links!\n
 import_error = "WARNING: Generating {0} was unsuccessfull! To generate {0} Python Imaging Library needs to be installed."
 pil_fonts = pil_thumbs = True
 
-img_fmt  = re.compile('\.(jpg|png|gif|svg)$',re.I)
-font_fmt = re.compile('\.(otf|ttf)$',re.I)
-vid_fmt = re.compile('\.(mp4|mov|flv|ogg|mp3|wav)$',re.I)
-fontname_re = re.compile('[^a-zA-Z0-9_ ]')
+re_img  = re.compile('\.(jpg|png|gif|svg)$',re.I)
+re_font = re.compile('\.(otf|ttf)$',re.I)
+re_vid = re.compile('\.(mp4|mov|flv|ogg|mp3|wav)$',re.I)
+re_remote = re.compile('^\w+://',re.I)
+re_fontname = re.compile('[^a-zA-Z0-9_ ]')
 
 def escape(s):#{{{
 	return s.replace('\\','\\\\').replace('"','\\"')
@@ -173,7 +174,7 @@ def prepare_gallery(d,gdir,force):#{{{
 #}}}
 
 def addFont(fontfile,css):#{{{
-	global pil_fonts
+	global pil_fonts, re_fontname
 
 	fontname = ""
 
@@ -190,7 +191,7 @@ def addFont(fontfile,css):#{{{
 			print( import_error.format("font names") )
 			pil_fonts = False
 
-	css.write("@font-face{font-family:"+fontname_re.sub("_",fontfile)+";src:url('items/"+fontfile+"');}\n")
+	css.write("@font-face{font-family:"+re_fontname.sub("_",fontfile)+";src:url('items/"+fontfile+"');}\n")
 
 	return fontname
 #}}}
@@ -203,7 +204,7 @@ def itemline(filename,alias=None,width=None,height=None):#{{{
 
 	# filename
 	# TODO: escape double quotes
-	line = line + '"' + filename + '"'
+	line = line + '"' + ( is_local(filename) and ("items/"+filename) or filename ) + '"'
 
 	# alias
 	if alias:
@@ -219,7 +220,13 @@ def itemline(filename,alias=None,width=None,height=None):#{{{
 	return line
 #}}}
 
+def is_local(filename):#{{{
+	return re_remote.search(filename) == None
+#}}}
+
 def prepare_html(template,itemfile,css,gdir,files):#{{{
+	global re_img, re_font, re_vid
+
 	items = {}
 	imgdir = gdir+"/items"
 	abs_gdir = os.path.abspath(gdir)
@@ -236,17 +243,18 @@ def prepare_html(template,itemfile,css,gdir,files):#{{{
 
 			# filetype (image, font, audio/video)
 			isimg = isfont = isvid = False
-			isimg = img_fmt.search(f) != None
+			isimg = re_img.search(f) != None
 			if not isimg:
-				isfont = font_fmt.search(f) != None
+				isfont = re_font.search(f) != None
 				if not isfont:
-					isvid = vid_fmt.search(f) != None
+					isvid = re_vid.search(f) != None
 
 			if isimg or isfont or isvid:
-				fdir = imgdir+"/"+os.path.dirname(f)
-				if not os.path.isdir(fdir):
-					os.makedirs(fdir)
-				cp( abs_f, fdir+"/" + os.path.basename(f) )
+				if is_local(f):
+					fdir = imgdir+"/"+os.path.dirname(f)
+					if not os.path.isdir(fdir):
+						os.makedirs(fdir)
+					cp( abs_f, fdir+"/" + os.path.basename(f) )
 
 				# if file is font: create font-face line in css
 				alias = ""
@@ -289,7 +297,7 @@ def create_thumbnails(items,imgdir,thumbdir,resolution,itemfile):#{{{
 
 	try:
 		# number of images
-		n = len( filter(img_fmt.search,items.keys()) )
+		n = len( filter(re_img.search,items.keys()) )
 		if n == 0:
 			return # no images
 
@@ -303,7 +311,7 @@ def create_thumbnails(items,imgdir,thumbdir,resolution,itemfile):#{{{
 		lines = "var ls=[\n"
 		for f in sorted(items,key=str.lower):
 			alias = items[f]
-			if img_fmt.search(f):
+			if re_img.search(f):
 				try:
 					size = create_thumbnail(imgdir+"/"+f, resolution, thumbdir+"/"+os.path.basename(f))
 					lines = lines + itemline(f,alias,size[0],size[1])
@@ -334,8 +342,6 @@ def create_thumbnails(items,imgdir,thumbdir,resolution,itemfile):#{{{
 #}}}
 
 def main(argv):#{{{
-	global img_fmt, font_fmt, fontname_re
-
 	files,title,resolution,gdir,url,d,force = parse_args(argv)
 
 	prepare_gallery(d,gdir,force)

@@ -186,7 +186,7 @@ createPreview: function(filepath)//{{{
         img.appendTo(p);
         this.initPreviewDragScroll();
     }
-    img.attr( "src", escape( path(filepath) ) );
+    img.attr( "src", esc(filepath) );
     p.show();
 },//}}}
 
@@ -355,7 +355,7 @@ var ImageView = function(imgpath, _parent) { this.init(imgpath, _parent); };
 ImageView.prototype = {
 init: function(imgpath, _parent)//{{{
 {
-    this.path = path(imgpath);
+    this.path = imgpath;
     this._parent = _parent;
     this.zoom_factor = 1;
 },//}}}
@@ -386,13 +386,15 @@ show: function()//{{{
 
     var e;
     // don't use canvas in some cases:
+    //  - user configuration
     //  - GIF: redraw animated images in intervals
     //  - Opera
-    if ( userAgent() == userAgents.opera || this.path.search(/\.gif$/i) > -1) {
+    if ( !getConfig('image_on_canvas',false) || userAgent() == userAgents.opera || this.path.search(/\.gif$/i) > -1) {
         e = this.e = $("<img></img>");
         this.ctx = {
             drawImage: function (img,x,y,width,height) {
-                           e.attr("src",img.src);
+                           if( !e.attr("src") );
+                               e.attr("src",img.src);
                            e.width = width;
                            e.height = height;
                        },
@@ -408,7 +410,7 @@ show: function()//{{{
 
     var img = this.img = $("<img></img>");
     img.attr("id","img");
-    img.attr("src",escape(this.path));
+    img.attr("src",esc(this.path));
     img.load( function () {
         view._parent.onUpdateStatus(null,"msg");
 
@@ -438,7 +440,7 @@ thumbnail: function()//{{{
         thumb.load(this.thumbnailOnLoad);
 		var t = this;
         thumb.error( function() { t.thumbnailOnLoad(true); } );
-        thumb.attr( "src", escape(thumbpath) );
+        thumb.attr( "src", esc(thumbpath) );
     }
 
     return this.thumb;
@@ -516,7 +518,7 @@ var VideoView = function(vidpath, _parent) { this.init(vidpath, _parent); };
 VideoView.prototype = {
 init: function(vidpath, _parent)//{{{
 {
-    this.path = path(vidpath);
+    this.path = vidpath;
     this._parent = _parent;
     this.zoom_factor = 1;
 },//}}}
@@ -540,19 +542,17 @@ show: function()//{{{
     e.attr("controls","controls");
     e.css("display","block");
     e.addClass("videoview");
-    e.appendTo(this._parent.e);
+    e.attr("id","video");
 
 	if ( getConfig('autoplay',false) )
-		this.e.attr("autoplay","autoplay");
+		e.attr("autoplay","autoplay");
 	if ( getConfig('loop',false) )
-		this.e.attr("loop","loop");
+		e.attr("loop","loop");
 	// TODO: onended event doesn't work -- WHY?
 	if ( getConfig('autonext',false) && next )
-		this.e.bind("ended",next);
+		e.bind("ended",next);
 
-    this.e.attr("id","video");
-    this.e.attr("src",escape(this.path));
-    this.e.load( function () {
+    e.load( function () {
         view._parent.onUpdateStatus(null,"msg");
 
         view.orig_width = this.videoWidth;
@@ -566,9 +566,12 @@ show: function()//{{{
 		view._parent.zoom();
         view._parent.onLoad();
     } );
-    this.e.error( function () {
+    e.error( function () {
         view._parent.onUpdateStatus( "Unsupported format!", "error" );
 	} );
+
+    e.attr("src",esc(this.path));
+    e.appendTo(this._parent.e);
 },//}}}
 
 remove: function()//{{{
@@ -715,7 +718,7 @@ show: function()//{{{
         return;
 
     e = this.e = $('<textarea></textarea>');
-    e.attr("src", escape(this.path));
+    e.attr("src", esc(this.path));
     e.addClass("fontview");
 
     e.attr( "value", getConfig('font_test', '+-1234567890, abcdefghijklmnopqrstuvwxyz, ABCDEFGHIJKLMNOPQRSTUVWXYZ, ?!.#$\\/"\'') );
@@ -726,8 +729,8 @@ show: function()//{{{
     e.focus( function () {
         view.keydown = document.onkeydown;
         view.keypress = document.onkeypress;
-        document.onkeydown = function(e){
-            if(e.keyCode == 27)
+        document.onkeydown = function(ev){
+            if(ev.keyCode == 27)
                 view.e.blur();
         };
         document.onkeypress = null;
@@ -739,7 +742,7 @@ show: function()//{{{
         view.updateHeight();
     } );
 
-    e.appentTo(this._parent.e);
+    e.appendTo(this._parent.e);
     this._parent.zoom();
 
     this._parent.onLoad();
@@ -1215,18 +1218,12 @@ init: function(e)//{{{
 
     this.progress = e[0].getElementsByClassName("progress")[0];
     this.counter = e.find(".counter");
-    this.counternow = this.e.find(".counternow");
-    this.countermax = this.e.find(".countermax");
+    this.counternow = e.find(".counternow");
+    this.countermax = e.find(".countermax");
 
     this.dir_e = e.find(".directory");
     this.filename_e = e.find(".filename");
     this.ext_e = e.find(".extension");
-},//}}}
-
-updateCounter: function ()//{{{
-{
-    if (this.counternow)
-		this.counternow.html(this.n);
 },//}}}
 
 updateProgress: function ()//{{{
@@ -1284,7 +1281,7 @@ updateProgress: function ()//{{{
 updateItemTitle: function ()//{{{
 {
     if (this.itemlink.length)
-        this.itemlink.attr( "href", path(this.itempath) );
+        this.itemlink.attr( "href", this.itempath );
 
     createPathElements(this.dir_e,this.filename_e,this.ext_e,this.href);
 },//}}}
@@ -1296,8 +1293,10 @@ updateProperties: function ()//{{{
         for (var key in this.props) {
             var e = this.e.find("."+key);
             var v = this.props[key];
-            if (v)
+            if (v) {
                 e.html(v);
+                e.show();
+            }
             else
                 e.hide();
         }
@@ -1324,7 +1323,7 @@ updateStatus: function (status_msg,class_name)//{{{
 
 name: function ()//{{{
 {
-    return this.aliasname ? this.aliasname+" ("+this.href+")" : this.href;
+    return this.href;
 },//}}}
 
 updateInfo: function (href,i,len,properties)//{{{
@@ -1334,12 +1333,12 @@ updateInfo: function (href,i,len,properties)//{{{
     this.len = len;
 	this.props = properties;
 	this.countermax.html(this.len);
-    this.itempath = escape(this.href);
+    this.counternow.html(this.n);
+    this.itempath = esc(this.href);
 
     // reset status
     this.status.children().hide();
 
-    this.updateCounter();
     this.updateProgress();
     this.updateItemTitle();
     this.updateProperties();
@@ -1374,7 +1373,15 @@ onSubmit: function(n){},
 // HELPER FUNCTIONS//{{{
 userAgents = {unknown:0, webkit:1, opera:2};
 
-function userAgent() //{{{
+function esc (str) {//{{{
+	// don't escape protocols (i.e. "http://" -> "http%3A//"
+    if (str.search(/^\w+:\/\//) > -1)
+		return encodeURI(str);
+	else
+		return escape(str);
+}//}}}
+
+function userAgent ()//{{{
 {
 if ( navigator.userAgent.indexOf("WebKit") != -1 )
     return userAgents.webkit;
@@ -1406,11 +1413,6 @@ function getConfig (name,default_value)//{{{
     }
 
     return default_value;
-}//}}}
-
-function path (filename)//{{{
-{
-    return "items/" + filename;
 }//}}}
 
 function createPathElements(dir_e,filename_e,ext_e,path) {//{{{
@@ -1463,16 +1465,16 @@ function go (i)//{{{
     }
 
 	var item = this.ls[i-1];
-	var itemname, alias;
+	var itemname, props;
 	if (item instanceof Array) {
-		var itemname = item[0];
-		var alias = item[1];
+		itemname = item[0];
+		props = item[1];
 	}
 	else
 		var itemname = item;
 
     if (info ) {
-        info.updateInfo(itemname,n,len,alias);
+        info.updateInfo(itemname,n,len,props);
         info.popInfo();
     }
 
@@ -1519,8 +1521,16 @@ function updateUrl (timeout)//{{{
         // if url is updated immediately, user cannot browse images rapidly
 		if (url_t)
 			clearTimeout(url_t);
-		if (timeout)
-			url_t = window.setTimeout( 'if( hash == "'+hash+'" ) location.hash = "#'+hash+'";',timeout );
+		if (timeout) {
+            url_t = window.setTimeout( 'if( hash == "'+hash+'" ) location.hash = "#'+hash+'";',timeout );
+            // TODO: memory leaks!!! -- reload window on every 30th item
+            if (n%30 || preloaded === null)
+                url_t = window.setTimeout( 'if( hash == "'+hash+'" ) location.hash = "#'+hash+'";',timeout );
+            else {
+                location.hash = "#"+hash;
+                location.reload();
+            }
+        }
 		else
 			location.hash = "#"+hash;
     }
@@ -1548,14 +1558,14 @@ function preloadImages()//{{{
         if ( !im ) {
             // type of item must be image
 			var item = this.ls[i];
-            var filename = path(item instanceof Array ? item[0] : item);
+            var filename = item instanceof Array ? item[0] : item;
             var view = ViewFactory.prototype.newView(filename);
             if (!view || view.type() != "image")
                 continue;
 
             // create image
             im = new Image();
-            im.src = escape(filename);
+            im.src = esc(filename);
 
             // since we access the disk (read the image) we can also
             // change the url - browser saves history

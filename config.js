@@ -6,7 +6,7 @@ config = {
 'progress_width': 4,
 'progress_inner_width': 4,
 'progress_bg': "rgba(200,200,200,0.4)",
-'progress_fg': "rgba(255,200,0,0.8)",
+'progress_fg': "white",
 'progress_blur': 10,
 
 'font_size': 16,
@@ -20,6 +20,9 @@ config = {
 
 'pop_info_delay': 2000,
 'pop_preview_delay': 2000,
+
+// use canvas to draw images
+'image_on_canvas': false,
 }
 
 // these can't be overriden in URL

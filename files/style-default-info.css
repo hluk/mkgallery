@@ -14,16 +14,16 @@
     border: 2px solid rgba(0,0,0,0.5);
     padding-right: 1.5em;
 
-    -webkit-transition: opacity 0.5s ease-in-out;
-    -moz-transition: opacity 0.5s ease-in-out;
+    -webkit-transition: opacity 0.5s ease-in-out, background-color 1.5s ease-in-out, -webkit-box-shadow 1.5s ease-in-out;
+    -moz-transition: opacity 0.5s ease-in-out, background-color 1.5s ease-in-out, -moz-box-shadow 1.5s ease-in-out;;
 }
 .modeViewer #info:hover, .modeViewer #info.focused {
     opacity: 1;
 }
 #info:hover {
-    background-color: black;
-    -webkit-box-shadow: 0px 0px 10px #7bf;
-    -moz-box-shadow: 0px 0px 10px #7bf;
+    background-color: rgba(0,100,200,0.4);
+    -webkit-box-shadow: 0px 0px 20px #7bf;
+    -moz-box-shadow: 0px 0px 20px #7bf;
 }
 
 /* current item and number of items */
@@ -37,18 +37,18 @@
 }
 .countermax, .counternow {color: white;}
 .counternow {font-weight: bold;}
-.countermax {font-size: 0.6em; border-top: 1px solid #bbb; color: #ddd;}
-.last .counternow {color: #db8}
+.countermax {font-size: 0.7em; border-top: 1px solid #bbb; color: #ddd;}
+.last .counternow {color: #fe6;}
 
 /* item directory, filename, alias */
 .itemlink {text-decoration: none; z-index: 1; float: left; text-align: left;}
 .itemlink .directory,
 .itemlink .extension,
-.itemlink .filename {font-family: monospace;}
-.itemlink .alias {color: #fd0;}
-.itemlink .filename {color: #9de;font-size: 0.9em;}
+.itemlink .filename {color: #9de; font-family: Consolas, Inconsolata, monospace;}
+.itemlink .alias {color: white;}
+.itemlink .filename {font-size: 0.9em; font-weight: bold;}
 .itemlink .extension {color: #8fb;}
-.itemlink .directory {color: #ccc; font-size: 0.8em;}
+.itemlink .directory {font-size: 0.75em;}
 .itemlink .extension {
     display: inline;
     font-size: 0.8em;
@@ -58,11 +58,12 @@
 
 /* messages, resolution, zoom, font-size, media duration */
 .status * {
-    font-size: 0.7em;
+    font-size: 0.8em;
     text-align: left;
     color: #ddd;
 }
-.status .loading {color: #fd0;}
+.status .resolution {color: #fff; font-weight: bold;}
+.status .msg {color: #fd0;}
 .status .error   {color: #faa;}
 .status .zoom:before {content: "[";}
 .status .zoom:after {content: "%]";}

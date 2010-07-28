@@ -69,9 +69,9 @@
 .item .path,
 .item .directory,
 .item .extension,
-.item .filename {font-family: monospace;}
+.item .filename {font-family: Consolas, Inconsolata, monospace;}
 .item .directory {font-size: 0.8em; color: #888;}
-.item .filename {font-size: 0.9em; display: inline; color: #ddd}
+.item .filename {font-size: 0.9em; display: inline; color: #ddd; font-weight: bold;}
 .item .extension {display: inline; margin-left: 0.5em; font-size: 0.7em; color: #fd0;}
 
 .thumbnail {
