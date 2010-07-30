@@ -1,9 +1,9 @@
 var title = "template";
 var ls = [
-    "face-smile-big.png",
-    "face-tired.png",
-    "stock_smiley-5.png",
-    "face-uncertain.png",
-    "face-angel.png",
+    "items/face-smile-big.png",
+    "items/face-tired.png",
+    "items/stock_smiley-5.png",
+    "items/face-uncertain.png",
+    "items/face-angel.png",
     ];
 

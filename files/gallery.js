@@ -1325,9 +1325,9 @@ updateInfo: function (href,i,len,properties)//{{{
     this.n = i;
     this.len = len;
 	this.props = properties;
-	this.countermax.html(this.len);
-    this.counternow.html(this.n);
-    this.itempath = esc(this.href);
+	this.countermax.html(len);
+    this.counternow.html(i);
+    this.itempath = esc(href);
 
     // reset status
     this.status.children().hide();
@@ -1458,6 +1458,7 @@ function go (i)//{{{
             m = 0;
             updateUrl();
             location.reload();
+            return;
         }
         else
             m += 1;
@@ -1780,7 +1781,7 @@ if ( userAgent() == userAgents.webkit ) {
     keycodes[105] = "KP9";
     keycodes[106] = "*";
     keycodes[107] = "+";
-    keycodes[109] = "-";
+    keycodes[109] = "Minus";
     keycodes[110] = ".";
     keycodes[111] = "/";
     keycodes[191] = "?";
@@ -1825,8 +1826,8 @@ function keyPress (e)//{{{
     if ( e.shiftKey )
         keyname = "S-"+keyname
 
-    //DEBUG:
-    //info.updateStatus(keycode+": "+keyname);
+	if ( getConfig("show_keys", false) )
+		info.updateStatus(keycode+": "+keyname);
 
     // try keys in this mode or modes.any
     var try_modes = [mode[mode.length-1],modes.any];
@@ -1855,8 +1856,6 @@ function onMouseWheel (e) {//{{{
 
 function addKeys (newkeys, desc, fn, keymode)//{{{
 {
-    if (!keys)
-        keys = {};
     if (!keymode)
         keymode = modes.any;
 
@@ -1865,8 +1864,14 @@ function addKeys (newkeys, desc, fn, keymode)//{{{
         ekeys = keys[keymode] = {};
 
     var k = newkeys instanceof Array ? newkeys : [newkeys];
-    for (var i in k)
-        ekeys[k[i].toUpperCase()] = fn;
+    for (var i in k) {
+		var modifiers = k[i].toUpperCase().split("-");
+		var key = modifiers.pop();
+		// sort modifiers
+		modifiers = modifiers.map( function(x) {return x[0]} ).sort();
+		key = modifiers.length ? modifiers.join("-")+"-"+key : key;
+        ekeys[key] = fn;
+	}
 
     // key description
     if (!desc) return;
@@ -2141,7 +2146,7 @@ var preloaded = null;
 // URL hash timeout
 var url_t;
 
-var keys;
+var keys = {};
 var keydesc;
 var modes = {any:"Any", viewer:"Viewer", itemlist:"Item List", help:"Help"};
 var mode = [modes.viewer];

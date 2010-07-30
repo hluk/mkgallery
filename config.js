@@ -1,5 +1,5 @@
-// user configuration (these can be overriden in URL)
-config = {
+// USER CONFIGURATION//{{{
+config = { // -- these can be overriden in URL
 zoom_step: 0.125,
 
 progress_radius: 22,
@@ -27,9 +27,127 @@ image_on_canvas: false,
 // reload every nth items (0: don't reload)
 // -- memory leaks workaround
 reload_every: 30,
+
+// show key combinations pressed
+show_keys: false,
 }
 
-// these won't be overriden in URL
-_config = {
+_config = { // -- these can't be overriden in URL
 preload_images: 3,
 }
+//}}}
+
+// CONTROLS//{{{
+/*
+ * Format
+ * ------
+ * Each entry in controls Object has following format:
+ * [key, function, description]
+ * key
+ *   string containing key combination or array of such strings
+ *   (see next section)
+ * function
+ *   function or string that is evaluated if key combination
+ *   (or any combination from array) is triggered
+ * description
+ *   optional field; if present the key combination is visible
+ *   in help window with given description
+ *
+ * Key combination format
+ * ----------------------
+ * Modifier can be one of these:
+ * (you can use either one letter or the full name)
+ *   A - Alt
+ *   C - Control
+ *   M - Meta (Command key on Macintosh keyboard)
+ *   S - Shift
+ *
+ * e.g.: "A-S-Left" (Alt+Shift+Left arrow)
+ *
+ */
+controls = {
+// global keys
+Any: [
+    [["KP5","5"], "toggleList()", "Toggle thumbnail list"],
+    [["?","h"], "toggleHelp()", "Show this help"],
+    [["Left","a"], "videoSlower() || scrollLeft() || prev()", "Slower playback/Move window left/Previous gallery item"],
+    [["Right","d"], "videoFaster() || scrollRight() || next()", "Faster playback/Move window right/Next gallery item"],
+    [["KP8","8","Up","w"], "scrollUp()", "Move window up"],
+    [["KP2","2","Down","s"], "scrollDown()", "Move window down"],
+    // emulate browser history
+    [["Alt-Left"], "back();", "back"],
+    [["Alt-Right"], "forward();", "forward"],
+    ["o", "info && popInfo(); popPreview()", "Show info"]
+],
+
+// item viewer
+Viewer: [
+    ["PageUp", "scrollUp()"],
+    ["PageDown", "scrollDown()"],
+    ["End", "scrollDown(b.scrollHeight)"],
+    ["Home", "scrollTo(0,0)"],
+    ["Space", "videoTogglePlay() || scrollDown(window.innerHeight*9/10) || next()",
+            "Move window down/Next gallery item/Play or pause"],
+    ["e", "editText()", "Edit font text"],
+    [["KP1","1"], "go(len)", "Browse to last gallery item"],
+    [["KP3","3"], "go(n+5)", "Browse to fifth next gallery item"],
+    [["KP4","4","k","K","q","Q"], "prev()", "Previous"],
+    [["KP6","6","Enter","j","J","e","E"], "next()", "Next"],
+    [["KP7","7"], "go(1)", "Browse to first gallery item"],
+    [["KP9","9"], "go(n-5)", "Browse to fifth previous gallery item"],
+    [["KP0","0"], "videoSpeed(0)", "Normal speed playback"],
+    ["+", "zoom('+')", "Zoom in"],
+    ["Minus", "zoom('-')", "Zoom out"],
+    ["*", "zoom(1)", "Zoom to original size"],
+    ["/", "zoom('fit')", "Zoom to fit"],
+    [".", "zoom('fill')", "Zoom to fill"],
+],
+
+// item list
+"Item List": [
+    ["Escape", "toggleList()", "Hide item list"],
+    ["Enter", "itemlist.submitSelected()", "Go to selected item"],
+    [["Left","KP4","4","a"], "itemlist.listLeft()", "Move cursor left"],
+    [["Right","KP6","6","d"],"itemlist.listRight()", "Move cursor right"],
+    [["Up","KP8","8","w"], "itemlist.listUp()", "Move cursor up"],
+    [["Down","KP2","2","s"], "itemlist.listDown()", "Move cursor down"],
+    [["PageUp","KP9","9"], "itemlist.listPageUp();", "Previous page"],
+    [["PageDown","KP3","3"], "itemlist.listPageDown()", "Next page"],
+    [["End","KP1","1"], "itemlist.selectItem(itemlist.size()-1)","Move cursor on last thumbnail"],
+    [["Home","KP7","7"], "itemlist.selectItem(0)", "Move cursor on first thumbnail"],
+],
+
+// help
+Help: [
+    // disable showing item list in help mode
+    [["KP5","5"], "", ""],
+    [["?","h","Escape"], "toggleHelp()", "Hide help"],
+],
+}
+//}}}
+
+// EVENTS//{{{
+events = {
+// item view at top/bottom
+top: "popInfo()",
+bottom: "",
+// item view scrolled
+scroll: "popPreview()",
+// video played/paused
+video_play: "",
+// window resized
+resized: "",
+// other item viewed
+go: "",
+// first/last item viewed
+first: "",
+last: "",
+// info updated
+info_update: "popInfo()",
+// zoom
+zoom: "popInfo()",
+// image is too big
+too_big: "popPreview()",
+}
+//}}}
+

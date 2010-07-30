@@ -165,8 +165,6 @@ def prepare_gallery(d,gdir,force):#{{{
 		os.mkdir(itemdir)
 
 		shutil.copyfile(d+"/config.js", gdir+"/config.js")
-		shutil.copyfile(d+"/controls.js", gdir+"/controls.js")
-		shutil.copyfile(d+"/events.js", gdir+"/events.js")
 	except:
 		raise
 #}}}
@@ -195,25 +193,23 @@ def addFont(fontfile,css):#{{{
 #}}}
 
 def itemline(filename,alias=None,width=None,height=None):#{{{
-	isarray = alias or width
-
-	# begin item line
-	line = isarray and '[' or ''
-
 	# filename
 	# TODO: escape double quotes
-	line = line + '"' + ( is_local(filename) and ("items/"+filename) or filename ) + '"'
+	line = '"' + ( is_local(filename) and ("items/"+filename) or filename ) + '"'
 
-	# alias
-	# TODO: escape double quotes
-	line = line + ',{' + ( alias and ('alias:"'+alias+'"') or '' ) + '}'
+	if alias or width:
+		# alias
+		# TODO: escape double quotes
+		line = line + ',{' + ( alias and ('alias:"'+alias+'"') or '' ) + '}'
 
-	# width and height
-	if width:
-		line = line + ','+str(width)+','+str(height)
+		# width and height
+		if width:
+			line = line + ','+str(width)+','+str(height)
+
+		line = '[' + line + ']'
 
 	# end item line
-	line = line + (isarray and ']' or '') + ",\n"
+	line = line + ",\n"
 
 	return line
 #}}}
