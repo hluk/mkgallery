@@ -132,7 +132,7 @@ a {font-weight: inherit; color: inherit; font-size: inherit; font-family: inheri
 .last .counternow {color: #fe6;}
 
 /* item directory, filename, alias */
-.itemlink {text-decoration: none; z-index: 1; float: left; text-align: left;}
+.itemlink {max-width: 90%; text-decoration: none; z-index: 1; float: left; text-align: left;}
 .itemlink .directory,
 .itemlink .extension,
 .itemlink .filename {color: #9de; font-family: Consolas, Inconsolata, monospace;}

@@ -25,9 +25,21 @@ Viewer.prototype = {
 init: function (e,preview,zoom)//{{{
 {
     this.e = e;
+    e.mousedown( function(ev){
+                if (ev.button == 0) {
+                    signal("view_mouse_down")
+                    ev.preventDefault();
+                }
+            } );
 
     if (preview.length) {
         this.preview = preview;
+        preview.mousedown( function(ev){
+                    if (ev.button == 0) {
+                        signal("preview_mouse_down")
+                        ev.preventDefault();
+                    }
+                } );
         var win = preview.find(".window");
         if (win.length) {
             this.preview_win = win;
@@ -74,87 +86,6 @@ zoomChanged: function (zoom_state,zoom_factor)//{{{
         this.hidePreview();
 },//}}}
 
-initDragScroll: function ()//{{{
-{
-    var x,y;
-    var dragging = false;
-    var canvas = this.e;
-
-    var b = $('body');
-    var t = this;
-    var canvas = this.e;
-    canvas.mousedown(startDragScroll);
-
-    function startDragScroll(e) {
-        if (e.button == 0) {
-            b.mouseup(stopDragScroll);
-            b.mousemove(dragScroll);
-
-            x = window.pageXOffset + e.clientX;
-            y = window.pageYOffset + e.clientY;
-            e.preventDefault();
-        }
-    }
-
-    function stopDragScroll(e) {
-        b.unbind('mousemove');
-        b.unbind('mouseup');
-    }
-
-    function dragScroll(e) {
-        window.scrollTo(x-e.clientX,y-e.clientY);
-        t.popPreview();
-        e.preventDefault();
-    }
-},//}}}
-
-initPreviewDragScroll: function ()//{{{
-{
-    var p = this.preview;
-    if (!p)
-        return;
-
-    var win = this.preview_win;
-    if (!win)
-        return;
-
-    var z;
-    var t = this;
-    var b = $('body');
-
-    p.mousedown(startDragScroll);
-
-    function startDragScroll(e) {
-        if (e.button == 0) {
-            b.mouseup(stopDragScroll);
-            b.mousemove(dragScroll);
-
-            z = t.view.height/p.innerHeight();
-
-            dragScroll(e);
-        }
-    }
-
-    function stopDragScroll(e) {
-        b.unbind('mousemove');
-        b.unbind('mouseup');
-        t.initDragScroll();
-    }
-
-    function dragScroll(e) {
-        var pos = p.position();
-        var x = pos.left+win.innerWidth()/2;
-        var y = pos.top+win.innerHeight()/2;
-
-        window.scrollTo(
-                z*(e.clientX+window.pageXOffset-x),
-                z*(e.clientY+window.pageYOffset-y) );
-        if (signal)
-            signal("scroll");
-        e.preventDefault();
-    }
-},//}}}
-
 createPreview: function(filepath)//{{{
 {
     var p = this.preview;
@@ -174,7 +105,6 @@ createPreview: function(filepath)//{{{
     if(!img) {
         img = this.preview_img = $("<img></img>");
         img.appendTo(p);
-        this.initPreviewDragScroll();
     }
     img.attr( "src", esc(filepath) );
     p.show();
@@ -550,7 +480,7 @@ show: function()//{{{
 	if ( getConfig('autonext',false) && next )
 		e.bind("ended",next);
 
-    e.load( function () {
+    e.bind('canplay', function () {
         view._parent.onUpdateStatus(null,"msg");
 
         view.orig_width = this.videoWidth;
@@ -679,6 +609,10 @@ slower: function()//{{{
 togglePlay: function()//{{{
 {
     this.e[0].paused ? this.e[0].play() : this.e[0].pause();
+},//}}}
+
+seek: function(how) {//{{{
+    this.e[0].currentTime += how;
 },//}}}
 
 /** events */
@@ -891,11 +825,6 @@ hidden: function()//{{{
 size: function ()//{{{
 {
     return this.items.length;
-},//}}}
-
-submitSelected: function()//{{{
-{
-    this.onSubmit(this.selected+1);
 },//}}}
 
 addThumbnails: function (i)//{{{
@@ -1210,7 +1139,7 @@ init: function(e)//{{{
 
     this.status = e.find(".status");
 
-    this.progress = e[0].getElementsByClassName("progress")[0];
+    this.progress = e.find(".progress")[0];
     this.counter = e.find(".counter");
     this.counternow = e.find(".counternow");
     this.countermax = e.find(".countermax");
@@ -1228,6 +1157,7 @@ updateProgress: function ()//{{{
     var r = getConfig('progress_radius',22);
     var w1 = getConfig('progress_width',8);
     var w2 = getConfig('progress_inner_width',8);
+    var shadow = getConfig('progress_shadow',10);
     var blur = getConfig('progress_blur',10);
 
     var ctx = this.progress.getContext("2d");
@@ -1244,7 +1174,7 @@ updateProgress: function ()//{{{
     //ctx.clearRect(x-r,y-r,2*r,2*r);
 
     // empty pie
-    ctx.shadowBlur = blur;
+    ctx.shadowBlur = shadow;
     ctx.shadowColor = "black";
     ctx.lineWidth = w1;
     ctx.strokeStyle = getConfig('progress_bg',"rgba(200,200,200,0.4)");
@@ -1254,6 +1184,7 @@ updateProgress: function ()//{{{
     ctx.stroke();
 
     // filled part of pie
+    ctx.shadowBlur = blur;
     ctx.shadowColor = getConfig('progress_fg',"rgba(255,200,0,0.8)");
     ctx.lineWidth = w2;
     ctx.strokeStyle = getConfig('progress_fg',"rgba(255,200,0,0.8)");
@@ -1600,17 +1531,17 @@ function toggleList()//{{{
 
 function scrollDown(how)//{{{
 {
-    return scroll(0,how ? how : window.innerWidth/4);
+    return scroll(0,how ? how : window.innerHeight/4);
 }//}}}
 
 function scrollUp(how)//{{{
 {
-    return scroll(0,how ? how : -window.innerWidth/4);
+    return scroll(0,how ? how : -window.innerHeight/4);
 }//}}}
 
 function scrollLeft(how)//{{{
 {
-    return scroll(how ? how : -window.innerHeight/4,0);
+    return scroll(how ? how : -window.innerWidth/4,0);
 }//}}}
 
 function scrollRight(how)//{{{
@@ -1707,6 +1638,20 @@ function videoSlower ()//{{{
     videoSpeed(-1);
 }//}}}
 
+function videoSeek (how)//{{{
+{
+    if (!viewer)
+        return false;
+
+    var v = viewer.view;
+    if (!v || v.type() != "video")
+        return false;
+
+    v.seek(how);
+
+    return true;
+}//}}}
+
 function back ()//{{{
 {
     history.back();
@@ -1742,10 +1687,13 @@ function signal (sgn)//{{{
     if (!events)
         return;
 
-    var fn = events[sgn];
-    if (!fn)
-        return;
+	if ( getConfig("show_events", false) ) {
+		info.updateStatus("event: " + sgn);
+        popInfo();
+    }
 
+
+    var fn = events[sgn];
     var t = typeof(fn);
     if (t == "string")
         eval(fn);
@@ -1826,8 +1774,10 @@ function keyPress (e)//{{{
     if ( e.shiftKey )
         keyname = "S-"+keyname
 
-	if ( getConfig("show_keys", false) )
-		info.updateStatus(keycode+": "+keyname);
+	if ( getConfig("show_keys", false) ) {
+		info.updateStatus("key: " + keyname + " ("+keycode+")");
+        popInfo();
+    }
 
     // try keys in this mode or modes.any
     var try_modes = [mode[mode.length-1],modes.any];
@@ -1836,13 +1786,13 @@ function keyPress (e)//{{{
         if (!k) continue;
 
         var fn = k[keyname];
-        if (!fn) continue;
-
         var t = typeof(fn);
         if (t == "string")
             eval(fn);
         else if (t == "function")
             fn();
+        else
+            continue;
         e.preventDefault();
         break;
     }
@@ -1882,6 +1832,51 @@ function addKeys (newkeys, desc, fn, keymode)//{{{
         modekeydesc = keydesc[keymode] = {};
     modekeydesc[desc] = k;
 }//}}}
+
+function dragScroll(t,p) {
+    var x,y,z;
+    var b = $("body");
+
+    if (p) {
+        var win = p.find(".window");
+        x = win.innerWidth()/2;
+        y = win.innerHeight()/2;
+        z = t.innerHeight()/p.innerHeight();
+        continueDragScroll();
+    }
+    else {
+        x = window.pageXOffset + mouseX;
+        y = window.pageYOffset + mouseY;
+    }
+
+    b.mouseup(stopDragScroll);
+    b.mousemove(continueDragScroll);
+
+    //dragScroll(e);
+
+    function stopDragScroll(e) {
+        b.unbind('mousemove');
+        b.unbind('mouseup');
+
+        signal("drag_scroll_end");
+        e.preventDefault();
+    }
+
+    function continueDragScroll(e) {
+        if (p) {
+            var pos = p.position();
+            window.scrollTo(
+                    z*(mouseX+window.pageXOffset-x-pos.left),
+                    z*(mouseY+window.pageYOffset-y-pos.top) );
+        }
+        else
+            window.scrollTo(x-mouseX,y-mouseY);
+
+        signal("scroll");
+        if (e)
+            e.preventDefault();
+    }
+}
 //}}}
 
 function createItemList()//{{{
@@ -1922,19 +1917,14 @@ function createNavigation ()//{{{
     window.onmousewheel = document.onmousewheel = onMouseWheel;
     window.addEventListener('DOMMouseScroll', onmousewheel, false);
 
-    // drag scroll
-    if (viewer)
-        viewer.initDragScroll();
-
-    if (!controls)
-        return;
-
     // user controls
-    for (var m in controls) {
-        var km = controls[m];
-        for (var i in controls[m]) {
-            var k = km[i];
-            addKeys(k[0],k[2],k[1],m);
+    if (controls) {
+        for (var m in controls) {
+            var km = controls[m];
+            for (var i in controls[m]) {
+                var k = km[i];
+                addKeys(k[0],k[2],k[1],m);
+            }
         }
     }
 }//}}}
@@ -1974,9 +1964,12 @@ function createConfigHelp(e)//{{{
 
         "Progress bar": {
         'progress_radius': "radius",
-        'progress_width': "width",
+        'progress_width': "circle stroke width (background)",
+        'progress_inner_width': "circle stroke width (foreground)",
         'progress_bg': "background color",
         'progress_fg': "foreground color",
+        'progress_blur': "blur amount",
+        'progress_shadow': "shadow size",
         },
 
         "Thumbnail": {
@@ -2092,6 +2085,13 @@ function onLoad()//{{{
 
     b = document.getElementsByTagName("body")[0];
 
+    // capture mouse position
+    mouseX = mouseY = 0;
+    $(document).mousemove(function(e){
+            mouseX = e.clientX;
+            mouseY = e.clientY;
+            });
+
     // no scrollbars
     document.body.style.overflow = "hidden";
 
@@ -2120,8 +2120,14 @@ function onLoad()//{{{
     go(n);
 }//}}}
 
+// reset user configuration
+var config = {};
+var _config = {};
+var controls = {};
+var events={};
+
 // number of items in gallery
-var len = ls ? ls.length : 0;
+const len = ls ? ls.length : 0;
 
 // url variables
 var hash;
@@ -2132,10 +2138,13 @@ var n = getPage( getConfig('n',0) );
 var m = 0;
 
 // zoom
-var zoom_step = getConfig('zoom_step',0.125);
+const zoom_step = getConfig('zoom_step',0.125);
 
 // body
 var b;
+
+// mouse position
+var mouseX, mouseY;
 
 // objects (created if appropriate HTML element is available)
 var itemlist, info, viewer, help;

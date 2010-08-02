@@ -7,6 +7,7 @@ progress_width: 4,
 progress_inner_width: 4,
 progress_bg: "rgba(200,200,200,0.4)",
 progress_fg: "white",
+progress_shadow: 10,
 progress_blur: 10,
 
 font_size: 16,
@@ -30,6 +31,8 @@ reload_every: 30,
 
 // show key combinations pressed
 show_keys: false,
+// show events
+show_events: false,
 }
 
 _config = { // -- these can't be overriden in URL
@@ -68,31 +71,37 @@ preload_images: 3,
 controls = {
 // global keys
 Any: [
-    [["KP5","5"], "toggleList()", "Toggle thumbnail list"],
-    [["?","h"], "toggleHelp()", "Show this help"],
-    [["Left","a"], "videoSlower() || scrollLeft() || prev()", "Slower playback/Move window left/Previous gallery item"],
-    [["Right","d"], "videoFaster() || scrollRight() || next()", "Faster playback/Move window right/Next gallery item"],
-    [["KP8","8","Up","w"], "scrollUp()", "Move window up"],
-    [["KP2","2","Down","s"], "scrollDown()", "Move window down"],
+    [["KP5","5"], toggleList, "Toggle thumbnail list"],
+    [["?","h"], toggleHelp, "Show this help"],
+    // try to: scroll right OR video seek OR
+    // view next item in gallery (if current item fits horizontally to window)
+    [["Right","d"],
+     "scrollRight() || videoSeek(5) || (viewer && viewer.width() < window.innerWidth && next())",
+     "Faster playback/Move window right/Next gallery item"],
+    [["Left","a"],
+     "scrollLeft() || videoSeek(-5) || (viewer && viewer.width() < window.innerWidth && prev())",
+     "Slower playback/Move window left/Previous gallery item"],
+    [["KP8","8","Up","w"], scrollUp, "Move window up"],
+    [["KP2","2","Down","s"], scrollDown, "Move window down"],
     // emulate browser history
-    [["Alt-Left"], "back();", "back"],
-    [["Alt-Right"], "forward();", "forward"],
+    [["Alt-Left"], back, "back"],
+    [["Alt-Right"], forward, "forward"],
     ["o", "info && popInfo(); popPreview()", "Show info"]
 ],
 
 // item viewer
 Viewer: [
-    ["PageUp", "scrollUp()"],
-    ["PageDown", "scrollDown()"],
+    ["PageUp", scrollUp],
+    ["PageDown", scrollDown],
     ["End", "scrollDown(b.scrollHeight)"],
     ["Home", "scrollTo(0,0)"],
     ["Space", "videoTogglePlay() || scrollDown(window.innerHeight*9/10) || next()",
             "Move window down/Next gallery item/Play or pause"],
-    ["e", "editText()", "Edit font text"],
+    ["e", editText, "Edit font text"],
     [["KP1","1"], "go(len)", "Browse to last gallery item"],
     [["KP3","3"], "go(n+5)", "Browse to fifth next gallery item"],
-    [["KP4","4","k","K","q","Q"], "prev()", "Previous"],
-    [["KP6","6","Enter","j","J","e","E"], "next()", "Next"],
+    [["KP4","4","k","K","q","Q"], prev, "Previous"],
+    [["KP6","6","Enter","j","J","e","E"], next, "Next"],
     [["KP7","7"], "go(1)", "Browse to first gallery item"],
     [["KP9","9"], "go(n-5)", "Browse to fifth previous gallery item"],
     [["KP0","0"], "videoSpeed(0)", "Normal speed playback"],
@@ -105,7 +114,7 @@ Viewer: [
 
 // item list
 "Item List": [
-    ["Escape", "toggleList()", "Hide item list"],
+    ["Escape", toggleList, "Hide item list"],
     ["Enter", "itemlist.submitSelected()", "Go to selected item"],
     [["Left","KP4","4","a"], "itemlist.listLeft()", "Move cursor left"],
     [["Right","KP6","6","d"],"itemlist.listRight()", "Move cursor right"],
@@ -119,9 +128,9 @@ Viewer: [
 
 // help
 Help: [
+    [["?","h","Escape"], toggleHelp, "Hide help"],
     // disable showing item list in help mode
     [["KP5","5"], "", ""],
-    [["?","h","Escape"], "toggleHelp()", "Hide help"],
 ],
 }
 //}}}
@@ -148,6 +157,10 @@ info_update: "popInfo()",
 zoom: "popInfo()",
 // image is too big
 too_big: "popPreview()",
+// view mouse down
+view_mouse_down: "dragScroll(viewer.e)",
+// preview mouse down
+preview_mouse_down: "dragScroll(viewer.e,viewer.preview,true)",
 }
 //}}}
 

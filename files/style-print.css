@@ -17,3 +17,47 @@ body { text-align: center; }
 
 #info {display: none;}
 
+/* item list {{{*/
+#itemlist {
+    position: absolute;
+    top: 0px;
+    left: 0px;
+    right: 0px;
+    z-index: 1;
+    background: white;
+    vertical-align: top;
+}
+.item {
+    display: inline-block;
+    text-align: left;
+    padding: 4pt;
+    padding-left: 8pt;
+    padding-right: 8pt;
+    border: 1pt dashed gray;
+    margin: 2pt;
+}
+.itemident {
+    display: inline;
+    font-size: 8pt;
+    font-style: italic;
+}
+.itemident:after {
+    content: ".";
+}
+.itemname {
+    margin-left: 0.5em;
+    display: inline;
+    font-size: 10pt;
+}
+#selection {}
+.thumbnail {margin: auto;}
+.thumbnail.image {
+    display: block;
+}
+.thumbnail.font {
+    display: block;
+    margin-left: 2em;
+    max-width: 100% !important;
+}
+/*}}}*/
+
