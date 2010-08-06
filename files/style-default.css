@@ -129,7 +129,7 @@ a {font-weight: inherit; color: inherit; font-size: inherit; font-family: inheri
 .countermax, .counternow {color: white;}
 .counternow {font-weight: bold;}
 .countermax {font-size: 0.7em; border-top: 1px solid #bbb; color: #ddd;}
-.last .counternow {color: #fe6;}
+.last .counternow {text-shadow: white 0px 0px 7px;}
 
 /* item directory, filename, alias */
 .itemlink {max-width: 90%; text-decoration: none; z-index: 1; float: left; text-align: left;}

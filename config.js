@@ -1,5 +1,7 @@
 // USER CONFIGURATION//{{{
 config = { // -- these can be overriden in URL
+title_fmt: '%{title}: %{now}/%{max} "%{filename}"',
+
 zoom_step: 0.125,
 
 progress_radius: 22,
@@ -73,19 +75,20 @@ controls = {
 Any: [
     [["KP5","5"], toggleList, "Toggle thumbnail list"],
     [["?","h"], toggleHelp, "Show this help"],
-    // try to: scroll right OR video seek OR
+    // scroll right OR video seek OR
     // view next item in gallery (if current item fits horizontally to window)
     [["Right","d"],
-     "scrollRight() || videoSeek(5) || (viewer && viewer.width() < window.innerWidth && next())",
+     "scrollRight() || videoSeek(5) || (viewer.width() <= window.innerWidth && next())",
      "Faster playback/Move window right/Next gallery item"],
     [["Left","a"],
-     "scrollLeft() || videoSeek(-5) || (viewer && viewer.width() < window.innerWidth && prev())",
+     "scrollLeft() || videoSeek(-5) || (viewer.width() <= window.innerWidth && prev())",
      "Slower playback/Move window left/Previous gallery item"],
-    [["KP8","8","Up","w"], scrollUp, "Move window up"],
+    // scrollup if not at top or show info
+    [["KP8","8","Up","w"], "window.pageYOffset ? scrollUp() : popInfo()", "Move window up"],
     [["KP2","2","Down","s"], scrollDown, "Move window down"],
     // emulate browser history
-    [["Alt-Left"], back, "back"],
-    [["Alt-Right"], forward, "forward"],
+    [["Alt-Left"], back, "Go back in history"],
+    [["Alt-Right"], forward, "Go forward in history"],
     ["o", "info && popInfo(); popPreview()", "Show info"]
 ],
 
@@ -96,7 +99,9 @@ Viewer: [
     ["End", "scrollDown(b.scrollHeight)"],
     ["Home", "scrollTo(0,0)"],
     ["Space", "videoTogglePlay() || scrollDown(window.innerHeight*9/10) || next()",
-            "Move window down/Next gallery item/Play or pause"],
+            "Play or pause/Move window down/Next gallery item"],
+    ["Shift-Space", "scrollUp(window.innerHeight*9/10) || prev()",
+            "Move window up/Previous gallery item"],
     ["e", editText, "Edit font text"],
     [["KP1","1"], "go(len)", "Browse to last gallery item"],
     [["KP3","3"], "go(n+5)", "Browse to fifth next gallery item"],
@@ -128,9 +133,9 @@ Viewer: [
 
 // help
 Help: [
-    [["?","h","Escape"], toggleHelp, "Hide help"],
+    [["?","h","Escape","Enter","Space"], toggleHelp, "Hide help"],
     // disable showing item list in help mode
-    [["KP5","5"], "", ""],
+    [["KP5","5"], ""],
 ],
 }
 //}}}
@@ -138,7 +143,7 @@ Help: [
 // EVENTS//{{{
 events = {
 // item view at top/bottom
-top: "popInfo()",
+top: "",
 bottom: "",
 // item view scrolled
 scroll: "popPreview()",

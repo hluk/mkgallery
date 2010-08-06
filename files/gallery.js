@@ -1438,11 +1438,12 @@ function updateInfo(itemname,n,len,props) {
 
 function updateTitle ()//{{{
 {
-    // title format: GALLERY_NAME: n/N "image.png"
-    document.title =
-        (title ? title : "untitled") + ": " +
-        n + "/" + len +
-        ' "' + info.name() + '"';
+    var t = getConfig( 'title_fmt', '%{title}: %{now}/%{max} "%{filename}"' );
+    t=t.replace( /%{title}/g, (title ? title : "untitled") );
+    t=t.replace( /%{now}/g, n );
+    t=t.replace( /%{max}/g, len );
+    t=t.replace( /%{filename}/g, info.name() );
+    document.title = t;
 }//}}}
 
 function getUrlVars()//{{{
@@ -1536,7 +1537,7 @@ function scrollDown(how)//{{{
 
 function scrollUp(how)//{{{
 {
-    return scroll(0,how ? how : -window.innerHeight/4);
+    return scroll(0,how ? -how : -window.innerHeight/4);
 }//}}}
 
 function scrollLeft(how)//{{{
@@ -1799,7 +1800,7 @@ function keyPress (e)//{{{
 }//}}}
 
 function onMouseWheel (e) {//{{{
-    var delta = e.detail ? -e.detail*4 : e.wheelDelta/3;
+    var delta = e.detail ? -e.detail*4 : e.wheelDelta/10;
     scroll(0,-delta);
     e.preventDefault();
 }//}}}
@@ -1926,6 +1927,7 @@ function createNavigation ()//{{{
                 addKeys(k[0],k[2],k[1],m);
             }
         }
+        delete controls;
     }
 }//}}}
 
