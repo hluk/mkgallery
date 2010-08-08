@@ -997,12 +997,25 @@ ensureCurrentVisible: function ()//{{{
 {
     var e = this.items[this.selected];
     // TODO: scroll horizontally to item
+    var wx = window.pageXOffset;
+
     var y = e.position().top;
-    var d = y + e.innerHeight() - window.pageYOffset - window.innerHeight;
-    if ( d > 0 )
-        window.scrollBy(0,d);
     if ( y < window.pageYOffset )
-        window.scrollTo(window.pageXOffset,y);
+        window.scrollTo(wx,y);
+
+    y = y + e.innerHeight() - window.innerHeight;
+    if ( y > window.pageYOffset )
+        window.scrollTo(wx,y);
+
+    var wy = window.pageYOffset;
+
+    var x = e.position().left;
+    if ( x < window.pageXOffset )
+        window.scrollTo(x,wy);
+
+    x = x + e.innerWidth() - window.innerWidth;
+    if ( x > window.pageXOffset )
+        window.scrollTo(x,wy);
 },//}}}
 
 updateSelection: function ()//{{{
@@ -1572,6 +1585,7 @@ function scroll (x,y)//{{{
 
     var d = x ? window.pageXOffset : window.pageYOffset;
     window.scrollBy(x,y);
+
     if ( mode() == modes.viewer )
         viewer.updatePreview();
 
