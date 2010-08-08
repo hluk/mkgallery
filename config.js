@@ -40,9 +40,12 @@ show_events: false,
 slideshow: false,
 // view next item after N ms
 slideshow_delay: 5000,
+
+// slide scroll coefficient (0 to turn off)
+slide_scroll: 400,
 }
 
-_config = { // -- these can't be overriden in URL
+_config = { // -- these can't be overridden in URL
 preload_images: 3,
 }
 //}}}
@@ -126,7 +129,7 @@ Viewer: [
 // item list
 "Item List": [
     ["Escape", toggleList, "Hide item list"],
-    ["Enter", "itemlist.submitSelected()", "Go to selected item"],
+    ["Enter", "go(itemlist.selected+1)", "Go to selected item"],
     [["Left","KP4","4","a"], "itemlist.listLeft()", "Move cursor left"],
     [["Right","KP6","6","d"],"itemlist.listRight()", "Move cursor right"],
     [["Up","KP8","8","w"], "itemlist.listUp()", "Move cursor up"],
@@ -153,7 +156,7 @@ Help: [
 Slideshow: [
     ["Escape", exit_slideshow, "Exit slideshow"],
     [["Right", "Space", "Enter", "PageDown", "d"], next, "Next item"],
-    [["Left", "S-Space", "PageUp", "a"], next, "Previous item"],
+    [["Left", "S-Space", "PageUp", "a"], prev, "Previous item"],
 ],
 }
 //}}}
@@ -184,6 +187,7 @@ too_big: popPreview,
 view_mouse_down: "dragScroll(viewer.e)",
 // preview mouse down
 preview_mouse_down: "dragScroll(viewer.e,viewer.preview,true)",
+itemlist_mouse_down: "dragScroll(itemlist.e)",
 }
 //}}}
 

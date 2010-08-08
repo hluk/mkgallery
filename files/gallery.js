@@ -386,16 +386,18 @@ zoom: function (how)//{{{
 
     switch(how) {
     case "+":
-        if ( z > zoom_step )
+        if ( z*0.8 > zoom_step )
             z += zoom_step;
         else
-            z *= 4;
+            // round to 3 decimal places
+            z = Math.round(1000*z*5/4)/1000;
         break;
     case "-":
-        if ( z > zoom_step )
+        if ( z*0.8 > zoom_step )
             z -= zoom_step;
         else
-            z *= 0.8;
+            // round to 3 decimal places
+            z = Math.round(1000*z*4/5)/1000;
         break;
     case "fit":
 		if (w > ww || h > wh)
@@ -783,6 +785,13 @@ init: function (e,items)//{{{
     if (!this.e)
         return null;
 
+    e.mousedown( function(ev){
+                if (ev.button == 0) {
+                    signal("view_mouse_down")
+                    ev.preventDefault();
+                }
+            } );
+
     // item template element
     var item = this.template = e.find(".item");
     var e;
@@ -919,9 +928,10 @@ newItem: function (i,props)//{{{
 
     // mouse click event
     var t = this;
-    item.click( function() {
-        t.onSubmit(i);
-    });
+    item.mouseup( function(ev){
+                if (ev.button == 0 && !scrolling)
+                    t.onSubmit(i);
+            } );
 
     return item;
 },//}}}
@@ -1530,7 +1540,7 @@ function toggleList()//{{{
         itemlist.toggle();
         if ( itemlist.hidden() )
             _mode.pop();
-        else if ( _mode[0] != _modes.itemlist )
+        else if ( _mode[0] != modes.itemlist )
             _mode.push(modes.itemlist);
 		updateClassName();
     }
@@ -1841,9 +1851,16 @@ function addKeys (newkeys, desc, fn, keymode)//{{{
     modekeydesc[desc] = k;
 }//}}}
 
+jQuery.extend( jQuery.easing,
+{
+easeOutCubic: function (x, t, b, c, d) {
+		return c*((t=t/d-1)*t*t + 1) + b;
+	}
+})
+
 function dragScroll(t,p) {
-    var x,y,z;
-    var b = $("body");
+    var x,y,z,oldy;
+    var w = $(window);
 
     if (p) {
         var win = p.find(".window");
@@ -1857,20 +1874,43 @@ function dragScroll(t,p) {
         y = window.pageYOffset + mouseY;
     }
 
-    b.mouseup(stopDragScroll);
-    b.mousemove(continueDragScroll);
+    $('html,body').stop(true);
+    w.mouseup(stopDragScroll);
+    w.mousemove(continueDragScroll);
+
+    var start = new Date().getTime();
+    oldy = mouseY;
+    oldx = mouseX;
 
     //dragScroll(e);
 
     function stopDragScroll(e) {
-        b.unbind('mousemove');
-        b.unbind('mouseup');
+        scrolling = false;
+        w.unbind('mousemove');
+        w.unbind('mouseup');
+
+        var accel = getConfig('slide_scroll',200)/(new Date().getTime()-start);
+        var vx = (oldx-mouseX)*accel;
+        var vy = (oldy-mouseY)*accel;
+        $('html,body').animate({
+                scrollLeft: window.pageXOffset+vx+"px",
+                scrollTop: window.pageYOffset+vy+"px"},
+                1000, "easeOutCubic");
 
         signal("drag_scroll_end");
         e.preventDefault();
     }
 
     function continueDragScroll(e) {
+        scrolling = true;
+
+        var t = new Date().getTime();
+        if (t-start > 200) {
+            start = t;
+            oldy = mouseY;
+            oldx = mouseX;
+        }
+
         if (p) {
             var pos = p.position();
             window.scrollTo(
@@ -1915,7 +1955,15 @@ function createViewer(e,preview,info)//{{{
         viewer.onError = function(msg) { info.updateStatus( msg, "error" ); }
     }
 
-    viewer.onZoomChanged = function(state) { if (vars['zoom'] == state) return; vars['zoom'] = state; updateUrl(1000); }
+    viewer.onZoomChanged = function(state) {
+        if (vars['zoom'] == state)
+            return;
+        if (state != 1)
+            vars['zoom'] = state;
+        else if ( vars['zoom'] )
+            delete vars['zoom'];
+        updateUrl(1000);
+    }
 }//}}}
 
 function createNavigation ()//{{{
@@ -2181,6 +2229,8 @@ var b;
 
 // mouse position
 var mouseX, mouseY;
+// drag scrolling
+var scrolling = false;
 
 // objects (created if appropriate HTML element is available)
 var itemlist, info, viewer, help;
