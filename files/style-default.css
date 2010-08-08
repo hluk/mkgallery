@@ -23,7 +23,7 @@ a {font-weight: inherit; color: inherit; font-size: inherit; font-family: inheri
 /* viewer {{{*/
 /* viewer visible only in Viewer mode */
 #canvas {display: none;}
-.modeViewer #canvas {display: block;}
+.modeViewer #canvas, .modeSlideshow #canvas {display: block;}
 
 .imageview {margin: auto;}
 .videoview {margin: auto;}
@@ -49,6 +49,8 @@ a {font-weight: inherit; color: inherit; font-size: inherit; font-family: inheri
 /*}}}*/
 
 /* preview {{{*/
+.preview {display: none;}
+.modeViewer .preview, .modeSlideshow .preview {display: block;}
 .preview {
     opacity: 0;
 
@@ -108,10 +110,10 @@ a {font-weight: inherit; color: inherit; font-size: inherit; font-family: inheri
     -webkit-transition: opacity 0.5s ease-in-out, background-color 1.5s ease-in-out, -webkit-box-shadow 1.5s ease-in-out;
     -moz-transition: opacity 0.5s ease-in-out, background-color 1.5s ease-in-out, -moz-box-shadow 1.5s ease-in-out;;
 }
-.modeViewer #info:hover, .modeViewer #info.focused {
+.modeViewer #info:hover, .modeSlideshow #info:hover, .modeViewer #info.focused {
     opacity: 1;
 }
-.modeViewer #info:hover {
+.modeViewer #info:hover, .modeSlideshow #info:hover {
     background-color: rgba(0,100,200,0.4);
     -webkit-box-shadow: 0px 0px 20px #7bf;
     -moz-box-shadow: 0px 0px 20px #7bf;

@@ -103,7 +103,7 @@ createPreview: function(filepath)//{{{
     }
 
     if(!img) {
-        img = this.preview_img = $("<img></img>");
+        img = this.preview_img = $( document.createElement("img") );
         img.appendTo(p);
     }
     img.attr( "src", esc(filepath) );
@@ -168,7 +168,8 @@ hidePreview: function()//{{{
 center: function()//{{{
 {
     // center item in window
-    var newtop = ( window.innerHeight - this.view.e.innerHeight() )/2;
+    var h = this.view.e.innerHeight();
+    var newtop = h ? ( window.innerHeight - this.view.e.innerHeight() )/2 : 0;
     this.view.e.css("margin-top",(newtop > 0 ? newtop : 0) + "px");
 },//}}}
 
@@ -318,7 +319,7 @@ show: function()//{{{
     //  - GIF: redraw animated images in intervals
     //  - Opera
     if ( !getConfig('image_on_canvas',false) || userAgent() == userAgents.opera || this.path.search(/\.gif$/i) > -1) {
-        e = this.e = $("<img></img>");
+        e = this.e = $( document.createElement("img") );
         this.ctx = {
             drawImage: function (img,x,y,width,height) {
                            if( !e.attr("src") );
@@ -329,14 +330,14 @@ show: function()//{{{
         }
     }
     else {
-        e = this.e = $("<canvas></canvas>");
+        e = this.e = $( document.createElement("canvas") );
         this.ctx = this.e[0].getContext('2d');
     }
     e.css("display","block");
     e.addClass("imageview");
     e.appendTo(this._parent.e);
 
-    var img = this.img = $("<img></img>");
+    var img = this.img = $( document.createElement("img") );
     img.attr("id","img");
     img.attr("src",esc(this.path));
     img.load( function () {
@@ -362,7 +363,7 @@ thumbnail: function()//{{{
     if ( !this.thumb ) {
         var thumbpath = "thumbs/" + this.path.replace(/^.*[\/\\]/,'') + ".png";
 
-        thumb = this.thumb = $('<img></img>');
+        thumb = this.thumb = $( document.createElement("img") );
         thumb.addClass("thumbnail " + this.type());
 
         thumb.load(this.thumbnailOnLoad);
@@ -465,7 +466,7 @@ show: function()//{{{
 
     this._parent.onUpdateStatus("loading","msg");
 
-	e = this.e = $("<video></video>");
+	e = this.e = $( document.createElement("video") );
 	e.html("Your browser does not support the video tag.");
     e.attr("controls","controls");
     e.css("display","block");
@@ -512,7 +513,7 @@ remove: function()//{{{
 thumbnail: function()//{{{
 {
     if ( !this.thumb ) {
-        thumb = this.thumb = $('<div></div>');
+        thumb = this.thumb = $( document.createElement("div") );
         thumb.addClass("thumbnail " + this.type());
 
         this.thumbnailOnLoad();
@@ -649,7 +650,7 @@ show: function()//{{{
     if (this.e)
         return;
 
-    e = this.e = $('<textarea></textarea>');
+    e = this.e = $( document.createElement("textarea") );
     e.attr("src", esc(this.path));
     e.addClass("fontview");
 
@@ -692,7 +693,7 @@ thumbnail: function()//{{{
     if ( !this.thumb ) {
         var font = this.path.replace(/.*\//gi, "").replace(".","-");
 
-        thumb = this.thumb = $('<div></div>');
+        thumb = this.thumb = $( document.createElement("div") );
         thumb.addClass("thumbnail " + this.type());
         thumb.css({
                 "max-width": getConfig('thumbnail_max_width',300) + "px",
@@ -1297,6 +1298,11 @@ onSubmit: function(n){},
 // HELPER FUNCTIONS//{{{
 userAgents = {unknown:0, webkit:1, opera:2};
 
+function mode ()//{{{
+{
+    return _mode[_mode.length-1];
+}//}}}
+
 function esc (str) {//{{{
 	// don't escape protocols (i.e. "http://" -> "http%3A//"
     if (str.search(/^\w+:\/\//) > -1)
@@ -1385,7 +1391,7 @@ function go (i)//{{{
     // reload window on every nth item
     var r = getConfig('reload_every');
     if (r) {
-        if (m > 0 && r && m%r == 0) {
+        if (m > 0 && r && m%r == 0 && mode() != modes.slideshow) {
             m = 0;
             updateUrl();
             location.reload();
@@ -1428,13 +1434,13 @@ function go (i)//{{{
         signal("last");
 }//}}}
 
-function updateInfo(itemname,n,len,props) {
+function updateInfo(itemname,n,len,props) {//{{{
     if(!info)
         return;
 
     info.updateInfo(itemname,n,len,props);
     signal("info_update");
-}
+}//}}}
 
 function updateTitle ()//{{{
 {
@@ -1457,7 +1463,7 @@ function getUrlVars()//{{{
 
 function updateClassName()//{{{
 {
-	b.className = "mode" + mode[mode.length-1] + " item" + n + (n == len ? " last" : "")
+	b.className = "mode" + mode() + " item" + n + (n == len ? " last" : "")
 }//}}}
 
 function updateUrl (timeout)//{{{
@@ -1523,9 +1529,9 @@ function toggleList()//{{{
     if (itemlist) {
         itemlist.toggle();
         if ( itemlist.hidden() )
-            mode.pop();
-        else if ( mode[0] != modes.itemlist )
-            mode.push(modes.itemlist);
+            _mode.pop();
+        else if ( _mode[0] != _modes.itemlist )
+            _mode.push(modes.itemlist);
 		updateClassName();
     }
 }//}}}
@@ -1556,7 +1562,8 @@ function scroll (x,y)//{{{
 
     var d = x ? window.pageXOffset : window.pageYOffset;
     window.scrollBy(x,y);
-    viewer.updatePreview();
+    if ( mode() == modes.viewer )
+        viewer.updatePreview();
 
     var newd = (x ? window.pageXOffset : window.pageYOffset);
     if (y) {
@@ -1781,7 +1788,7 @@ function keyPress (e)//{{{
     }
 
     // try keys in this mode or modes.any
-    var try_modes = [mode[mode.length-1],modes.any];
+    var try_modes = [mode(),modes.any];
     for (var i in try_modes) {
         var k = keys[try_modes[i]];
         if (!k) continue;
@@ -1880,6 +1887,13 @@ function dragScroll(t,p) {
 }
 //}}}
 
+function viewerOnLoad()//{{{
+{
+    if ( mode() == modes.slideshow )
+        viewer.e.fadeIn(1000);
+    preloadImages();
+}//}}}
+
 function createItemList()//{{{
 {
     var e = $("#itemlist");
@@ -1894,9 +1908,7 @@ function createItemList()//{{{
 function createViewer(e,preview,info)//{{{
 {
     viewer = new Viewer(e,preview,vars['zoom']);
-    viewer.onLoad = function() {
-        preloadImages();
-    }
+    viewer.onLoad = viewerOnLoad;
 
     if (info) {
         viewer.onUpdateStatus = function(msg,class_name) { info.updateStatus( msg, class_name ); }
@@ -1934,14 +1946,16 @@ function createNavigation ()//{{{
 function createKeyHelp(e)//{{{
 {
     for (var i in modes) {
-        var cat = $('<div class="category"></div>');
+        var cat = $( document.createElement("div") );
+        cat.addClass('category');
         cat.appendTo(e);
 
         $('<h3>'+modes[i]+'</h3>').appendTo(cat);
 
         var modekeydesc = keydesc[modes[i]];
         for (var j in modekeydesc) {
-            var key = $('<div class="key"></div>');
+            var key = $( document.createElement("div") );
+            key.addClass("key");
             key.appendTo(cat);
 
             $('<div class="which">'+modekeydesc[j].join(", ")+'</div>').appendTo(key);
@@ -1988,22 +2002,20 @@ function createConfigHelp(e)//{{{
     };//}}}
 
     for (var i in confdesc) {
-        var cat = $('<div class="category"></div>');
+        var cat = $( document.createElement("div") );
+        cat.addClass('category');
         cat.appendTo(e);
 
-        var h3 = $("<h3>"+i+"</h3>");
-        h3.appendTo(cat);
+        $('<h3>'+i+'</h3>').appendTo(cat);
 
         var desc = confdesc[i];
         for (var j in desc) {
-            var opt = $('<div class="option"></div>');
+            var opt = $( document.createElement("div") );
+            opt.addClass("option");
             opt.appendTo(cat);
 
-            var which = $('<div class="which">'+j+'</div>');
-            which.appendTo(opt);
-
-            var desc = $('<div class="desc">'+confdesc[i][j]+'</div>');
-            desc.appendTo(opt);
+            $('<div class="which">'+j+'</div>').appendTo(opt);
+            $('<div class="desc">'+confdesc[i][j]+'</div>').appendTo(opt);
         }
     }
 }//}}}
@@ -2018,14 +2030,12 @@ function createAbout(e)//{{{
 
     for (var i in content) {
         var x = content[i];
-        var cat = $('<div class="category"></div>');
+        var cat = $( document.createElement("div") );
+        cat.addClass("category");
         cat.appendTo(e);
 
-        var which = $('<div class="which">'+x[0]+'</div>');
-        which.appendTo(cat);
-
-        var desc = $('<div class="desc">'+x[1]+'</div>');
-        desc.appendTo(cat);
+        $('<div class="which">'+x[0]+'</div>').appendTo(cat);
+        $('<div class="desc">'+x[1]+'</div>').appendTo(cat);
     }
 }//}}}
 
@@ -2057,11 +2067,11 @@ function toggleHelp()//{{{
     if ( help.length ) {
         if ( help.hasClass("focused") ) {
             help.removeClass("focused");
-            mode.pop();
+            _mode.pop();
         }
         else {
             help.addClass("focused");
-            mode.push(modes.help);
+            _mode.push(modes.help);
         }
 		updateClassName();
     }
@@ -2074,6 +2084,27 @@ function onResize()//{{{
     if (itemlist)
         itemlist.resize();
     signal("resized");
+}//}}}
+
+function exit_slideshow()//{{{
+{
+    if ( mode() != modes.slideshow )
+        return;
+
+    _mode.pop()
+    if (slidedhow_t)
+        clearTimeout(slidedhow_t);
+}//}}}
+
+function slideshow()//{{{
+{
+    zoom('fit');
+    if ( mode() != modes.slideshow )
+        _mode.push(modes.slideshow);
+    slidedhow_t = window.setTimeout( function(){
+                viewer.e.fadeOut( 1000, function() {next()} );
+                slideshow();
+            }, getConfig('slideshow_delay', 8000) );
 }//}}}
 
 function onLoad()//{{{
@@ -2120,6 +2151,9 @@ function onLoad()//{{{
     createNavigation();
 
     go(n);
+
+    if ( getConfig('slideshow') )
+        slideshow();
 }//}}}
 
 // reset user configuration
@@ -2157,8 +2191,11 @@ var preloaded = null;
 // URL hash timeout
 var url_t;
 
+// slideshow timer
+var slideshow_t;
+
 var keys = {};
 var keydesc;
-var modes = {any:"Any", viewer:"Viewer", itemlist:"Item List", help:"Help"};
-var mode = [modes.viewer];
+var modes = {any:"Any", viewer:"Viewer", itemlist:"Item List", help:"Help", slideshow: "Slideshow"};
+var _mode = [modes.viewer];
 

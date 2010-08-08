@@ -29,12 +29,17 @@ image_on_canvas: false,
 
 // reload every nth items (0: don't reload)
 // -- memory leaks workaround
-reload_every: 30,
+reload_every: 20,
 
 // show key combinations pressed
 show_keys: false,
 // show events
 show_events: false,
+
+// slideshow mode
+slideshow: false,
+// view next item after N ms
+slideshow_delay: 5000,
 }
 
 _config = { // -- these can't be overriden in URL
@@ -75,6 +80,14 @@ controls = {
 Any: [
     [["KP5","5"], toggleList, "Toggle thumbnail list"],
     [["?","h"], toggleHelp, "Show this help"],
+    // emulate browser history
+    [["Alt-Left"], back, "Go back in history"],
+    [["Alt-Right"], forward, "Go forward in history"],
+    ["o", "info && popInfo(); popPreview()", "Show info"]
+],
+
+// item viewer
+Viewer: [
     // scroll right OR video seek OR
     // view next item in gallery (if current item fits horizontally to window)
     [["Right","d"],
@@ -86,16 +99,8 @@ Any: [
     // scrollup if not at top or show info
     [["KP8","8","Up","w"], "window.pageYOffset ? scrollUp() : popInfo()", "Move window up"],
     [["KP2","2","Down","s"], scrollDown, "Move window down"],
-    // emulate browser history
-    [["Alt-Left"], back, "Go back in history"],
-    [["Alt-Right"], forward, "Go forward in history"],
-    ["o", "info && popInfo(); popPreview()", "Show info"]
-],
-
-// item viewer
-Viewer: [
-    ["PageUp", scrollUp],
-    ["PageDown", scrollDown],
+    ["PageUp", "scrollUp(window.innerHeight*9/10) || prev()"],
+    ["PageDown", "scrollDown(window.innerHeight*9/10) || next()"],
     ["End", "scrollDown(b.scrollHeight)"],
     ["Home", "scrollTo(0,0)"],
     ["Space", "videoTogglePlay() || scrollDown(window.innerHeight*9/10) || next()",
@@ -115,6 +120,7 @@ Viewer: [
     ["*", "zoom(1)", "Zoom to original size"],
     ["/", "zoom('fit')", "Zoom to fit"],
     [".", "zoom('fill')", "Zoom to fill"],
+    ["p", slideshow, "Slideshow"],
 ],
 
 // item list
@@ -136,6 +142,18 @@ Help: [
     [["?","h","Escape","Enter","Space"], toggleHelp, "Hide help"],
     // disable showing item list in help mode
     [["KP5","5"], ""],
+    // scroll help
+    [["KP8","8","Up","w"], scrollUp, ""],
+    [["KP2","2","Down","s"], scrollDown, ""],
+    [["KP6","6","Right","d"], scrollRight, ""],
+    [["KP4","4","Left","a"], scrollLeft, ""],
+],
+
+// slideshow
+Slideshow: [
+    ["Escape", exit_slideshow, "Exit slideshow"],
+    [["Right", "Space", "Enter", "PageDown", "d"], next, "Next item"],
+    [["Left", "S-Space", "PageUp", "a"], next, "Previous item"],
 ],
 }
 //}}}
@@ -146,7 +164,7 @@ events = {
 top: "",
 bottom: "",
 // item view scrolled
-scroll: "popPreview()",
+scroll: "mode() == modes.viewer && popPreview()",
 // video played/paused
 video_play: "",
 // window resized
@@ -157,11 +175,11 @@ go: "",
 first: "",
 last: "",
 // info updated
-info_update: "popInfo()",
+info_update: popInfo,
 // zoom
-zoom: "popInfo()",
+zoom: popInfo,
 // image is too big
-too_big: "popPreview()",
+too_big: popPreview,
 // view mouse down
 view_mouse_down: "dragScroll(viewer.e)",
 // preview mouse down
