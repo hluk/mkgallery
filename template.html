@@ -6,7 +6,6 @@
 		<meta http-equiv="Pragma" content="no-cache">
 		<meta http-equiv="expires" content="0">
 		<link rel="shortcut icon" type="image/png" href="files/favicon.png" />
-		<script type="text/javascript" src="files/jquery-1.4.2.min.js"></script>
 
 		<!-- CSS with font-faces -->
 		<link rel="stylesheet" type="text/css" href="fonts.css" />
@@ -15,6 +14,7 @@
 		<!-- printer-friendly CSS version -->
 		<link rel="stylesheet" type="text/css" href="files/style-print.css" media="print" />
 
+		<script type="text/javascript" src="files/jquery-1.4.2.min.js"></script>
 		<!-- gallery title and list of items:
 		var title = "gallery title";
 		var ls = [
@@ -82,13 +82,15 @@
 		<div id="itemlist"><!-- container item list -->
 			<div class="selection"></div><!-- selection cursor -->
 
+            <!-- remove_if_empty class means that the element
+                 will be removed if it is empty (simplifies DOM) -->
 			<div class="item"><!-- template for all items in list -->
 				<div class="itemident"></div><!-- item identification number -->
 				<div class="thumbnail_width"><!-- max-width of this is set to thumbnail width -->
-					<div class="alias"></div><!-- same as above -->
+					<div class="alias remove_if_empty"></div><!-- same as above -->
 					<div class="filename"></div><!-- same as above -->
 					<div class="extension"></div><!-- same as above -->
-					<div class="directory">.</div><!-- same as above -->
+					<div class="directory remove_if_empty">.</div><!-- same as above -->
 				</div>
 				<div class="thumbnail"></div><!-- item preview -->
 			</div>
@@ -100,17 +102,14 @@
 		<div class="help"><!-- container help window -->
 			<h1>Help</h1>
 
-			<div class="keys"><!-- shortcuts -->
-				<h2>Keys</h2>
-			</div>
+            <h2>Keys</h2>
+			<div class="keys"></div><!-- shortcuts -->
 
-			<div class="options"><!-- user configuration -->
-				<h2>Options</h2>
-			</div>
+            <h2>Options</h2>
+			<div class="options"></div><!-- user configuration -->
 
-			<div class="about"><!-- about application -->
-				<h2>About</h2>
-			</div>
+            <h2>About</h2>
+			<div class="about"></div><!-- about application -->
 		</div>
 
 

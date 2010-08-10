@@ -3,15 +3,16 @@
 Creates web gallery of images and fonts present in current directory
 """
 import os, sys, re, getopt, shutil, glob
+S = os.sep
 # default values:
 title="default" # html title and gallery directory name
 resolution = 300 # thumbnail resolution
 d = os.path.dirname(sys.argv[0]) or "." # path to template
-gdir = d + "/galleries/%s"; # path to gallery
+home = os.environ.has_key('HOME') and os.environ['HOME'] or os.environ['HOMEDRIVE']+os.environ['HOMEPATH']+S+"My Documents"
+gdir = home +S+ "Galleries" +S+ "%s"; # path to gallery
 url = "file:///<path_to_gallery>/index.html" # browser url
 progress_len = 40 # progress bar length
-create_liks = True; # create symbolic links instead of copy
-cp = os.symlink # default is create symbolic links
+
 force = False # don't delete files
 
 rm_error = "ERROR: Existing gallery contains files that aren't symbolic links!\n"+\
@@ -25,15 +26,22 @@ re_vid = re.compile('\.(mp4|mov|flv|ogg|mp3|wav)$',re.I)
 re_remote = re.compile('^\w+://',re.I)
 re_fontname = re.compile('[^a-zA-Z0-9_ ]')
 
-def escape(s):#{{{
-	return s.replace('\\','\\\\').replace('"','\\"')
-#}}}
-
 def copy(src, dest):#{{{
 	if os.path.isdir(src):
 		shutil.copytree( src, dest )
 	else:
 		shutil.copyfile( src, dest )
+#}}}
+
+# default is create symbolic links
+# if operation not supported, copy all files
+try:
+	cp = os.symlink
+except:
+	cp = copy
+
+def escape(s):#{{{
+	return s.replace('\\','\\\\').replace('"','\\"')
 #}}}
 
 def usage():#{{{
@@ -44,8 +52,7 @@ usage: %s [options] [directories|filenames]
     Creates HTML gallery containing images and fonts recursively
     found in given directories and files or in the current directory.
 
-    If BROWSER environment variable is set, the gallery is
-    automatically viewed using web browser $BROWSER.
+    The gallery is automatically viewed with default web browsser.
 
     For the program to be able to generate thumbnails and font names,
     the Python Imaging Library (PIL) must be installed.
@@ -73,24 +80,28 @@ options:
 def walk(root):#{{{
 	if os.path.isdir(root):
 		for f in os.listdir(root):
-			for ff in walk(root == "." and f or root+"/"+f):
+			for ff in walk(root == "." and f or root+S+f):
 				yield ff
 	else:
 		yield root
 #}}}
 
 def launch_browser(url):#{{{
-	browser = os.environ['BROWSER']
-	print("Lauching web browser ("+browser+").")
+	sys.stdout.write("Lauching default web browser: ")
+	ok = False;
 
 	try:
-		os.spawnlp(os.P_WAIT, browser, browser, url)
+		import webbrowser
+		if webbrowser.open(url):
+			ok = True;
 	except:
-		pass
+		pass;
+
+	print(ok and "DONE" or "FAILED!")
 #}}}
 
 def parse_args(argv):#{{{
-	global title, resolution, gdir, url, d, create_links, cp, force
+	global title, resolution, gdir, url, d, cp, force
 
 	try:
 		opts, args = getopt.getopt(argv[1:], "ht:r:d:u:cf",
@@ -140,12 +151,14 @@ def prepare_gallery(d,gdir,force):#{{{
 			os.makedirs(gdir)
 		# TODO: port (symbolic links only on UNIX-like platforms)
 		links = {
-				d+"/files":gdir+"/files",
-				d+"/template.html":gdir+"/index.html"
+				d+S+"files":gdir+S+"files",
+				d+S+"template.html":gdir+S+"index.html"
 				}
 		for f in links:
 			link = links[f]
 			if os.path.islink(link):
+				os.remove(link)
+			elif force and os.path.isfile(link):
 				os.remove(link)
 			elif os.path.isdir(link):
 				if force:
@@ -155,7 +168,7 @@ def prepare_gallery(d,gdir,force):#{{{
 			cp( os.path.abspath(f), link )
 
 		# clean items directory
-		itemdir = gdir+"/items"
+		itemdir = gdir+S+"items"
 		if os.path.isdir(itemdir):
 			for f in walk(itemdir):
 				# TODO: port
@@ -164,7 +177,7 @@ def prepare_gallery(d,gdir,force):#{{{
 			shutil.rmtree(itemdir)
 		os.mkdir(itemdir)
 
-		shutil.copyfile(d+"/config.js", gdir+"/config.js")
+		shutil.copyfile(d+S+"config.js", gdir+S+"config.js")
 	except:
 		raise
 #}}}
@@ -187,7 +200,7 @@ def addFont(fontfile,css):#{{{
 	except Exception as e:
 		print("ERROR: "+str(e)+" (file: \""+fontfile+"\")")
 
-	css.write("@font-face{font-family:"+re_fontname.sub("_",fontfile)+";src:url('items/"+fontfile+"');}\n")
+	css.write("@font-face{font-family:items_"+re_fontname.sub("_",fontfile)+";src:url('items"+S+fontfile+"');}\n")
 
 	return fontname
 #}}}
@@ -195,7 +208,7 @@ def addFont(fontfile,css):#{{{
 def itemline(filename,alias=None,width=None,height=None):#{{{
 	# filename
 	# TODO: escape double quotes
-	line = '"' + ( is_local(filename) and ("items/"+filename) or filename ) + '"'
+	line = '"' + ( is_local(filename) and ("items"+S+filename) or filename ) + '"'
 
 	if alias or width:
 		# alias
@@ -222,7 +235,7 @@ def prepare_html(template,itemfile,css,gdir,files):#{{{
 	global re_img, re_font, re_vid
 
 	items = {}
-	imgdir = gdir+"/items"
+	imgdir = gdir+S+"items"
 	abs_gdir = os.path.abspath(gdir)
 
 	# find items in "files" directory
@@ -230,9 +243,9 @@ def prepare_html(template,itemfile,css,gdir,files):#{{{
 		for f in walk(ff):
 			abs_f = os.path.abspath(f)
 			# ignore gallery generated directories
-			if abs_f.startswith(abs_gdir+"/files/") or \
-			   abs_f.startswith(abs_gdir+"/items/") or \
-			   abs_f.startswith(abs_gdir+"/thumbs/"):
+			if abs_f.startswith(abs_gdir+S+"files"+S) or \
+			   abs_f.startswith(abs_gdir+S+"items"+S) or \
+			   abs_f.startswith(abs_gdir+S+"thumbs"+S):
 				continue
 
 			# filetype (image, font, audio/video)
@@ -245,10 +258,10 @@ def prepare_html(template,itemfile,css,gdir,files):#{{{
 
 			if isimg or isfont or isvid:
 				if is_local(f):
-					fdir = imgdir+"/"+os.path.dirname(f)
+					fdir = imgdir+S+os.path.dirname(f)
 					if not os.path.isdir(fdir):
 						os.makedirs(fdir)
-					cp( abs_f, fdir+"/" + os.path.basename(f) )
+					cp( abs_f, fdir +S+ os.path.basename(f) )
 
 				# if file is font: create font-face line in css
 				alias = ""
@@ -304,7 +317,7 @@ def create_thumbnails(items,imgdir,thumbdir,resolution,itemfile):#{{{
 		w = h = 0
 		if re_img.search(f):
 			try:
-				w,h = create_thumbnail(imgdir+"/"+f, resolution, thumbdir+"/"+os.path.basename(f))
+				w,h = create_thumbnail(imgdir+S+f, resolution, thumbdir+S+os.path.basename(f))
 			except ImportError:
 				pass
 			except Exception as e:
@@ -333,9 +346,9 @@ def main(argv):#{{{
 
 	prepare_gallery(d,gdir,force)
 
-	template = open( d+"/template.html", "r" );
-	itemfile = open( gdir+"/items.js", "w" )
-	css = open( gdir+"/fonts.css", "w" )
+	template = open( d+S+"template.html", "r" );
+	itemfile = open( gdir+S+"items.js", "w" )
+	css = open( gdir+S+"fonts.css", "w" )
 
 	items = prepare_html(template,itemfile,css,gdir,files)
 
@@ -346,11 +359,11 @@ def main(argv):#{{{
 		itemfile.flush()
 		launch_browser(url)
 
-	thumbdir = gdir+"/thumbs"
+	thumbdir = gdir+S+"thumbs"
 	if os.path.isdir(thumbdir):
 		shutil.rmtree(thumbdir)
 	if resolution>0:
-		create_thumbnails(items, gdir+"/items",thumbdir,resolution,itemfile)
+		create_thumbnails(items, gdir+S+"items",thumbdir,resolution,itemfile)
 
 	itemfile.close()
 

@@ -42,7 +42,7 @@ slideshow: false,
 slideshow_delay: 5000,
 
 // slide scroll coefficient (0 to turn off)
-slide_scroll: 400,
+slide_scroll: 100,
 }
 
 _config = { // -- these can't be overridden in URL
@@ -82,7 +82,7 @@ controls = {
 // global keys
 Any: [
     [["KP5","5"], toggleList, "Toggle thumbnail list"],
-    [["?","h"], toggleHelp, "Show this help"],
+    [["S-?","?","h"], toggleHelp, "Show this help"],
     // emulate browser history
     [["Alt-Left"], back, "Go back in history"],
     [["Alt-Right"], forward, "Go forward in history"],

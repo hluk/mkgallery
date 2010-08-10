@@ -115,6 +115,8 @@ updatePreview: function()//{{{
     var img = this.preview_img;
     if ( !(img && img.attr("src")) )
         return false;
+	else if ( !this.preview.hasClass("focused") )
+		return true;
 
     // highlights the part of the image in window
     var win = this.preview_win;
@@ -662,18 +664,18 @@ show: function()//{{{
     // disable keyboard navigation when textarea focused
     var view = this;
     e.focus( function () {
-        view.keydown = document.onkeydown;
-        view.keypress = document.onkeypress;
-        document.onkeydown = function(ev){
+        view.keydown = window.onkeydown;
+        view.keypress = window.onkeypress;
+        window.onkeydown = function(ev){
             if(ev.keyCode == 27)
                 view.e.blur();
         };
-        document.onkeypress = null;
+        window.onkeypress = null;
     } );
     e.blur( function () {
         config['font_test'] = this.value;
-        document.onkeydown = view.keydown;
-        document.onkeypress = view.keypress;
+        window.onkeydown = view.keydown;
+        window.onkeypress = view.keypress;
         view.updateHeight();
     } );
 
@@ -745,7 +747,7 @@ zoom: function (how)//{{{
     this._parent.zoomChanged(how,this.zoom_factor);
     this._parent.center();
 
-    // for firefox this.e.css("font-size") is "...px"
+    // for firefox this.e.css("font-size") is "...px" not "pt"
     this._parent.onUpdateStatus( this.e[0].style.fontSize, "fontsize" );
 },//}}}
 
@@ -801,16 +803,20 @@ init: function (e,items)//{{{
             this.e_ident = e;
 
         e = item.find(".thumbnail_width");
-        if (e.length)
+        if (e.length) {
+            e.css('max-width', getConfig('thumbnail_max_width',300)+'px');
             this.e_w = e;
+        }
 
         this.e_dir = item.find(".directory");
         this.e_filename = item.find(".filename");
         this.e_ext = item.find(".extension");
 
         e = item.find(".thumbnail");
-        if (e.length)
+        if (e.length) {
+            e.css('display','none');
             this.e_thumb = e;
+        }
     }
     else
         return null;
@@ -854,8 +860,10 @@ addThumbnails: function (i)//{{{
 
         var t = this;
         thumb.thumbnailOnLoad = function(error) {
-			if (error !== true)
-				thumb_e.css("display","");
+			if (error === true)
+				thumb_e.remove();
+            else
+                thumb_e.css('display','');
             // recursively load thumbnails from currently viewed
             // - flood load:
             //      previous and next thumbnails (from the current) are loaded in parallel
@@ -872,7 +880,7 @@ addThumbnails: function (i)//{{{
 newItem: function (i,props)//{{{
 {
     var e;
-    var item = this.template;
+    item = this.template;
 
     // image identification
     e = this.e_ident;
@@ -892,8 +900,8 @@ newItem: function (i,props)//{{{
 
 	// set .thumbnail_width max-width
     e = this.e_w;
-	if (e)
-		e.css("max-width",(w>100 ? w+20 : getConfig('thumbnail_max_width',300)) +"px");
+	if (e && w>100)
+		e.css("max-width",(w+20) + "px");
 
     // filename
     createPathElements(
@@ -904,27 +912,26 @@ newItem: function (i,props)//{{{
 
 	// thumbnail size
     e = this.e_thumb;
-	if (e)
-        e.css({
-				"display": (w && h) ? "" : "none",
-				"width": w ? w+"px" : "",
-				"height": h ? h+"px" : ""
-			});
-
-    // user tags
-    if (tags) {
-        for (var key in tags) {
-            e = item.find("."+key);
-            var v = tags[key];
-            if (v)
-                e.html(v);
-            else
-                e.hide();
-        }
-    }
+	if (e && w && h)
+        e.css( {"width": w+"px", "height": h+"px"} );
 
     // clone item
     item = item.clone();
+
+    // user tags
+    for (var key in tags) {
+        e = item.find("."+key);
+        if (e.length)
+            e.html(tags[key]);
+    }
+
+    // remove empty elements
+    item.find('.remove_if_empty').each(
+            function() {
+                var t = $(this);
+                if( !t.html() )
+                    t.remove();
+            });
 
     // mouse click event
     var t = this;
@@ -1161,8 +1168,6 @@ init: function(e)//{{{
 
 	this.itemlink = e.find(".itemlink");
 
-    this.status = e.find(".status");
-
     this.progress = e.find(".progress")[0];
     this.counter = e.find(".counter");
     this.counternow = e.find(".counternow");
@@ -1171,6 +1176,8 @@ init: function(e)//{{{
     this.dir_e = e.find(".directory");
     this.filename_e = e.find(".filename");
     this.ext_e = e.find(".extension");
+
+    this.props = [];
 },//}}}
 
 updateProgress: function ()//{{{
@@ -1235,38 +1242,33 @@ updateItemTitle: function ()//{{{
     createPathElements(this.dir_e,this.filename_e,this.ext_e,this.href);
 },//}}}
 
-updateProperties: function ()//{{{
+updateProperties: function (props)//{{{
 {
-    // item properties
-    if (this.props) {
-        for (var key in this.props) {
-            var e = this.e.find("."+key);
-            var v = this.props[key];
-            if (v) {
-                e.html(v);
-                e.show();
-            }
-            else
-                e.hide();
-        }
-    }
+    // clear old properties
+    var oldprops = this.props;
+    for (key in oldprops)
+        this.updateProperty(null,key);
+
+    // new properties
+    for (var key in props)
+        this.updateProperty(props[key],key);
 
 },//}}}
 
-updateStatus: function (status_msg,class_name)//{{{
+updateProperty: function (status_msg,class_name)//{{{
 {
-    if (!this.status.length)
-        return;
-
-    var e = this.status.find( "."+(class_name ? class_name : "msg") );
+    var cls = class_name ? class_name : "msg";
+    var e = this.e.find( "." + cls );
     if(e.length) {
-        if( status_msg != null ) {
+        if( status_msg !== null ) {
             e.html(status_msg);
             e.show();
         }
         else
             e.hide();
     }
+    // remember property so it can be removed later
+    this.props[cls] = 1;
 },//}}}
 
 name: function ()//{{{
@@ -1279,17 +1281,13 @@ updateInfo: function (href,i,len,properties)//{{{
     this.href = href;
     this.n = i;
     this.len = len;
-	this.props = properties;
 	this.countermax.html(len);
     this.counternow.html(i);
     this.itempath = esc(href);
 
-    // reset status
-    this.status.children().hide();
-
     this.updateProgress();
     this.updateItemTitle();
-    this.updateProperties();
+    this.updateProperties(properties);
 },//}}}
 
 popInfo: function ()//{{{
@@ -1378,6 +1376,7 @@ function createPathElements(dir_e,filename_e,ext_e,path) {//{{{
     // directory
     var dir = path.substring(0,m);
     if (dir_e.length) {
+        dir = dir.replace(/^items\/?/,'');
         if (dir) {
             dir_e.html(dir);
             dir_e.show();
@@ -1579,26 +1578,37 @@ function scrollRight(how)//{{{
     return scroll(how ? how : window.innerWidth/4,0);
 }//}}}
 
-function scroll (x,y)//{{{
+function scroll (x,y,absolute)//{{{
 {
     if (!viewer) return false;
 
-    var d = x ? window.pageXOffset : window.pageYOffset;
-    window.scrollBy(x,y);
+    var oldx = window.pageXOffset;
+    var oldy = window.pageYOffset;
+	if (absolute)
+		window.scrollTo(x,y);
+	else
+		window.scrollBy(x,y);
 
-    if ( mode() == modes.viewer )
-        viewer.updatePreview();
-
-    var newd = (x ? window.pageXOffset : window.pageYOffset);
-    if (y) {
-        if (newd == 0)
-            signal("top");
-        if (newd+window.innerHeight >= document.documentElement.scrollHeight)
-            signal("bottom");
-    }
-
-    if (d != newd) {
+    var newx = window.pageXOffset;
+    var newy = window.pageYOffset;
+    if ( newy != oldy ) {
         signal("scroll");
+
+        if (newy == 0)
+            signal("top");
+        if (newy+window.innerHeight >= document.documentElement.scrollHeight)
+            signal("bottom");
+
+        return true
+    }
+	else if ( newx != oldx ) {
+        signal("scroll");
+
+        if (newx == 0)
+            signal("leftmost");
+        if (newx+window.innerWidth >= document.documentElement.scrollWidth)
+            signal("rightmost");
+
         return true
     }
     else
@@ -1720,7 +1730,7 @@ function signal (sgn)//{{{
         return;
 
 	if ( getConfig("show_events", false) ) {
-		info.updateStatus("event: " + sgn);
+		info.updateProperty("event: " + sgn);
         popInfo();
     }
 
@@ -1807,7 +1817,7 @@ function keyPress (e)//{{{
         keyname = "S-"+keyname
 
 	if ( getConfig("show_keys", false) ) {
-		info.updateStatus("key: " + keyname + " ("+keycode+")");
+		info.updateProperty("key: " + keyname + " ("+keycode+")");
         popInfo();
     }
 
@@ -1865,15 +1875,20 @@ function addKeys (newkeys, desc, fn, keymode)//{{{
     modekeydesc[desc] = k;
 }//}}}
 
+var tt = 0;
 jQuery.extend( jQuery.easing,
 {
 easeOutCubic: function (x, t, b, c, d) {
-		return c*((t=t/d-1)*t*t + 1) + b;
-	}
+        if ( t>tt ) {
+            tt += 50;
+            viewer.updatePreview();
+        }
+        return (t=t/1000-1)*t*t + 1;
+    }
 })
 
 function dragScroll(t,p) {
-    var x,y,z,oldy;
+    var x,y,z;
     var w = $(window);
 
     if (p) {
@@ -1892,24 +1907,25 @@ function dragScroll(t,p) {
     w.mouseup(stopDragScroll);
     w.mousemove(continueDragScroll);
 
-    var start = new Date().getTime();
-    oldy = mouseY;
-    oldx = mouseX;
-
-    //dragScroll(e);
+    var start = new Date().getTime()-100;
+	var d = 0;
+    var dx = [mouseX,mouseX];
+    var dy = [mouseY,mouseY];
 
     function stopDragScroll(e) {
         scrolling = false;
         w.unbind('mousemove');
         w.unbind('mouseup');
 
-        var accel = getConfig('slide_scroll',200)/(new Date().getTime()-start);
-        var vx = (oldx-mouseX)*accel;
-        var vy = (oldy-mouseY)*accel;
+        var accel = getConfig('slide_scroll',100)/(new Date().getTime()-start);
+        var vx = (dx[d]-mouseX)*accel;
+        var vy = (dy[d]-mouseY)*accel;
+
+        tt = mode() == modes.viewer ? 50 : 1000;
         $('html,body').animate({
-                scrollLeft: window.pageXOffset+vx+"px",
-                scrollTop: window.pageYOffset+vy+"px"},
-                1000, "easeOutCubic");
+            scrollLeft: window.pageXOffset+vx+"px",
+            scrollTop: window.pageYOffset+vy+"px"},
+            1000, "easeOutCubic");
 
         signal("drag_scroll_end");
         e.preventDefault();
@@ -1917,22 +1933,26 @@ function dragScroll(t,p) {
 
     function continueDragScroll(e) {
         scrolling = true;
+		mouseX = e.clientX;
+		mouseY = e.clientY;
 
         var t = new Date().getTime();
-        if (t-start > 200) {
-            start = t;
-            oldy = mouseY;
-            oldx = mouseX;
-        }
+		//info.updateProperty( (oldy-mouseY)/(t-start) );
+		//info.popInfo();
+		if (t-start > 100) {
+			start = t;
+			dx[d] = mouseX;
+			dy[d] = mouseY;
+			d = d?0:1;
+		}
 
         if (p) {
             var pos = p.position();
-            window.scrollTo(
-                    z*(mouseX+window.pageXOffset-x-pos.left),
-                    z*(mouseY+window.pageYOffset-y-pos.top) );
+            scroll( z*(mouseX+window.pageXOffset-x-pos.left),
+                    z*(mouseY+window.pageYOffset-y-pos.top), true );
         }
         else
-            window.scrollTo(x-mouseX,y-mouseY);
+            scroll(x-mouseX,y-mouseY,true);
 
         signal("scroll");
         if (e)
@@ -1965,8 +1985,8 @@ function createViewer(e,preview,info)//{{{
     viewer.onLoad = viewerOnLoad;
 
     if (info) {
-        viewer.onUpdateStatus = function(msg,class_name) { info.updateStatus( msg, class_name ); }
-        viewer.onError = function(msg) { info.updateStatus( msg, "error" ); }
+        viewer.onUpdateStatus = function(msg,class_name) { info.updateProperty( msg, class_name ); }
+        viewer.onError = function(msg) { info.updateProperty( msg, "error" ); }
     }
 
     viewer.onZoomChanged = function(state) {
@@ -1978,15 +1998,24 @@ function createViewer(e,preview,info)//{{{
             delete vars['zoom'];
         updateUrl(1000);
     }
+
+    if ( preview.length ) {
+        $('html,body').scroll(
+                function(){
+                    if ( mode() == modes.viewer )
+                        viewer.updatePreview();
+                }
+        );
+    }
 }//}}}
 
 function createNavigation ()//{{{
 {
     // keyboard
     if ( userAgent() == userAgents.webkit )
-        document.onkeydown = keyPress;
+        window.onkeydown = keyPress;
     else
-        document.onkeypress = keyPress;
+        window.onkeypress = keyPress;
 
     // mouse
     window.onmousewheel = document.onmousewheel = onMouseWheel;
