@@ -261,19 +261,12 @@ a {font-weight: inherit; color: inherit; font-size: inherit; font-family: inheri
 .item .extension {display: inline; margin-left: 0.5em; font-size: 0.7em; color: #fd0;}
 
 .thumbnail {
-    vertical-align: middle;
 	margin: auto;
     z-index: -1;
     color: black;
-    -webkit-transition: height 0.5s ease-in-out;
-    -moz-transition: height 0.5s ease-in-out;
-    -o-transition: height 0.5s ease-in-out;
 }
 .thumbnail.image {}
 .thumbnail.font {
-    -webkit-transition: color 0.3s ease-in-out;
-    -moz-transition: color 0.3s ease-in-out;
-    -o-transition: color 0.3s ease-in-out;
     border: 1px solid black;
     background-color: #ddd;
     padding: 0.5em;

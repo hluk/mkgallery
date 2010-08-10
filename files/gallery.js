@@ -803,20 +803,16 @@ init: function (e,items)//{{{
             this.e_ident = e;
 
         e = item.find(".thumbnail_width");
-        if (e.length) {
-            e.css('max-width', getConfig('thumbnail_max_width',300)+'px');
+        if (e.length)
             this.e_w = e;
-        }
 
         this.e_dir = item.find(".directory");
         this.e_filename = item.find(".filename");
         this.e_ext = item.find(".extension");
 
         e = item.find(".thumbnail");
-        if (e.length) {
-            e.css('display','none');
+        if (e.length)
             this.e_thumb = e;
-        }
     }
     else
         return null;
@@ -900,8 +896,8 @@ newItem: function (i,props)//{{{
 
 	// set .thumbnail_width max-width
     e = this.e_w;
-	if (e && w>100)
-		e.css("max-width",(w+20) + "px");
+	if (e)
+		e.css("max-width",w>100 ? w+20 : getConfig('thumbnail_max_width',300)+'px');
 
     // filename
     createPathElements(
@@ -912,8 +908,11 @@ newItem: function (i,props)//{{{
 
 	// thumbnail size
     e = this.e_thumb;
-	if (e && w && h)
-        e.css( {"width": w+"px", "height": h+"px"} );
+	if (e) {
+        e.css({ "display": w||h ? "" : "none",
+                "width": w ? w+"px" : "",
+                "height": h ? h+"px" : "" });
+    }
 
     // clone item
     item = item.clone();
