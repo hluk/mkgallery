@@ -280,8 +280,13 @@ def prepare_html(template,itemfile,css,gdir,files):#{{{
 	return items
 #}}}
 
-def create_thumbnail(filename,resolution,outfilename):#{{{
+def create_thumbnail(filename, resolution, outfilename):#{{{
 	from PIL import Image
+
+	# create directory for output file
+	d = os.path.dirname(outfilename)
+	if not os.path.exists(d):
+		os.makedirs(d)
 
 	im = Image.open(filename)
 
@@ -296,9 +301,7 @@ def create_thumbnail(filename,resolution,outfilename):#{{{
 	return im.size
 #}}}
 
-def create_thumbnails(items,imgdir,thumbdir,resolution,itemfile):#{{{
-	global pil_thumbs
-
+def create_thumbnails(items, imgdir, thumbdir, resolution, itemfile):#{{{
 	# number of images
 	n = sum( 1 for _ in filter(re_img.search,items.keys()) )
 	if n == 0:
@@ -317,7 +320,7 @@ def create_thumbnails(items,imgdir,thumbdir,resolution,itemfile):#{{{
 		w = h = 0
 		if re_img.search(f):
 			try:
-				w,h = create_thumbnail(imgdir+S+f, resolution, thumbdir+S+os.path.basename(f))
+				w,h = create_thumbnail(imgdir+S+f, resolution, thumbdir+S+f)
 			except ImportError:
 				pass
 			except Exception as e:
@@ -363,7 +366,7 @@ def main(argv):#{{{
 	if os.path.isdir(thumbdir):
 		shutil.rmtree(thumbdir)
 	if resolution>0:
-		create_thumbnails(items, gdir+S+"items",thumbdir,resolution,itemfile)
+		create_thumbnails(items, gdir+S+"items", thumbdir, resolution, itemfile)
 
 	itemfile.close()
 

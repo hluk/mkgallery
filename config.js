@@ -45,7 +45,7 @@ slideshow_delay: 5000,
 slide_scroll: 100,
 }
 
-_config = { // -- these can't be overridden in URL
+configStrict = { // -- these can't be overridden in URL
 preload_images: 3,
 }
 //}}}
@@ -110,7 +110,7 @@ Viewer: [
             "Play or pause/Move window down/Next gallery item"],
     ["Shift-Space", "scrollUp(window.innerHeight*9/10) || prev()",
             "Move window up/Previous gallery item"],
-    ["e", editText, "Edit font text"],
+    ["x", editText, "Edit font text"],
     [["KP1","1"], "go(len)", "Browse to last gallery item"],
     [["KP3","3"], "go(n+5)", "Browse to fifth next gallery item"],
     [["KP4","4","k","K","q","Q"], prev, "Previous"],
@@ -183,11 +183,13 @@ info_update: popInfo,
 zoom: popInfo,
 // image is too big
 too_big: popPreview,
-// view mouse down
-view_mouse_down: "dragScroll(viewer.e)",
+// image mouse down
+image_mouse_down: "dragScroll(viewer.e)",
 // preview mouse down
-preview_mouse_down: "dragScroll(viewer.e,viewer.preview,true)",
+preview_mouse_down: "dragScroll(viewer.e, viewer.preview, true)",
 itemlist_mouse_down: "dragScroll(itemlist.e)",
+// item cannot be displayed of file missing
+error: "";
 }
 //}}}
 

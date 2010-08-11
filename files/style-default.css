@@ -44,7 +44,7 @@ a {font-weight: inherit; color: inherit; font-size: inherit; font-family: inheri
 	-webkit-border-radius: 0.5em;
     overflow: hidden;
 
-    /* default preview size*/
+    /* default test font size*/
     font-size: 16pt;
 }
 /*}}}*/
@@ -80,6 +80,7 @@ a {font-weight: inherit; color: inherit; font-size: inherit; font-family: inheri
 }
 
 .preview img {
+	/* preview size */
     max-width: 200px;
     max-height: 600px;
 

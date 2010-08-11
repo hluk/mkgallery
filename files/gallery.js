@@ -15,247 +15,25 @@
  *
  */
 
-//! \class Viewer
-//{{{
-var Viewer = function(e,preview,zoom) {
-    this.init(e,preview,zoom);
-};
+"use strict";
+/*global $, window, document, navigator, escape*/
 
-Viewer.prototype = {
-init: function (e,preview,zoom)//{{{
-{
-    this.e = e;
-    e.mousedown( function(ev){
-                if (ev.button == 0) {
-                    signal("view_mouse_down")
-                    ev.preventDefault();
-                }
-            } );
+// CLASSES//{{{
+function esc (str) {//{{{
+	// don't escape protocols (i.e. "http://" -> "http%3A//"
+    if (str.search(/^\w+:\/\//) > -1)
+		return encodeURI(str);
+	else
+		return escape(str);
+}//}}}
 
-    if (preview.length) {
-        this.preview = preview;
-        preview.mousedown( function(ev){
-                    if (ev.button == 0) {
-                        signal("preview_mouse_down")
-                        ev.preventDefault();
-                    }
-                } );
-        var win = preview.find(".window");
-        if (win.length) {
-            this.preview_win = win;
-            win.css("position","absolute");
-        }
-    }
-    this.zoom_state = zoom ? zoom : 1;
-    this.viewFactory = new ViewFactory(this);
-},//}}}
-
-zoom: function (how)//{{{
-{
-    if ( !this.view )
-        return;
-
-    this.view.zoom(how ? how : this.zoom_state);
-},//}}}
-
-zoomChanged: function (zoom_state,zoom_factor)//{{{
-{
-    var z;
-
-    switch(zoom_state) {
-    case "fit":
-    case "fill":
-        z = zoom_state;
-        break;
-    default:
-        z = zoom_factor;
-        break;
-    }
-
-    if ( this.zoom_state != z ) {
-        this.zoom_state = z;
-        if (this.onZoomChanged)
-            this.onZoomChanged(z);
-    }
-
-    if ( signal && this.view.type() == "image" &&
-         ( window.innerHeight < this.view.e.innerHeight() ||
-           window.innerWidth < this.view.e.innerWidth() ) )
-        signal("too_big");
-    else
-        this.hidePreview();
-},//}}}
-
-createPreview: function(filepath)//{{{
-{
-    var p = this.preview;
-    if (!p)
-        return;
-
-    var img = this.preview_img;
-
-    // remove preview if item is not an image
-    if ( this.view.type() != "image" ) {
-        if (img)
-            img.attr( "src", "" );
-        p.hide();
-        return;
-    }
-
-    if(!img) {
-        img = this.preview_img = $( document.createElement("img") );
-        img.appendTo(p);
-    }
-    img.attr( "src", esc(filepath) );
-    p.show();
-},//}}}
-
-updatePreview: function()//{{{
-{
-    var img = this.preview_img;
-    if ( !(img && img.attr("src")) )
-        return false;
-	else if ( !this.preview.hasClass("focused") )
-		return true;
-
-    // highlights the part of the image in window
-    var win = this.preview_win;
-    if (win) {
-        var imgw = img.innerWidth();
-        var imgh = img.innerHeight();
-        var ww = window.innerWidth;
-        var wh = window.innerHeight;
-        var w = this.view.width;
-        var h = this.view.height;
-        var doc = document.documentElement;
-        win.css({
-                "height": Math.floor( h<wh ? imgh : (imgh*wh/h) ) +"px",
-                "width":  Math.floor( w<ww ? imgw : (imgw*ww/w) ) +"px",
-                "top":    Math.floor( h<wh ? "0" : imgh*window.pageYOffset/doc.scrollHeight) +"px",
-                "left":   Math.floor( w<ww ? "0" : imgw*window.pageXOffset/doc.scrollWidth) +"px",
-              });
-    }
-
-    return true;
-},//}}}
-
-popPreview: function()//{{{
-{
-    if ( !this.updatePreview() )
-        return;
-
-    if (this.preview_t)
-        clearTimeout(this.preview_t);
-
-    var p = this.preview;
-    p.addClass("focused");
-
-    var t = this;
-    this.preview_t = window.setTimeout(function(){p.removeClass("focused");},
-            getConfig('pop_preview_delay',1000));
-},//}}}
-
-hidePreview: function()//{{{
-{
-    var p = this.preview;
-    if (!p)
-        return;
-
-    if (this.preview_t) {
-        clearTimeout(this.preview_t);
-        p.removeClass("focused");
-    }
-},//}}}
-
-center: function()//{{{
-{
-    // center item in window
-    var h = this.view.e.innerHeight();
-    var newtop = h ? ( window.innerHeight - this.view.e.innerHeight() )/2 : 0;
-    this.view.e.css("margin-top",(newtop > 0 ? newtop : 0) + "px");
-},//}}}
-
-show: function (filepath)//{{{
-{
-    if (this.view)
-        this.view.remove();
-
-    var v = this.view = this.viewFactory.newView(filepath);
-    if ( v ) {
-        v.show();
-        this.createPreview(filepath);
-    }
-    else if (this.onError)
-        this.onError("Unknown format: \""+filepath+"\"");
-},//}}}
-
-width: function ()//{{{
-{
-    return this.view ? this.view.width : 0;
-},//}}}
-
-height: function ()//{{{
-{
-    return this.view ? this.view.height : 0;
-},//}}}
-
-/** events */
-/** \fn onUpdateStatus(msg,class_name)
- * \brief event is triggered after changing status of view/viewer
- * \param msg status text
- * \param class_name class of status text ("loading", "error" or custom)
- *
- */
-onUpdateStatus: function(msg,class_name){},
-
-/** \fn onLoad()
- * \brief event is triggered after item is successfully loaded
- */
-onLoad: function(){},
-
-/** \fn onError(error_msg);
- * \brief event is triggered after error
- */
-onError: function(error_msg){},
-
-/** \fn onZoomChanged(zoom_state)
- * \brief event is triggered after zoom is changed
- * \param zoom_state "fit", "fill" or zoom factor (float)
- */
-onZoomChanged: function(zoom_state){},
-}
-//}}}
-
-//! \class ViewFactory
-//{{{
-var ViewFactory = function(_parent) {
-    this.init(_parent);
-};
-
-ViewFactory.prototype = {
-init: function(_parent) {//{{{
-      this._parent = _parent;
-},//}}}
-
-newView: function(filepath) {//{{{
-    if (filepath.search(/\.(png|jpg|gif)$/i) > -1)
-        return new ImageView(filepath, this._parent);
-    else if (filepath.search(/\.(ttf|otf)$/i) > -1)
-        return new FontView(filepath, this._parent);
-    else if (filepath.search(/\.(mp4|mov|flv|ogg|mp3|wav)$/i) > -1)
-        return new VideoView(filepath, this._parent);
-    else
-        return null;
-},//}}}
-}
-//}}}
-
+// this section should be independent from the rest
 //! \interface ItemView
 //{{{
 /**
- * \fn init(itempath, _parent)
+ * \fn init(itempath, parent)
  * \param itempath item filename
- * \param _parent item parent (Viewer)
+ * \param parent item parent (Viewer)
  *
  * \fn type()
  * \return an identifier of type (e.g. "image", "font")
@@ -271,7 +49,8 @@ newView: function(filepath) {//{{{
  * \return an element representing the thumbnail of item
  *
  * \fn zoom(how)
- * \param how "fit" (fit to window), "fill" (fill window), float (zoom factor), other (restore default zoom factor)
+ * \param how "fit" (fit to window), "fill" (fill window), float (zoom factor), other (do nothing)
+ * \return current zoom factor
  *
  * \fn onZoomChange()
  * \brief event
@@ -281,14 +60,13 @@ newView: function(filepath) {//{{{
 //! \class ImageView
 //! \implements ItemView
 //{{{
-var ImageView = function(imgpath, _parent) { this.init(imgpath, _parent); };
+var ImageView = function (imgpath, parent) { this.init(imgpath, parent); };
 
 ImageView.prototype = {
-init: function(imgpath, _parent)//{{{
+init: function (imgpath, parent)//{{{
 {
     this.path = imgpath;
-    this._parent = _parent;
-    this.zoom_factor = 1;
+    this.parent = parent;
 },//}}}
 
 type: function ()//{{{
@@ -296,14 +74,15 @@ type: function ()//{{{
     return "image";
 },//}}}
 
-show: function()//{{{
+show: function ()//{{{
 {
-    var view = this;
+    var view, e, use_canvas;
+    view = this;
 
     if ( this.e )
         return;
 
-    this._parent.onUpdateStatus("loading","msg");
+    this.parent.onUpdateStatus("loading","msg");
 
     // TODO: SVG -- for some reason this doesn't work in Chromium
 	/*
@@ -315,21 +94,22 @@ show: function()//{{{
 	}
 	*/
 
-    var e;
     // don't use canvas in some cases:
     //  - user configuration
     //  - GIF: redraw animated images in intervals
-    //  - Opera
-    if ( !getConfig('image_on_canvas',false) || userAgent() == userAgents.opera || this.path.search(/\.gif$/i) > -1) {
+    use_canvas = this.parent.getConfig('image_on_canvas', false) &&
+        filepath.search(/\.gif$/i) == -1;
+
+    if ( use_canvas ) {
         e = this.e = $( document.createElement("img") );
         this.ctx = {
             drawImage: function (img,x,y,width,height) {
-                           if( !e.attr("src") );
-                               e.attr("src",img.src);
+                           if( !e.attr("src") )
+                               e.attr("src", img.src);
                            e.width = width;
                            e.height = height;
-                       },
-        }
+                       }
+        };
     }
     else {
         e = this.e = $( document.createElement("canvas") );
@@ -337,83 +117,56 @@ show: function()//{{{
     }
     e.css("display","block");
     e.addClass("imageview");
-    e.appendTo(this._parent.e);
+    e.appendTo(this.parent.e);
 
-    var img = this.img = $( document.createElement("img") );
-    img.attr("id","img");
-    img.attr("src",esc(this.path));
-    img.load( function () {
-        view._parent.onUpdateStatus(null,"msg");
+    e = this.img = $( document.createElement("img") );
+    e.attr( "id", "img" );
+    e.attr( "src", esc(this.path) );
+    e.load( function () {
+        view.parent.onUpdateStatus(null,"msg");
 
         view.orig_width = this.width ? this.width : this.naturalWidth;
         view.orig_height = this.height ? this.height : this.naturalHeight;
 
-        view._parent.zoom();
-        view._parent.onLoad();
+        view.parent.zoom();
+        view.parent.onLoad();
     } );
 },//}}}
 
-remove: function()//{{{
+remove: function ()//{{{
 {
     var e = this.e;
     if ( e )
         e.remove();
 },//}}}
 
-thumbnail: function()//{{{
+thumbnail: function ()//{{{
 {
     if ( !this.thumb ) {
-        var thumbpath = "thumbs/" + this.path.replace(/^.*[\/\\]/,'') + ".png";
+        var thumbpath, thumb, t;
+        thumbpath = "thumbs/" + this.path.replace(/^items\//,'').replace(/:/g,'_') + ".png";
 
         thumb = this.thumb = $( document.createElement("img") );
         thumb.addClass("thumbnail " + this.type());
 
         thumb.load(this.thumbnailOnLoad);
-		var t = this;
-        thumb.error( function() { t.thumbnailOnLoad(true); } );
+		t = this;
+        thumb.error( function () { t.thumbnailOnLoad(true); } );
         thumb.attr( "src", esc(thumbpath) );
     }
 
     return this.thumb;
 },//}}}
 
-zoom: function (how)//{{{
+zoom: function (z)//{{{
 {
-	var ww = window.innerWidth;
-	var wh = window.innerHeight;
-    var w = this.orig_width;
-    var h = this.orig_height;
+    var w, h;
 
-    var z = this.zoom_factor;
+    if (!z)
+        return this.width/this.orig_width;
 
-    switch(how) {
-    case "+":
-        if ( z*0.8 > zoom_step )
-            z += zoom_step;
-        else
-            // round to 3 decimal places
-            z = Math.round(1000*z*5/4)/1000;
-        break;
-    case "-":
-        if ( z*0.8 > zoom_step )
-            z -= zoom_step;
-        else
-            // round to 3 decimal places
-            z = Math.round(1000*z*4/5)/1000;
-        break;
-    case "fit":
-		if (w > ww || h > wh)
-			z = ( ww*h < wh*w ) ? ww/w : wh/h;
-		else
-			z = 1;
-        break;
-    case "fill":
-        z = ( ww*h < wh*w ) ? wh/h : ww/w;
-        break;
-    default:
-        z = how ? parseFloat(how) : 1;
-        break;
-    }
+    w = this.orig_width;
+    h = this.orig_height;
 
     // clear canvas
     if(this.width && this.ctx.clearRect)
@@ -426,11 +179,13 @@ zoom: function (how)//{{{
     this.ctx.drawImage(this.img[0],0,0,this.width,this.height);
     this.zoom_factor = z;
 
-    this._parent.onUpdateStatus( this.orig_width+"x"+this.orig_height, "resolution" );
-    this._parent.onUpdateStatus( z==1 ? null : Math.floor(z*100), "zoom" );
+    this.parent.onUpdateStatus( w+"x"+h, "resolution" );
+    this.parent.onUpdateStatus( z===1 ? null : Math.floor(z*100), "zoom" );
 
-    this._parent.zoomChanged(how,this.zoom_factor);
-    this._parent.center();
+    this.parent.zoomChanged(z,this.zoom_factor);
+    this.parent.center();
+
+    return this.width/this.w;
 },//}}}
 
 /** events */
@@ -439,20 +194,20 @@ zoom: function (how)//{{{
  * \brief event is triggered after thumbnail is loaded
  * \param error true if error occured
  */
-thumbnailOnLoad: function(error){},
-}
+thumbnailOnLoad: function (error){}
+};
 //}}}
 
 //! \class VideoView
 //! \implements ItemView
 //{{{
-var VideoView = function(vidpath, _parent) { this.init(vidpath, _parent); };
+var VideoView = function (vidpath, parent) { this.init(vidpath, parent); };
 
 VideoView.prototype = {
-init: function(vidpath, _parent)//{{{
+init: function (vidpath, parent)//{{{
 {
     this.path = vidpath;
-    this._parent = _parent;
+    this.parent = parent;
     this.zoom_factor = 1;
 },//}}}
 
@@ -461,14 +216,16 @@ type: function ()//{{{
     return "video";
 },//}}}
 
-show: function()//{{{
+show: function ()//{{{
 {
-    var view = this;
+    var view, e, p;
+    view = this;
+    p = this.parent;
 
     if ( this.e )
         return;
 
-    this._parent.onUpdateStatus("loading","msg");
+    p.onUpdateStatus("loading","msg");
 
 	e = this.e = $( document.createElement("video") );
 	e.html("Your browser does not support the video tag.");
@@ -477,44 +234,46 @@ show: function()//{{{
     e.addClass("videoview");
     e.attr("id","video");
 
-	if ( getConfig('autoplay',false) )
+	if ( p.getConfig('autoplay',false) )
 		e.attr("autoplay","autoplay");
-	if ( getConfig('loop',false) )
+	if ( p.getConfig('loop',false) )
 		e.attr("loop","loop");
 	// TODO: onended event doesn't work -- WHY?
-	if ( getConfig('autonext',false) && next )
+	if ( p.getConfig('autonext',false) && next )
 		e.bind("ended",next);
 
     e.bind('canplay', function () {
-        view._parent.onUpdateStatus(null,"msg");
+        var s, m;
+
+        view.parent.onUpdateStatus(null,"msg");
 
         view.orig_width = this.videoWidth;
         view.orig_height = this.videoHeight;
 		view.duration = this.duration/60;
-		var s = Math.floor(this.duration);
-		var m = Math.floor(s/60);
+		s = Math.floor(this.duration);
+		m = Math.floor(s/60);
 		s = ""+(s-m*60);
-		view.duration = m+":"+(s.length == 1 ? "0" : "")+s;
+		view.duration = m+":"+(s.length === 1 ? "0" : "")+s;
 
-		view._parent.zoom();
-        view._parent.onLoad();
+		view.parent.zoom();
+        view.parent.onLoad();
     } );
     e.error( function () {
-        view._parent.onUpdateStatus( "Unsupported format!", "error" );
+        view.parent.onUpdateStatus( "Unsupported format!", "error" );
 	} );
 
     e.attr("src",esc(this.path));
-    e.appendTo(this._parent.e);
+    e.appendTo(this.parent.e);
 },//}}}
 
-remove: function()//{{{
+remove: function ()//{{{
 {
     var e = this.e;
     if ( e )
         e.remove();
 },//}}}
 
-thumbnail: function()//{{{
+thumbnail: function ()//{{{
 {
     if ( !this.thumb ) {
         thumb = this.thumb = $( document.createElement("div") );
@@ -526,46 +285,22 @@ thumbnail: function()//{{{
     return this.thumb;
 },//}}}
 
-zoom: function (how)//{{{
+zoom: function (z)//{{{
 {
-	var ww = window.innerWidth;
-	var wh = window.innerHeight;
+    var w,h;
 
-    if(!this.orig_width) {
+    if (!z)
+        return this.width/this.orig_width;
+
+    w = this.orig_width;
+    h = this.orig_height;
+
+    if(!w) {
 		this.width = this.e[0].width = ww;
 		this.height = this.e[0].height = wh/2;
         this.updateStatus();
 		return;
 	}
-
-    var w = this.orig_width;
-    var h = this.orig_height;
-
-    var z = this.zoom_factor;
-
-    switch(how) {
-    case "+":
-        if ( z > zoom_step )
-            z += zoom_step;
-        else
-            z *= 4;
-        break;
-    case "-":
-        if ( z > zoom_step )
-            z -= zoom_step;
-        else
-            z *= 0.8;
-        break;
-    case "fit":
-		z = ( ww*h < wh*w ) ? ww/w : wh/h;
-        break;
-    case "fill":
-        z = ( ww*h < wh*w ) ? wh/h : ww/w;
-        break;
-    default:
-        z = how ? parseFloat(how) : 1;
-        break;
-    }
 
     this.width = this.e[0].width = w*z;
     this.height = this.e[0].height = h*z;
@@ -573,50 +308,52 @@ zoom: function (how)//{{{
 
     this.updateStatus();
 
-    this._parent.zoomChanged(how,this.zoom_factor);
-    this._parent.center();
+    this.parent.zoomChanged(z,this.zoom_factor);
+    this.parent.center();
+
+    return this.width/this.orig_width;
 },//}}}
 
-updateStatus: function()//{{{
+updateStatus: function ()//{{{
 {
     // resolution
-    this._parent.onUpdateStatus( this.orig_width+"x"+this.orig_height, "resolution" );
+    this.parent.onUpdateStatus( this.orig_width+"x"+this.orig_height, "resolution" );
 
     // zoom
-    this._parent.onUpdateStatus( this.zoom_factor != 1 ? null : Math.floor(this.zoom_factor*100), "zoom" );
+    this.parent.onUpdateStatus( this.zoom_factor !== 1 ? null : Math.floor(this.zoom_factor*100), "zoom" );
 
     // playback speed
-    this._parent.onUpdateStatus(
-            this.e[0].playbackRate == 1.0 ? null : Math.round(this.e[0].playbackRate*100)/100,"speed" );
+    this.parent.onUpdateStatus(
+            this.e[0].playbackRate === 1.0 ? null : Math.round(this.e[0].playbackRate*100)/100,"speed" );
 
     // duration
-    this._parent.onUpdateStatus(this.duration, "duration");
+    this.parent.onUpdateStatus(this.duration, "duration");
 },//}}}
 
-normalSpeed: function()//{{{
+normalSpeed: function ()//{{{
 {
     this.e[0].playbackRate = 1;
     this.updateStatus();
 },//}}}
 
-faster: function()//{{{
+faster: function ()//{{{
 {
     this.e[0].playbackRate += 0.1;
     this.updateStatus();
 },//}}}
 
-slower: function()//{{{
+slower: function ()//{{{
 {
     this.e[0].playbackRate -= 0.1;
     this.updateStatus();
 },//}}}
 
-togglePlay: function()//{{{
+togglePlay: function ()//{{{
 {
     this.e[0].paused ? this.e[0].play() : this.e[0].pause();
 },//}}}
 
-seek: function(how) {//{{{
+seek: function (how) {//{{{
     this.e[0].currentTime += how;
 },//}}}
 
@@ -625,20 +362,20 @@ seek: function(how) {//{{{
  * \fn thumbnailOnLoad()
  * \brief event is triggered after thumbnail is loaded
  */
-thumbnailOnLoad: function(){},
+thumbnailOnLoad: function (){},
 }
 //}}}
 
 //! \class FontView
 //! \implements ItemView
 //{{{
-var FontView = function(itempath, _parent) { this.init(itempath, _parent); };
+var FontView = function (itempath, parent) { this.init(itempath, parent); };
 
 FontView.prototype = {
-init: function(itempath, _parent)//{{{
+init: function (itempath, parent)//{{{
 {
     this.path = itempath;
-    this._parent = _parent;
+    this.parent = parent;
     this.zoom_factor = 1;
     this.font = this.path.replace(/[^a-zA-Z0-9_ ]/g,"_");
 	this.width = this.height = 0;
@@ -649,7 +386,7 @@ type: function ()//{{{
     return "font";
 },//}}}
 
-show: function()//{{{
+show: function ()//{{{
 {
     if (this.e)
         return;
@@ -658,7 +395,7 @@ show: function()//{{{
     e.attr("src", esc(this.path));
     e.addClass("fontview");
 
-    e.attr( "value", getConfig('font_test', '+-1234567890, abcdefghijklmnopqrstuvwxyz, ABCDEFGHIJKLMNOPQRSTUVWXYZ, ?!.#$\\/"\'') );
+    e.attr( "value", this.parent.getConfig('font_test', '+-1234567890, abcdefghijklmnopqrstuvwxyz, ABCDEFGHIJKLMNOPQRSTUVWXYZ, ?!.#$\\/"\'') );
     e.css("font-family",this.font);
 
     // disable keyboard navigation when textarea focused
@@ -666,8 +403,8 @@ show: function()//{{{
     e.focus( function () {
         view.keydown = window.onkeydown;
         view.keypress = window.onkeypress;
-        window.onkeydown = function(ev){
-            if(ev.keyCode == 27)
+        window.onkeydown = function (ev){
+            if(ev.keyCode === 27)
                 view.e.blur();
         };
         window.onkeypress = null;
@@ -679,31 +416,33 @@ show: function()//{{{
         view.updateHeight();
     } );
 
-    e.appendTo(this._parent.e);
-    this._parent.zoom();
+    e.appendTo(this.parent.e);
+    this.parent.zoom();
 
-    this._parent.onLoad();
+    this.parent.onLoad();
 },//}}}
 
-remove: function()//{{{
+remove: function ()//{{{
 {
     var e = this.e;
     if ( e )
         e.remove();
 },//}}}
 
-thumbnail: function()//{{{
+thumbnail: function ()//{{{
 {
     if ( !this.thumb ) {
-        var font = this.path.replace(/.*\//gi, "").replace(".","-");
+        var font, p;
+        font = this.path.replace(/.*\//gi, "").replace(".","-");
+        p = this.parent;
 
         thumb = this.thumb = $( document.createElement("div") );
         thumb.addClass("thumbnail " + this.type());
         thumb.css({
-                "max-width": getConfig('thumbnail_max_width',300) + "px",
+                "max-width": p.getConfig('thumbnail_max_width',300) + "px",
                 "font-family": this.font
                 });
-        thumb.html( getConfig('thumbnail_font_test',
+        thumb.html( p.getConfig('thumbnail_font_test',
                     '+-1234567890, abcdefghijklmnopqrstuvwxyz, ABCDEFGHIJKLMNOPQRSTUVWXYZ, ?!.#$\\/"\'') );
 
         this.thumbnailOnLoad();
@@ -714,7 +453,7 @@ thumbnail: function()//{{{
 
 zoom: function (how)//{{{
 {
-    var orig = getConfig('font_size',16);
+    var orig = this.parent.getConfig('font_size',16);
 
     if ( !this.orig_height )
         this.orig_height = this.e.offsetHeight;
@@ -744,14 +483,14 @@ zoom: function (how)//{{{
 
     this.zoom_factor = z;
 
-    this._parent.zoomChanged(how,this.zoom_factor);
-    this._parent.center();
+    this.parent.zoomChanged(how,this.zoom_factor);
+    this.parent.center();
 
     // for firefox this.e.css("font-size") is "...px" not "pt"
-    this._parent.onUpdateStatus( this.e[0].style.fontSize, "fontsize" );
+    this.parent.onUpdateStatus( this.e[0].style.fontSize, "fontsize" );
 },//}}}
 
-updateHeight: function()//{{{
+updateHeight: function ()//{{{
 {
     // TODO: better solution
     var view = this;
@@ -759,10 +498,10 @@ updateHeight: function()//{{{
     e.hide();
     e.css("height","50%");
     window.setTimeout(
-        function(){
+        function (){
             e.show();
             e.css("height",e[0].scrollHeight+"px");
-            view._parent.center(e.innerHeight());
+            view.parent.center(e.innerHeight());
         },10);
 },//}}}
 
@@ -771,32 +510,342 @@ updateHeight: function()//{{{
  * \fn thumbnailOnLoad()
  * \brief event is triggered after thumbnail is loaded
  */
-thumbnailOnLoad: function(){},
+thumbnailOnLoad: function (){},
+}
+//}}}
+
+//! \class ViewFactory
+//{{{
+var ViewFactory = function (parent) {
+    this.init(parent);
+};
+
+ViewFactory.prototype = {
+init: function (parent) {//{{{
+      this.parent = parent;
+},//}}}
+
+newView: function (filepath) {//{{{
+    if (filepath.search(/\.(png|jpg|gif)$/i) > -1)
+        return new ImageView(filepath, this.parent);
+    else if (filepath.search(/\.(ttf|otf)$/i) > -1)
+        return new FontView(filepath, this.parent);
+    else if (filepath.search(/\.(mp4|mov|flv|ogg|mp3|wav)$/i) > -1)
+        return new VideoView(filepath, this.parent);
+    else
+        return null;
+},//}}}
+}
+//}}}
+
+//! \class Viewer
+//{{{
+var Viewer = function (e, preview, getConfig) {
+    this.init(e, preview, getConfig);
+};
+
+Viewer.prototype = {
+init: function (e, preview, getConfig)//{{{
+{
+    var t, win;
+
+    t = this
+    this.e = e;
+    e.mousedown( function (ev){
+                if (ev.button === 0 && t.view) {
+                    var fn = t.view.type()+'OnMouseDown';
+                    if ( t[fn] ) {
+                        t[fn]();
+                        ev.preventDefault();
+                    }
+                }
+            } );
+
+    if (preview.length) {
+        this.preview = preview;
+        preview.mousedown( function (ev){
+                    if (ev.button === 0 && t.previewOnMouseDown) {
+                        t.previewOnMouseDown();
+                        ev.preventDefault();
+                    }
+                } );
+        win = preview.find(".window");
+        if (win.length) {
+            this.preview_win = win;
+            win.css("position","absolute");
+        }
+    }
+
+    this.zoom_state = getConfig('zoom',1);
+
+    this.getConfig = getConfig;
+
+    this.viewFactory = new ViewFactory(this);
+},//}}}
+
+zoom: function (how)//{{{
+{
+    var v = this.view;
+    if ( !v )
+        return;
+
+    if( v.type() === 'font' ) {
+        v.zoom(how);
+        return;
+    }
+
+    if (!how)
+        how = this.zoom_state;
+    else
+        this.zoom_state = how;
+
+    var ww, wh, w, h, z, zs;
+	ww = window.innerWidth;
+	wh = window.innerHeight;
+    w = v.orig_width;
+    h = v.orig_height;
+    z = v.zoom();
+    zs = this.getConfig('zoom_step', 0.125);
+
+    // determine zoom factor
+    switch(how) {
+    case "+":
+        if ( z*0.8 > zs )
+            z += zs;
+        else
+            // round to 3 decimal places
+            z = Math.round(1000*z*5/4)/1000;
+        break;
+    case "-":
+        if ( z*0.8 > zs )
+            z -= zs;
+        else
+            // round to 3 decimal places
+            z = Math.round(1000*z*4/5)/1000;
+        break;
+    case "fit":
+		if (w > ww || h > wh)
+			z = ( ww*h < wh*w ) ? ww/w : wh/h;
+		else
+			z = 1;
+        break;
+    case "fill":
+        z = ( ww*h < wh*w ) ? wh/h : ww/w;
+        break;
+    default:
+        z = how ? parseFloat(how) : 1;
+        break;
+    }
+
+    v.zoom(z);
+},//}}}
+
+zoomChanged: function (zoom_state,zoom_factor)//{{{
+{
+    var z;
+
+    switch(zoom_state) {
+    case "fit":
+    case "fill":
+        z = zoom_state;
+        break;
+    default:
+        z = zoom_factor;
+        break;
+    }
+
+    if ( this.zoom_state !== z ) {
+        this.zoom_state = z;
+        if (this.onZoomChanged) {
+            this.onZoomChanged(z);
+        }
+    }
+
+    if ( this.view.type() === "image" &&
+         ( window.innerHeight < this.view.e.innerHeight() ||
+           window.innerWidth < this.view.e.innerWidth() ) ) {
+        this.onTooBig();
+    } else {
+        this.hidePreview();
+    }
+},//}}}
+
+createPreview: function (filepath)//{{{
+{
+    var p = this.preview;
+    if (!p)
+        return;
+
+    var img = this.preview_img;
+
+    // remove preview if item is not an image
+    if ( this.view.type() !== "image" ) {
+        if (img) {
+            img.attr( "src", "" );
+        }
+        p.hide();
+        return;
+    }
+
+    if(!img) {
+        img = this.preview_img = $( document.createElement("img") );
+        img.appendTo(p);
+    }
+    img.attr( "src", esc(filepath) );
+    p.show();
+},//}}}
+
+updatePreview: function (force)//{{{
+{
+    var img, win;
+
+    img = this.preview_img;
+    if ( !img || !img.attr("src") )
+        return false;
+    else if ( !force && !this.preview.hasClass("focused") )
+		return true;
+
+    // highlights the part of the image in window
+    win = this.preview_win;
+    if (win) {
+        var imgw = img.innerWidth();
+        var imgh = img.innerHeight();
+        var ww = window.innerWidth;
+        var wh = window.innerHeight;
+        var w = this.view.width;
+        var h = this.view.height;
+        var doc = document.documentElement;
+        win.css({
+                "height": Math.floor( h<wh ? imgh : (imgh*wh/h) ) +"px",
+                "width":  Math.floor( w<ww ? imgw : (imgw*ww/w) ) +"px",
+                "top":    Math.floor( h<wh ? "0" : imgh*window.pageYOffset/doc.scrollHeight) +"px",
+                "left":   Math.floor( w<ww ? "0" : imgw*window.pageXOffset/doc.scrollWidth) +"px",
+              });
+    }
+
+    return true;
+},//}}}
+
+popPreview: function ()//{{{
+{
+    var preview, t;
+
+    if ( !this.updatePreview(true) )
+        return;
+
+    if (this.preview_t) clearTimeout(this.preview_t);
+
+    preview = this.preview;
+    preview.addClass("focused");
+
+    t = this;
+    this.preview_t = window.setTimeout(function (){preview.removeClass("focused");},
+            this.getConfig('pop_preview_delay',1000));
+},//}}}
+
+hidePreview: function ()//{{{
+{
+    var p = this.preview;
+    if (!p)
+        return;
+
+    if (this.preview_t) {
+        clearTimeout(this.preview_t);
+        p.removeClass("focused");
+    }
+},//}}}
+
+center: function ()//{{{
+{
+    // center item in window
+    var h = this.view.e.innerHeight();
+    var newtop = h ? ( window.innerHeight - this.view.e.innerHeight() )/2 : 0;
+    this.view.e.css("margin-top",(newtop > 0 ? newtop : 0) + "px");
+},//}}}
+
+show: function (filepath)//{{{
+{
+    var v;
+
+    if (this.view)
+        this.view.remove();
+
+    v = this.view = this.viewFactory.newView(filepath);
+    if ( v ) {
+        v.show();
+        this.createPreview(filepath);
+    }
+    else if (this.onError)
+        this.onError("Unknown format: \""+filepath+"\"");
+},//}}}
+
+width: function ()//{{{
+{
+    return this.view ? this.view.width : 0;
+},//}}}
+
+height: function ()//{{{
+{
+    return this.view ? this.view.height : 0;
+},//}}}
+
+/** events */
+/** \fn onUpdateStatus(msg,class_name)
+ * \brief event is triggered after changing status of view/viewer
+ * \param msg status text
+ * \param class_name class of status text ("loading", "error" or custom)
+ *
+ */
+onUpdateStatus: function (msg,class_name) {},
+
+/** \fn onLoad()
+ * \brief event is triggered after item is successfully loaded
+ */
+onLoad: function () {},
+
+/** \fn onError(error_msg);
+ * \brief event is triggered after error
+ */
+onError: function (error_msg) {},
+
+/** \fn onZoomChanged(zoom_state)
+ * \brief event is triggered after zoom is changed
+ * \param zoom_state "fit", "fill" or zoom factor (float)
+ */
+onZoomChanged: function (zoom_state) {},
+
+/** \fn (preview|image|font|video|...)OnMouseDown()
+ */
+
+onTooBig: function () {},
 }
 //}}}
 
 //! \class ItemList
 //{{{
-var ItemList = function(e,items) { this.init(e,items); };
+var ItemList = function (e, items, getConfig) { this.init(e, items, getConfig); };
 
 ItemList.prototype = {
-init: function (e,items)//{{{
+init: function (elem, items, getConfig)//{{{
 {
-    // itemlist element
-    this.e = e;
-    if (!this.e)
-        return null;
+    var t, item, e;
 
-    e.mousedown( function(ev){
-                if (ev.button == 0) {
-                    signal("view_mouse_down")
+    // itemlist element
+    if (!elem)
+        return null;
+    this.e = elem;
+
+    // mouse down
+    var t = this;
+    elem.mousedown( function (ev){
+                if (ev.button === 0 && t.onMouseDown) {
+                    t.onMouseDown();
                     ev.preventDefault();
                 }
             } );
 
     // item template element
-    var item = this.template = e.find(".item");
-    var e;
+    item = this.template = elem.find(".item");
     if (this.template.length) {
         e = item.find(".itemident");
         if (e.length)
@@ -822,14 +871,16 @@ init: function (e,items)//{{{
     this.lastpos = [0,0];
 
     this.viewFactory = new ViewFactory(this);
+
+    this.getConfig = getConfig;
 },//}}}
 
-get: function(i)//{{{
+get: function (i)//{{{
 {
     return this.items[i];
 },//}}}
 
-hidden: function()//{{{
+hidden: function ()//{{{
 {
     return !this.e.hasClass("focused");
 },//}}}
@@ -841,9 +892,7 @@ size: function ()//{{{
 
 addThumbnails: function (i)//{{{
 {
-    if ( i == null )
-        i = n-1;
-    if ( i<0 || i>=len )
+    if ( i<0 || i>=len() )
         return;
 
     items = this.items;
@@ -855,7 +904,7 @@ addThumbnails: function (i)//{{{
         var thumb = this.viewFactory.newView(filename);
 
         var t = this;
-        thumb.thumbnailOnLoad = function(error) {
+        thumb.thumbnailOnLoad = function (error) {
 			if (error === true)
 				thumb_e.remove();
             else
@@ -897,7 +946,7 @@ newItem: function (i,props)//{{{
 	// set .thumbnail_width max-width
     e = this.e_w;
 	if (e)
-		e.css("max-width",w>100 ? w+20 : getConfig('thumbnail_max_width',300)+'px');
+		e.css("max-width",w>100 ? w+20 : this.getConfig('thumbnail_max_width',300)+'px');
 
     // filename
     createPathElements(
@@ -926,7 +975,7 @@ newItem: function (i,props)//{{{
 
     // remove empty elements
     item.find('.remove_if_empty').each(
-            function() {
+            function () {
                 var t = $(this);
                 if( !t.html() )
                     t.remove();
@@ -934,15 +983,15 @@ newItem: function (i,props)//{{{
 
     // mouse click event
     var t = this;
-    item.mouseup( function(ev){
-                if (ev.button == 0 && !scrolling)
+    item.mouseup( function (ev){
+                if (ev.button === 0 && !scrolling)
                     t.onSubmit(i);
             } );
 
     return item;
 },//}}}
 
-appendItems: function()//{{{
+appendItems: function ()//{{{
 {
     var e = this.e;
     var ls = this.ls;
@@ -951,7 +1000,7 @@ appendItems: function()//{{{
     // avoid changing the document each time item is added
     e.css("display","none");
 
-    for(var i=0; i<len; ++i) {
+    for(var i=0; i<len(); ++i) {
         var item = this.newItem(i+1,ls[i]);
         item.appendTo(e);
         items.push(item);
@@ -969,7 +1018,7 @@ toggle: function ()//{{{
 
         // add thumbnails
         this.thumbs = [];
-        this.addThumbnails();
+        this.addThumbnails(n-1);
 
         this.template.remove();
 
@@ -1071,17 +1120,17 @@ listVertically: function (direction)//{{{
     var y = Math.floor(pos.top + sel.innerHeight()/2);
     var ny
     var dist = 99999; // smallest X distance
-    var newdist;
+    var newdist = null;
 
     // select item on next/previous line,
     // item has smallest X distance from curently selected
-    var i;
+    var i,l;
     var it = this.items;
-    for( i = this.selected+direction, len = it.length; i < len && i >= 0; i+=direction) {
+    for( i = this.selected+direction, l = it.length; i < l && i >= 0; i+=direction) {
         var e = it[i];
         pos = e.position();
 
-        if ( newdist == null ) {
+        if ( newdist === null ) {
             ny = pos.top + e.innerHeight()/2;
             if ( (direction > 0 && ny-y < 10) || (direction < 0 && y-ny < 10) )
                 continue;
@@ -1097,7 +1146,7 @@ listVertically: function (direction)//{{{
     }
 
     // no new line encountered
-    if (newdist == null)
+    if (newdist === null)
         return;
 
     // select new
@@ -1140,7 +1189,7 @@ listPageDown: function ()//{{{
 {
     var min_pos = this.selection.offset().top+window.innerHeight;
     var i = this.selected;
-    while ( ++i < len && min_pos > this.get(i).offset().top );
+    while ( ++i < len() && min_pos > this.get(i).offset().top );
     this.selectItem(i-1);
 },//}}}
 
@@ -1151,19 +1200,23 @@ listPageUp: function ()//{{{
     while ( --i > 0 && min_pos < this.get(i).offset().top );
     this.selectItem(i+1);
 },//}}}
+
+/** events */
+onMouseDown: null,
 }
 //}}}
 
 //! \class Info
 //{{{
-var Info = function(e) {
-    this.init(e);
+var Info = function (e, getConfig) {
+    this.init(e, getConfig);
 };
 
 Info.prototype = {
-init: function(e)//{{{
+init: function (e, getConfig)//{{{
 {
     this.e = e;
+    this.getConfig = getConfig;
 
 	this.itemlink = e.find(".itemlink");
 
@@ -1184,15 +1237,15 @@ updateProgress: function ()//{{{
     if ( !this.progress )
         return;
 
-    var r = getConfig('progress_radius',22);
-    var w1 = getConfig('progress_width',8);
-    var w2 = getConfig('progress_inner_width',8);
-    var shadow = getConfig('progress_shadow',10);
-    var blur = getConfig('progress_blur',10);
+    var r = this.getConfig('progress_radius',22);
+    var w1 = this.getConfig('progress_width',8);
+    var w2 = this.getConfig('progress_inner_width',8);
+    var shadow = this.getConfig('progress_shadow',10);
+    var blur = this.getConfig('progress_blur',10);
 
     var ctx = this.progress.getContext("2d");
     var pi = 3.1415;
-    var angle = 2*pi*this.n/this.len;
+    var angle = 2*pi*this.n/len();
     var x = r+blur/2;
     var y = r+blur/2;
 
@@ -1207,7 +1260,7 @@ updateProgress: function ()//{{{
     ctx.shadowBlur = shadow;
     ctx.shadowColor = "black";
     ctx.lineWidth = w1;
-    ctx.strokeStyle = getConfig('progress_bg',"rgba(200,200,200,0.4)");
+    ctx.strokeStyle = this.getConfig('progress_bg',"rgba(200,200,200,0.4)");
     ctx.moveTo(x, y);
     ctx.beginPath();
     ctx.arc(x, y, r-w1/2, 0, 2*pi, false);
@@ -1215,9 +1268,9 @@ updateProgress: function ()//{{{
 
     // filled part of pie
     ctx.shadowBlur = blur;
-    ctx.shadowColor = getConfig('progress_fg',"rgba(255,200,0,0.8)");
+    ctx.shadowColor = this.getConfig('progress_fg',"rgba(255,200,0,0.8)");
     ctx.lineWidth = w2;
-    ctx.strokeStyle = getConfig('progress_fg',"rgba(255,200,0,0.8)");
+    ctx.strokeStyle = this.getConfig('progress_fg',"rgba(255,200,0,0.8)");
     ctx.moveTo(x, y);
     ctx.beginPath();
     ctx.arc(x, y, r-w1/2, -pi/2, angle-pi/2, false);
@@ -1275,12 +1328,11 @@ name: function ()//{{{
     return this.href;
 },//}}}
 
-updateInfo: function (href,i,len,properties)//{{{
+updateInfo: function (href,i,properties)//{{{
 {
     this.href = href;
     this.n = i;
-    this.len = len;
-	this.countermax.html(len);
+	this.countermax.html( len() );
     this.counternow.html(i);
     this.itempath = esc(href);
 
@@ -1297,11 +1349,11 @@ popInfo: function ()//{{{
     this.e.addClass("focused");
 
     var t = this;
-    this.info_t = window.setTimeout(function(){t.e.removeClass("focused");},
-            getConfig('pop_info_delay',4000));
+    this.info_t = window.setTimeout(function (){t.e.removeClass("focused");},
+            this.getConfig('pop_info_delay',4000));
 },//}}}
 
-hidden: function()//{{{
+hidden: function ()//{{{
 {
     return !this.e.hasClass("focused");
 },//}}}
@@ -1311,41 +1363,82 @@ hidden: function()//{{{
  * \brief event is triggered after selecting item (pressing enter or mouse click)
  * \param n identification of submitted item
  */
-onSubmit: function(n){},
+onSubmit: function (n){},
 }
+//}}}
+//}}}
+
+// Global variables//{{{
+// reset user configuration
+var config = {};
+var configStrict = {};
+var controls = {};
+var events = {};
+var ls = {}; // gallery items
+
+// url variables
+var hash;
+var vars;
+
+// page number
+var n;
+// number of viewed images witout page refresh
+var count_n;
+
+// body
+var b;
+
+// mouse position
+var mouseX, mouseY;
+// drag scrolling
+var scrolling = false;
+
+// objects (created if appropriate HTML element is available)
+var itemlist, info, viewer, help;
+
+// image cache
+var preloaded = null;
+
+// URL hash timeout
+var url_t;
+
+// slideshow timer
+var slideshow_t;
+
+var keys = {};
+var keydesc;
+var modes = {any:"Any", viewer:"Viewer", itemlist:"Item List", help:"Help", slideshow: "Slideshow"};
+var mode_stack = [modes.viewer];
 //}}}
 
 // HELPER FUNCTIONS//{{{
-userAgents = {unknown:0, webkit:1, opera:2};
-
-function mode ()//{{{
-{
-    return _mode[_mode.length-1];
-}//}}}
-
-function esc (str) {//{{{
-	// don't escape protocols (i.e. "http://" -> "http%3A//"
-    if (str.search(/^\w+:\/\//) > -1)
-		return encodeURI(str);
-	else
-		return escape(str);
-}//}}}
+var userAgents = {unknown:0, webkit:1, opera:2};
 
 function userAgent ()//{{{
 {
-if ( navigator.userAgent.indexOf("WebKit") != -1 )
-    return userAgents.webkit;
-if ( navigator.userAgent.indexOf("Opera") != -1 )
-    return userAgents.opera;
-else
-    return userAgents.unknown;
+    if ( navigator.userAgent.indexOf("WebKit") !== -1 )
+        return userAgents.webkit;
+    if ( navigator.userAgent.indexOf("Opera") !== -1 )
+        return userAgents.opera;
+    else
+        return userAgents.unknown;
+}//}}}
+
+function len ()//{{{
+{
+    return ls.length;
+}//}}}
+
+function mode ()//{{{
+{
+    return mode_stack[mode_stack.length-1];
 }//}}}
 
 function getConfig (name,default_value)//{{{
 {
     var x;
 
-    if ( (x = _config[name]) ||
+    if ( (x = configStrict[name]) ||
          (x = vars[name])    ||
          (x = config[name]) )
     {
@@ -1353,10 +1446,8 @@ function getConfig (name,default_value)//{{{
         switch( typeof(default_value) ) {
             case "string":
                 return ""+x;
-            break;
             case "number":
                 return parseFloat(x);
-            break;
             default:
                 return x;
         }
@@ -1366,14 +1457,14 @@ function getConfig (name,default_value)//{{{
 }//}}}
 
 function createPathElements(dir_e,filename_e,ext_e,path) {//{{{
-    var m;
+    var m, dir, filename;
 
     m = path.lastIndexOf("/");
-    if (m==-1)
+    if ( m === -1 )
         m  = path.lastIndexOf("\\");
 
     // directory
-    var dir = path.substring(0,m);
+    dir = path.substring(0,m);
     if (dir_e.length) {
         dir = dir.replace(/^items\/?/,'');
         if (dir) {
@@ -1384,7 +1475,7 @@ function createPathElements(dir_e,filename_e,ext_e,path) {//{{{
             dir_e.hide();
     }
 
-    var filename = path.substring(m+1,path.length);
+    filename = path.substring(m+1,path.length);
 
     m = filename.lastIndexOf(".");
 
@@ -1399,67 +1490,33 @@ function createPathElements(dir_e,filename_e,ext_e,path) {//{{{
 
 function getPage (i)//{{{
 {
-    return i ? Math.min( Math.max(i,1), len ) : 1
+    return i ? Math.min( Math.max(i,1), len() ) : 1;
 }//}}}
 
-function go (i)//{{{
+function signal (sgn)//{{{
 {
-	var pg = getPage(i);
+    if (!events)
+        return;
 
-    n = vars['n'] = pg;
-
-    // TODO: fix memory leaks!!!
-    // reload window on every nth item
-    var r = getConfig('reload_every');
-    if (r) {
-        if (m > 0 && r && m%r == 0 && mode() != modes.slideshow) {
-            m = 0;
-            updateUrl();
-            location.reload();
-            return;
-        }
-        else
-            m += 1;
+	if ( getConfig("show_events", false) ) {
+		info.updateProperty("event: " + sgn);
+        popInfo();
     }
 
-    // hide item list and select current item
-    if ( itemlist ) {
-        if ( !itemlist.hidden() )
-            toggleList();
-        itemlist.selectItem(i-1);
-    }
 
-	var item = this.ls[i-1];
-	var itemname, props;
-	if (item instanceof Array) {
-		itemname = item[0];
-		props = item[1];
-	}
-	else
-		var itemname = item;
-
-    updateInfo(itemname,n,len,props);
-
-    updateTitle();
-	updateUrl(1000);
-	updateClassName();
-
-    viewer.show(itemname);
-
-    window.scrollTo(0,0);
-
-    signal("go");
-    if (n==1)
-        signal("first");
-    if (n==len)
-        signal("last");
+    var fn = events[sgn];
+    var t = typeof(fn);
+    if (t === "string")
+        eval(fn);
+    else if (t === "function")
+        fn();
 }//}}}
 
-function updateInfo(itemname,n,len,props) {//{{{
+function updateInfo(itemname, n, props) {//{{{
     if(!info)
         return;
 
-    info.updateInfo(itemname,n,len,props);
+    info.updateInfo(itemname, n, props);
     signal("info_update");
 }//}}}
 
@@ -1468,7 +1525,7 @@ function updateTitle ()//{{{
     var t = getConfig( 'title_fmt', '%{title}: %{now}/%{max} "%{filename}"' );
     t=t.replace( /%{title}/g, (title ? title : "untitled") );
     t=t.replace( /%{now}/g, n );
-    t=t.replace( /%{max}/g, len );
+    t=t.replace( /%{max}/g, len() );
     t=t.replace( /%{filename}/g, info.name() );
     document.title = t;
 }//}}}
@@ -1476,15 +1533,16 @@ function updateTitle ()//{{{
 function getUrlVars()//{{{
 {
 	var map = {};
-	var parts = location.hash.replace(/[#&]+([^=&]+)=([^&]*)/gi, function(m,key,value) {
-		map[key] = value;
-	});
+	var parts = location.hash.replace(/[#&]+([^=&]+)=([^&]*)/gi,
+        function (m,key,value) {
+		    map[key] = value;
+	    });
 	return map;
 }//}}}
 
 function updateClassName()//{{{
 {
-	b.className = "mode" + mode() + " item" + n + (n == len ? " last" : "")
+	b.className = "mode" + mode() + " item" + n + (n === len() ? " last" : "")
 }//}}}
 
 function updateUrl (timeout)//{{{
@@ -1494,12 +1552,12 @@ function updateUrl (timeout)//{{{
     for (var key in vars)
         hash += (hash ? "&" : "") + key + "=" + vars[key];
 
-    if ( hash != location.hash ) {
+    if ( hash !== location.hash ) {
         // if url is updated immediately, user cannot browse images rapidly
 		if (url_t)
 			clearTimeout(url_t);
 		if (timeout)
-            url_t = window.setTimeout( 'if( hash == "'+hash+'" ) location.hash = "#'+hash+'";',timeout );
+            url_t = window.setTimeout( 'if( hash === "'+hash+'" ) location.hash = "#'+hash+'";',timeout );
 		else
 			location.hash = "#"+hash;
     }
@@ -1507,7 +1565,7 @@ function updateUrl (timeout)//{{{
 
 function preloadImages()//{{{
 {
-    if (preloaded == null) {
+    if (preloaded === null) {
         // don't preload images when started
         preloaded = {};
         return;
@@ -1517,7 +1575,7 @@ function preloadImages()//{{{
     var num = maxnum - (n+2) % maxnum;
 
     var new_preloaded = {};
-    var end = Math.min(n+num,len);
+    var end = Math.min( n+num, len() );
     var begin = Math.max(n-maxnum+num+1,0);
     for(var i = begin; i < n; ++i)
         new_preloaded[i] = preloaded[i];
@@ -1529,7 +1587,7 @@ function preloadImages()//{{{
 			var item = this.ls[i];
             var filename = item instanceof Array ? item[0] : item;
             var view = ViewFactory.prototype.newView(filename);
-            if (!view || view.type() != "image")
+            if (!view || view.type() !== "image")
                 continue;
 
             // create image
@@ -1550,9 +1608,9 @@ function toggleList()//{{{
     if (itemlist) {
         itemlist.toggle();
         if ( itemlist.hidden() )
-            _mode.pop();
-        else if ( _mode[0] != modes.itemlist )
-            _mode.push(modes.itemlist);
+            mode_stack.pop();
+        else if ( mode_stack[0] !== modes.itemlist )
+            mode_stack.push(modes.itemlist);
 		updateClassName();
     }
 }//}}}
@@ -1590,20 +1648,20 @@ function scroll (x,y,absolute)//{{{
 
     var newx = window.pageXOffset;
     var newy = window.pageYOffset;
-    if ( newy != oldy ) {
+    if ( newy !== oldy ) {
         signal("scroll");
 
-        if (newy == 0)
+        if (newy === 0)
             signal("top");
         if (newy+window.innerHeight >= document.documentElement.scrollHeight)
             signal("bottom");
 
         return true
     }
-	else if ( newx != oldx ) {
+	else if ( newx !== oldx ) {
         signal("scroll");
 
-        if (newx == 0)
+        if (newx === 0)
             signal("leftmost");
         if (newx+window.innerWidth >= document.documentElement.scrollWidth)
             signal("rightmost");
@@ -1614,7 +1672,61 @@ function scroll (x,y,absolute)//{{{
         return false;
 }//}}}
 
-function zoom(how)
+function go (i)//{{{
+{
+    var pg, r, item, itemname, props;
+
+    pg = getPage(i);
+
+    n = vars.n = pg;
+
+    // TODO: fix memory leaks!!!
+    // reload window on every nth item
+    r = getConfig('reload_every');
+    if (r) {
+        if (count_n > 0 && r && count_n%r === 0 && mode() !== modes.slideshow) {
+            count_n = 0;
+            updateUrl();
+            location.reload();
+            return;
+        }
+        else
+            count_n += 1;
+    }
+
+    // hide item list and select current item
+    if ( itemlist ) {
+        if ( !itemlist.hidden() )
+            toggleList();
+        itemlist.selectItem(i-1);
+    }
+
+	item = ls[i-1];
+	if (item instanceof Array) {
+		itemname = item[0];
+		props = item[1];
+	}
+	else
+		itemname = item;
+
+    updateInfo(itemname, n, len(), props);
+
+    updateTitle();
+	updateUrl(1000);
+	updateClassName();
+
+    viewer.show(itemname);
+
+    window.scrollTo(0,0);
+
+    signal("go");
+    if ( n === 1 )
+        signal("first");
+    if ( n === len() )
+        signal("last");
+}//}}}
+
+function zoom(how)//{{{
 {
     if (!viewer)
         return false;
@@ -1622,7 +1734,7 @@ function zoom(how)
     viewer.zoom(how);
     signal("zoom");
     return true;
-}
+}//}}}
 
 function editText()//{{{
 {
@@ -1630,10 +1742,10 @@ function editText()//{{{
         return false;
 
     var v = viewer.view;
-    if (!v || v.type() != "font")
+    if (!v || v.type() !== "font")
         return false;
 
-    v.ee.focus();
+    v.e.focus();
     return true;
 }//}}}
 
@@ -1643,7 +1755,7 @@ function videoTogglePlay ()//{{{
         return false;
 
     var v = viewer.view;
-    if (!v || v.type() != "video")
+    if (!v || v.type() !== "video")
         return false;
 
     v.togglePlay();
@@ -1657,7 +1769,7 @@ function videoSpeed (d)//{{{
         return false;
 
     var v = viewer.view;
-    if (!v || v.type() != "video")
+    if (!v || v.type() !== "video")
         return false;
 
     if (d>0)
@@ -1685,7 +1797,7 @@ function videoSeek (how)//{{{
         return false;
 
     var v = viewer.view;
-    if (!v || v.type() != "video")
+    if (!v || v.type() !== "video")
         return false;
 
     v.seek(how);
@@ -1723,25 +1835,6 @@ function popPreview ()//{{{
     return true;
 }//}}}
 
-function signal (sgn)//{{{
-{
-    if (!events)
-        return;
-
-	if ( getConfig("show_events", false) ) {
-		info.updateProperty("event: " + sgn);
-        popInfo();
-    }
-
-
-    var fn = events[sgn];
-    var t = typeof(fn);
-    if (t == "string")
-        eval(fn);
-    else if (t == "function")
-        fn();
-}//}}}
-
 //}}}
 
 // INTERACTION//{{{
@@ -1757,7 +1850,7 @@ keycodes[33] = "PageUp";
 keycodes[34] = "PageDown";
 keycodes[35] = "End";
 keycodes[36] = "Home";
-if ( userAgent() == userAgents.webkit ) {
+if ( userAgent() === userAgents.webkit ) {
     keycodes[96] =  "KP0";
     keycodes[97] =  "KP1";
     keycodes[98] =  "KP2";
@@ -1778,7 +1871,7 @@ if ( userAgent() == userAgents.webkit ) {
 
 function next ()//{{{
 {
-    if ( n == len )
+    if ( n === len() )
         return false;
 
     signal("next");
@@ -1788,7 +1881,7 @@ function next ()//{{{
 
 function prev ()//{{{
 {
-    if ( n == 1 )
+    if ( n === 1 )
         return false;
 
     signal("prev");
@@ -1821,16 +1914,16 @@ function keyPress (e)//{{{
     }
 
     // try keys in this mode or modes.any
-    var try_modes = [mode(),modes.any];
-    for (var i in try_modes) {
-        var k = keys[try_modes[i]];
+    var trymode_stacks = [mode(),modes.any];
+    for (var i in trymode_stacks) {
+        var k = keys[trymode_stacks[i]];
         if (!k) continue;
 
         var fn = k[keyname];
         var t = typeof(fn);
-        if (t == "string")
+        if (t === "string")
             eval(fn);
-        else if (t == "function")
+        else if (t === "function")
             fn();
         else
             continue;
@@ -1859,7 +1952,7 @@ function addKeys (newkeys, desc, fn, keymode)//{{{
 		var modifiers = k[i].toUpperCase().split("-");
 		var key = modifiers.pop();
 		// sort modifiers
-		modifiers = modifiers.map( function(x) {return x[0]} ).sort();
+		modifiers = modifiers.map( function (x) {return x[0]} ).sort();
 		key = modifiers.length ? modifiers.join("-")+"-"+key : key;
         ekeys[key] = fn;
 	}
@@ -1878,9 +1971,11 @@ var tt = 0;
 jQuery.extend( jQuery.easing,
 {
 easeOutCubic: function (x, t, b, c, d) {
+        // refresh preview every 30ms
         if ( t>tt ) {
-            tt += 50;
-            viewer.updatePreview();
+            tt = t+25;
+            if ( mode() === modes.viewer )
+                viewer.updatePreview();
         }
         return (t=t/1000-1)*t*t + 1;
     }
@@ -1920,7 +2015,7 @@ function dragScroll(t,p) {
         var vx = (dx[d]-mouseX)*accel;
         var vy = (dy[d]-mouseY)*accel;
 
-        tt = mode() == modes.viewer ? 50 : 1000;
+        tt = mode() === modes.viewer ? 50 : 1000;
         $('html,body').animate({
             scrollLeft: window.pageXOffset+vx+"px",
             scrollTop: window.pageYOffset+vy+"px"},
@@ -1932,8 +2027,10 @@ function dragScroll(t,p) {
 
     function continueDragScroll(e) {
         scrolling = true;
-		mouseX = e.clientX;
-		mouseY = e.clientY;
+        if(e) {
+            mouseX = e.clientX;
+            mouseY = e.clientY;
+        }
 
         var t = new Date().getTime();
 		//info.updateProperty( (oldy-mouseY)/(t-start) );
@@ -1962,7 +2059,7 @@ function dragScroll(t,p) {
 
 function viewerOnLoad()//{{{
 {
-    if ( mode() == modes.slideshow )
+    if ( mode() === modes.slideshow )
         viewer.e.fadeIn(1000);
     preloadImages();
 }//}}}
@@ -1973,25 +2070,34 @@ function createItemList()//{{{
     if (!e.length)
         return;
 
-    itemlist = new ItemList(e,ls);
+    itemlist = new ItemList(e, ls, getConfig);
 
     itemlist.onSubmit = go;
+    itemlist.onMouseDown = function () {signal("itemlist_mouse_down")};
 }//}}}
 
-function createViewer(e,preview,info)//{{{
+function createViewer(e, preview, info)//{{{
 {
-    viewer = new Viewer(e,preview,vars['zoom']);
+    viewer = new Viewer(e, preview, getConfig);
     viewer.onLoad = viewerOnLoad;
+    viewer.imageOnMouseDown   = function () {signal("image_mouse_down")};
+    viewer.videoOnMouseDown   = function () {signal("video_mouse_down")};
+    viewer.fontOnMouseDown    = function () {signal("font_mouse_down")};
+    viewer.previewOnMouseDown = function () {signal("preview_mouse_down")};
+    viewer.onTooBig           = function () {signal("too_big")};
 
     if (info) {
-        viewer.onUpdateStatus = function(msg,class_name) { info.updateProperty( msg, class_name ); }
-        viewer.onError = function(msg) { info.updateProperty( msg, "error" ); }
+        viewer.onUpdateStatus = function (msg,class_name) { info.updateProperty( msg, class_name ); }
+        viewer.onError = function (msg) {
+            info.updateProperty( msg, "error" );
+            signal("error");
+        }
     }
 
-    viewer.onZoomChanged = function(state) {
-        if (vars['zoom'] == state)
+    viewer.onZoomChanged = function (state) {
+        if (vars['zoom'] === state)
             return;
-        if (state != 1)
+        if (state !== 1)
             vars['zoom'] = state;
         else if ( vars['zoom'] )
             delete vars['zoom'];
@@ -2000,8 +2106,8 @@ function createViewer(e,preview,info)//{{{
 
     if ( preview.length ) {
         $('html,body').scroll(
-                function(){
-                    if ( mode() == modes.viewer )
+                function (){
+                    if ( mode() === modes.viewer )
                         viewer.updatePreview();
                 }
         );
@@ -2011,7 +2117,7 @@ function createViewer(e,preview,info)//{{{
 function createNavigation ()//{{{
 {
     // keyboard
-    if ( userAgent() == userAgents.webkit )
+    if ( userAgent() === userAgents.webkit )
         window.onkeydown = keyPress;
     else
         window.onkeypress = keyPress;
@@ -2157,11 +2263,11 @@ function toggleHelp()//{{{
     if ( help.length ) {
         if ( help.hasClass("focused") ) {
             help.removeClass("focused");
-            _mode.pop();
+            mode_stack.pop();
         }
         else {
             help.addClass("focused");
-            _mode.push(modes.help);
+            mode_stack.push(modes.help);
         }
 		updateClassName();
     }
@@ -2178,10 +2284,10 @@ function onResize()//{{{
 
 function exit_slideshow()//{{{
 {
-    if ( mode() != modes.slideshow )
+    if ( mode() !== modes.slideshow )
         return;
 
-    _mode.pop()
+    mode_stack.pop()
     if (slidedhow_t)
         clearTimeout(slidedhow_t);
 }//}}}
@@ -2189,10 +2295,10 @@ function exit_slideshow()//{{{
 function slideshow()//{{{
 {
     zoom('fit');
-    if ( mode() != modes.slideshow )
-        _mode.push(modes.slideshow);
-    slidedhow_t = window.setTimeout( function(){
-                viewer.e.fadeOut( 1000, function() {next()} );
+    if ( mode() !== modes.slideshow )
+        mode_stack.push(modes.slideshow);
+    slidedhow_t = window.setTimeout( function (){
+                viewer.e.fadeOut( 1000, function () {next()} );
                 slideshow();
             }, getConfig('slideshow_delay', 8000) );
 }//}}}
@@ -2201,16 +2307,21 @@ function onLoad()//{{{
 {
     var e;
 
-	if (len == 0) {
+	if ( len() === 0 ) {
 		alert("No items in gallery!");
 		return;
 	}
 
     b = document.getElementsByTagName("body")[0];
 
+    // get URL variables
+    vars = getUrlVars();
+    n = getPage( getConfig('n',0) );
+    count_n = 0;
+
     // capture mouse position
     mouseX = mouseY = 0;
-    $(document).mousemove(function(e){
+    $(document).mousemove(function (e){
             mouseX = e.clientX;
             mouseY = e.clientY;
             });
@@ -2224,7 +2335,7 @@ function onLoad()//{{{
     // info
     e = $('#info');
     if (e)
-        info = new Info(e);
+        info = new Info(e, getConfig);
 
     // viewer
     e = $('#canvas');
@@ -2235,7 +2346,7 @@ function onLoad()//{{{
     window.onresize = onResize;
 
     // browser with sessions: update URL when browser window closed
-    b.onbeforeunload = function() { updateUrl(); };
+    b.onbeforeunload = function () { updateUrl(); };
 
     // navigation
     createNavigation();
@@ -2245,49 +2356,4 @@ function onLoad()//{{{
     if ( getConfig('slideshow') )
         slideshow();
 }//}}}
-
-// reset user configuration
-var config = {};
-var _config = {};
-var controls = {};
-var events={};
-
-// number of items in gallery
-const len = ls ? ls.length : 0;
-
-// url variables
-var hash;
-var vars = getUrlVars();
-
-// page number
-var n = getPage( getConfig('n',0) );
-var m = 0;
-
-// zoom
-const zoom_step = getConfig('zoom_step',0.125);
-
-// body
-var b;
-
-// mouse position
-var mouseX, mouseY;
-// drag scrolling
-var scrolling = false;
-
-// objects (created if appropriate HTML element is available)
-var itemlist, info, viewer, help;
-
-// image cache
-var preloaded = null;
-
-// URL hash timeout
-var url_t;
-
-// slideshow timer
-var slideshow_t;
-
-var keys = {};
-var keydesc;
-var modes = {any:"Any", viewer:"Viewer", itemlist:"Item List", help:"Help", slideshow: "Slideshow"};
-var _mode = [modes.viewer];
 
