@@ -24,7 +24,9 @@ re_img  = re.compile('\.(jpg|png|gif|svg)$',re.I)
 re_font = re.compile('\.(otf|ttf)$',re.I)
 re_vid = re.compile('\.(mp4|mov|flv|ogg|mp3|wav)$',re.I)
 re_remote = re.compile('^\w+://',re.I)
-re_fontname = re.compile('[^a-zA-Z0-9_ ]')
+re_fontname = re.compile('[^a-zA-Z0-9_]')
+
+local = False
 
 def copy(src, dest):#{{{
 	if os.path.isdir(src):
@@ -41,7 +43,7 @@ except:
 	cp = copy
 
 def escape(s):#{{{
-	return s.replace('\\','\\\\').replace('"','\\"')
+	return s.replace('\\','/').replace('"','\\"')
 #}}}
 
 def usage():#{{{
@@ -71,11 +73,24 @@ options:
                               (default: %s)
     -c, --copy              copy files instead of creating symbolic links
     -f, --force             overwrites existing gallery
+    -l, --local             don't copy or create links to gallery items,
+                            browse items locally, i.e. protocol is "file://"
 
     -r 0, --resolution=0    don't generate thumbnails
     -u "", --url=""         don't launch web browser
 """	% (sys.argv[0], title, gdir, d, url, resolution) )
 #}}}
+
+def dirname(filename):
+	return os.path.dirname(filename).replace(':','_')
+
+def path(filename, dir='items'):
+	global local
+
+	if local:
+		return 'file://'+os.path.abspath(filename).replace('\\','/')
+	else:
+		return dir+'/'+filename.replace(':',"_").replace('\\','/')
 
 def walk(root):#{{{
 	if os.path.isdir(root):
@@ -101,16 +116,16 @@ def launch_browser(url):#{{{
 #}}}
 
 def parse_args(argv):#{{{
-	global title, resolution, gdir, url, d, cp, force
+	global title, resolution, gdir, url, d, cp, force, local
 
 	try:
-		opts, args = getopt.getopt(argv[1:], "ht:r:d:u:cf",
-				["help", "title=", "resolution=", "directory=", "url=","template=","copy","force"])
+		opts, args = getopt.getopt(argv[1:], "ht:r:d:u:cfl",
+				["help", "title=", "resolution=", "directory=", "url=","template=","copy","force","local"])
 	except getopt.GetoptError:
 		usage()
 		sys.exit(2)
 
-	newurl = ""
+	newurl = None
 	for opt, arg in opts:
 		if opt in ("-h", "--help"):
 			usage()
@@ -130,13 +145,18 @@ def parse_args(argv):#{{{
 				exit("ERROR: Resolution must be single number!")
 		elif opt in ("-c", "--copy"):
 			cp = copy
+		elif opt in ("-l", "--local"):
+			local = True
 		elif opt in ("-f", "--force"):
 			force = True
 
 	try:    gdir = gdir % title
 	except: pass
 
-	url = newurl and newurl or "file://"+ os.path.abspath(gdir) + "/index.html"
+	if newurl != None:
+		url = newurl
+	else:
+		url = "file://"+ os.path.abspath(gdir) + "/index.html"
 
 	try:    url = url % title
 	except: pass
@@ -175,7 +195,10 @@ def prepare_gallery(d,gdir,force):#{{{
 				if not (os.path.islink(f) or force):
 					exit(rm_error)
 			shutil.rmtree(itemdir)
-		os.mkdir(itemdir)
+
+		# omit item directory when creating local gallery
+		if not local:
+			os.mkdir(itemdir)
 
 		shutil.copyfile(d+S+"config.js", gdir+S+"config.js")
 	except:
@@ -200,7 +223,8 @@ def addFont(fontfile,css):#{{{
 	except Exception as e:
 		print("ERROR: "+str(e)+" (file: \""+fontfile+"\")")
 
-	css.write("@font-face{font-family:items_"+re_fontname.sub("_",fontfile)+";src:url('items"+S+fontfile+"');}\n")
+	p = path(fontfile)
+	css.write("@font-face{font-family:"+re_fontname.sub("_",p)+";src:url('"+p+"');}\n")
 
 	return fontname
 #}}}
@@ -208,7 +232,7 @@ def addFont(fontfile,css):#{{{
 def itemline(filename,alias=None,width=None,height=None):#{{{
 	# filename
 	# TODO: escape double quotes
-	line = '"' + ( is_local(filename) and ("items"+S+filename) or filename ) + '"'
+	line = '"' + ( is_local(filename) and path(filename) or filename ) + '"'
 
 	if alias or width:
 		# alias
@@ -258,10 +282,11 @@ def prepare_html(template,itemfile,css,gdir,files):#{{{
 
 			if isimg or isfont or isvid:
 				if is_local(f):
-					fdir = imgdir+S+os.path.dirname(f)
+					fdir = imgdir+S+dirname(f)
 					if not os.path.isdir(fdir):
 						os.makedirs(fdir)
-					cp( abs_f, fdir +S+ os.path.basename(f) )
+					if not local:
+						cp( abs_f, fdir +S+ os.path.basename(f) )
 
 				# if file is font: create font-face line in css
 				alias = ""
@@ -283,8 +308,9 @@ def prepare_html(template,itemfile,css,gdir,files):#{{{
 def create_thumbnail(filename, resolution, outfilename):#{{{
 	from PIL import Image
 
+	print(filename,outfilename)
 	# create directory for output file
-	d = os.path.dirname(outfilename)
+	d = dirname(outfilename).replace(':','_')
 	if not os.path.exists(d):
 		os.makedirs(d)
 
@@ -302,6 +328,8 @@ def create_thumbnail(filename, resolution, outfilename):#{{{
 #}}}
 
 def create_thumbnails(items, imgdir, thumbdir, resolution, itemfile):#{{{
+	global local
+
 	# number of images
 	n = sum( 1 for _ in filter(re_img.search,items.keys()) )
 	if n == 0:
@@ -320,7 +348,11 @@ def create_thumbnails(items, imgdir, thumbdir, resolution, itemfile):#{{{
 		w = h = 0
 		if re_img.search(f):
 			try:
-				w,h = create_thumbnail(imgdir+S+f, resolution, thumbdir+S+f)
+				if local:
+					w,h = create_thumbnail( os.path.abspath(f), resolution,
+							thumbdir +S+ path(f).replace(':','_') )
+				else:
+					w,h = create_thumbnail( os.path.abspath(f), resolution, path(f,thumbdir) )
 			except ImportError:
 				pass
 			except Exception as e:

@@ -111,7 +111,7 @@ Viewer: [
     ["Shift-Space", "scrollUp(window.innerHeight*9/10) || prev()",
             "Move window up/Previous gallery item"],
     ["x", editText, "Edit font text"],
-    [["KP1","1"], "go(len)", "Browse to last gallery item"],
+    [["KP1","1"], "go(len())", "Browse to last gallery item"],
     [["KP3","3"], "go(n+5)", "Browse to fifth next gallery item"],
     [["KP4","4","k","K","q","Q"], prev, "Previous"],
     [["KP6","6","Enter","j","J","e","E"], next, "Next"],
@@ -185,11 +185,12 @@ zoom: popInfo,
 too_big: popPreview,
 // image mouse down
 image_mouse_down: "dragScroll(viewer.e)",
+font_mouse_down: editText,
 // preview mouse down
 preview_mouse_down: "dragScroll(viewer.e, viewer.preview, true)",
 itemlist_mouse_down: "dragScroll(itemlist.e)",
 // item cannot be displayed of file missing
-error: "";
+error: "",
 }
 //}}}
 

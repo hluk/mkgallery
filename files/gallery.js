@@ -377,7 +377,7 @@ init: function (itempath, parent)//{{{
     this.path = itempath;
     this.parent = parent;
     this.zoom_factor = 1;
-    this.font = this.path.replace(/[^a-zA-Z0-9_ ]/g,"_");
+    this.font = this.path.replace(/[^a-zA-Z0-9_]/g,"_");
 	this.width = this.height = 0;
 },//}}}
 
@@ -1512,7 +1512,8 @@ function signal (sgn)//{{{
         fn();
 }//}}}
 
-function updateInfo(itemname, n, props) {//{{{
+function updateInfo(itemname, n, props) //{{{
+{
     if(!info)
         return;
 
@@ -1701,7 +1702,7 @@ function go (i)//{{{
         itemlist.selectItem(i-1);
     }
 
-	item = ls[i-1];
+	item = ls[pg-1];
 	if (item instanceof Array) {
 		itemname = item[0];
 		props = item[1];
@@ -1709,7 +1710,7 @@ function go (i)//{{{
 	else
 		itemname = item;
 
-    updateInfo(itemname, n, len(), props);
+    updateInfo(itemname, n, props);
 
     updateTitle();
 	updateUrl(1000);
