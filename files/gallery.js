@@ -15,10 +15,15 @@
  *
  */
 
+/*jslint evil: true, forin: true, onevar: true, undef: true, nomen: true, eqeqeq: true, plusplus: true, bitwise: true, newcap: true, immed: true, strict: true */
+/*global $, jQuery, window, document, navigator, location, history, escape, alert, Image*/
+
 "use strict";
-/*global $, window, document, navigator, escape*/
 
 // CLASSES//{{{
+// drag scrolling
+var scrolling = false;
+
 function esc (str) {//{{{
 	// don't escape protocols (i.e. "http://" -> "http%3A//"
     if (str.search(/^\w+:\/\//) > -1) {
@@ -113,7 +118,7 @@ type: function ()//{{{
 
 show: function ()//{{{
 {
-    var view, e, ee, use_canvas, use_embed;
+    var view, e, use_canvas, use_embed;
     view = this;
 
     if ( this.e ) {
@@ -940,6 +945,7 @@ init: function (elem, items, getConfig)//{{{
     }
 
     this.ls = items;
+    this.length = items.length;
     this.selected = 0;
 
     this.lastpos = [0,0];
@@ -959,15 +965,10 @@ hidden: function ()//{{{
     return !this.e.hasClass("focused");
 },//}}}
 
-size: function ()//{{{
-{
-    return this.items.length;
-},//}}}
-
 addThumbnails: function (i)//{{{
 {
     var items, thumb_e, item, filename, thumb, t;
-    if ( i<0 || i>=this.items.length ) {
+    if ( i<0 || i>=this.length ) {
         return;
     }
 
@@ -1050,11 +1051,9 @@ newItem: function (i,props)//{{{
 
     // user tags
     for (key in tags) {
-        if ( tags.hasOwnProperty(key) ) {
-            e = item.find("."+key);
-            if (e.length) {
-                e.html(tags[key]);
-            }
+        e = item.find("."+key);
+        if (e.length) {
+            e.html(tags[key]);
         }
     }
 
@@ -1080,15 +1079,16 @@ newItem: function (i,props)//{{{
 
 appendItems: function ()//{{{
 {
-    var e = this.e;
-    var ls = this.ls;
-    var items = this.items = [];
+    var e, ls, items, i, item;
+    e = this.e;
+    ls = this.ls;
+    items = this.items = [];
 
     // avoid changing the document each time item is added
     e.css("display","none");
 
-    for(var i=0; i<len(); ++i) {
-        var item = this.newItem(i+1,ls[i]);
+    for(i=0; i<this.length; i+=1) {
+        item = this.newItem(i+1,ls[i]);
         item.appendTo(e);
         items.push(item);
     }
@@ -1105,7 +1105,7 @@ toggle: function ()//{{{
 
         // add thumbnails
         this.thumbs = [];
-        this.addThumbnails(n-1);
+        this.addThumbnails(this.selected-1);
 
         this.template.remove();
 
@@ -1134,11 +1134,13 @@ resize: function ()//{{{
 
 ensureCurrentVisible: function ()//{{{
 {
-    var e = this.items[this.selected];
-    // TODO: scroll horizontally to item
-    var wx = window.pageXOffset;
+    var e, wx, wy, x, y;
 
-    var y = e.position().top;
+    e = this.items[this.selected];
+    // TODO: scroll horizontally to item
+    wx = window.pageXOffset;
+
+    y = e.position().top;
     if ( y < window.pageYOffset ) {
         window.scrollTo(wx,y);
     }
@@ -1148,9 +1150,9 @@ ensureCurrentVisible: function ()//{{{
         window.scrollTo(wx,y);
     }
 
-    var wy = window.pageYOffset;
+    wy = window.pageYOffset;
 
-    var x = e.position().left;
+    x = e.position().left;
     if ( x < window.pageXOffset ) {
         window.scrollTo(x,wy);
     }
@@ -1163,16 +1165,17 @@ ensureCurrentVisible: function ()//{{{
 
 updateSelection: function ()//{{{
 {
+    var e, pos;
     if ( this.hidden() ) {
         this.selection_needs_update = true;
     } else {
         this.selection_needs_update = false;
 
-        var e = this.items[this.selected];
+        e = this.items[this.selected];
 
         e.attr("id","selected");
 
-        var pos = e.offset();
+        pos = e.offset();
 
         // move selection cursor
         this.selection.css({
@@ -1204,20 +1207,20 @@ selectItem: function (i)//{{{
 
 listVertically: function (direction)//{{{
 {
-    var sel = this.items[this.selected];
-    var pos = sel.position();
-    var x = pos.left - window.pageXOffset + sel.innerWidth()/2;
-    var y = Math.floor(pos.top + sel.innerHeight()/2);
-    var ny
-    var dist = 99999; // smallest X distance
-    var newdist = null;
+    var sel, pos, x, y, ny, dist, newdist, i, it, e;
+
+    sel = this.items[this.selected];
+    pos = sel.position();
+    x = pos.left - window.pageXOffset + sel.innerWidth()/2;
+    y = Math.floor(pos.top + sel.innerHeight()/2);
+    dist = 99999; // smallest X distance
+    newdist = null;
 
     // select item on next/previous line,
     // item has smallest X distance from curently selected
-    var i,l;
-    var it = this.items;
-    for( i = this.selected+direction, l = it.length; i < l && i >= 0; i+=direction) {
-        var e = it[i];
+    it = this.items;
+    for( i = this.selected+direction; i < this.len && i >= 0; i+=direction) {
+        e = it[i];
         pos = e.position();
 
         if ( newdist === null ) {
@@ -1230,7 +1233,7 @@ listVertically: function (direction)//{{{
             break;
         }
 
-        var newdist = Math.abs( pos.left + e.innerWidth()/2 - x );
+        newdist = Math.abs( pos.left + e.innerWidth()/2 - x );
         if ( newdist > dist ) {
             break;
         }
@@ -1261,7 +1264,7 @@ listRight: function ()//{{{
 {
     // select next
     var i = this.selected+1;
-    if ( i >= this.items.length ) {
+    if ( i >= this.length ) {
         return;
     }
 
@@ -1283,22 +1286,30 @@ listLeft: function ()//{{{
 
 listPageDown: function ()//{{{
 {
-    var min_pos = this.selection.offset().top+window.innerHeight;
-    var i = this.selected;
-    while ( ++i < len() && min_pos > this.get(i).offset().top );
+    var min_pos, i;
+
+    min_pos = this.selection.offset().top+window.innerHeight;
+    i = this.selected+1;
+    while ( i < this.length && min_pos > this.get(i).offset().top ) {
+        i += 1;
+    }
     this.selectItem(i-1);
 },//}}}
 
 listPageUp: function ()//{{{
 {
-    var min_pos = this.selection.offset().top-window.innerHeight;
-    var i = this.selected;
-    while ( --i > 0 && min_pos < this.get(i).offset().top );
+    var min_pos, i;
+
+    min_pos = this.selection.offset().top-window.innerHeight;
+    i = this.selected;
+    while ( i > 0 && min_pos < this.get(i).offset().top ) {
+        i -= 1;
+    }
     this.selectItem(i+1);
 },//}}}
 
 /** events */
-onMouseDown: null,
+onMouseDown: null
 };
 //}}}
 
@@ -1331,21 +1342,23 @@ init: function (e, getConfig)//{{{
 
 updateProgress: function ()//{{{
 {
+    var r, w1, w2, shadow, blur, ctx, pi, angle, x, y;
+
     if ( !this.progress ) {
         return;
     }
 
-    var r = this.getConfig('progress_radius',22);
-    var w1 = this.getConfig('progress_width',8);
-    var w2 = this.getConfig('progress_inner_width',8);
-    var shadow = this.getConfig('progress_shadow',10);
-    var blur = this.getConfig('progress_blur',10);
+    r = this.getConfig('progress_radius',22);
+    w1 = this.getConfig('progress_width',8);
+    w2 = this.getConfig('progress_inner_width',8);
+    shadow = this.getConfig('progress_shadow',10);
+    blur = this.getConfig('progress_blur',10);
 
-    var ctx = this.progress.getContext("2d");
-    var pi = 3.1415;
-    var angle = 2*pi*this.n/len();
-    var x = r+blur/2;
-    var y = r+blur/2;
+    ctx = this.progress.getContext("2d");
+    pi = 3.1415;
+    angle = 2*pi*this.n/this.len;
+    x = r+blur/2;
+    y = r+blur/2;
 
     this.progress.setAttribute("width", r*2+blur);
     this.progress.setAttribute("height", r*2+blur);
@@ -1395,31 +1408,40 @@ updateItemTitle: function ()//{{{
 
 updateProperties: function (props)//{{{
 {
+    var oldprops, key;
+
     // clear old properties
-    var oldprops = this.props;
-    for (key in oldprops)
-        this.updateProperty(null,key);
+    oldprops = this.props;
+    while( oldprops.length ) {
+        this.updateProperty( null, oldprops.pop() );
+    }
 
     // new properties
-    for (var key in props)
+    for (key in props) {
         this.updateProperty(props[key],key);
+    }
 
 },//}}}
 
-updateProperty: function (status_msg,class_name)//{{{
+updateProperty: function (status_msg, class_name)//{{{
 {
-    var cls = class_name ? class_name : "msg";
-    var e = this.e.find( "." + cls );
+    var cls, e;
+
+    cls = class_name ? class_name : "msg";
+    e = this.e.find( "." + cls );
     if(e.length) {
         if( status_msg !== null ) {
             e.html(status_msg);
             e.show();
-        }
-        else
+        } else {
             e.hide();
+        }
     }
+
     // remember property so it can be removed later
-    this.props[cls] = 1;
+    if (status_msg !== null) {
+        this.props.push(cls);
+    }
 },//}}}
 
 name: function ()//{{{
@@ -1427,13 +1449,14 @@ name: function ()//{{{
     return this.href;
 },//}}}
 
-updateInfo: function (href,i,properties)//{{{
+updateInfo: function (href,i,len,properties)//{{{
 {
     this.href = href;
     this.n = i;
-	this.counter_max.html( len() );
+    this.len = len;
+	this.counter_max.html( len );
     this.counter_now.html(i);
-    this.counter_rem.html( len() - i );
+    this.counter_rem.html( len - i );
     this.itempath = esc(href);
 
     this.updateProgress();
@@ -1464,7 +1487,7 @@ hidden: function ()//{{{
  * \brief event is triggered after selecting item (pressing enter or mouse click)
  * \param n identification of submitted item
  */
-onSubmit: function (n){},
+onSubmit: function (n){}
 };
 //}}}
 //}}}
@@ -1476,6 +1499,7 @@ var configStrict = {};
 var controls = {};
 var events = {};
 var ls = {}; // gallery items
+var title;   // gallery title
 
 // url variables
 var hash;
@@ -1491,8 +1515,6 @@ var b;
 
 // mouse position
 var mouseX, mouseY;
-// drag scrolling
-var scrolling = false;
 
 // objects (created if appropriate HTML element is available)
 var itemlist, info, viewer, help;
@@ -1564,8 +1586,20 @@ function getPage (i)//{{{
     return i ? Math.min( Math.max(i,1), len() ) : 1;
 }//}}}
 
+function popInfo ()//{{{
+{
+    if (!info) {
+        return false;
+    }
+
+    info.popInfo();
+    return true;
+}//}}}
+
 function signal (sgn)//{{{
 {
+    var fn, t;
+
     if (!events) {
         return;
     }
@@ -1575,9 +1609,8 @@ function signal (sgn)//{{{
         popInfo();
     }
 
-
-    var fn = events[sgn];
-    var t = typeof(fn);
+    fn = events[sgn];
+    t = typeof(fn);
     if (t === "string") {
         eval(fn);
     } else if (t === "function") {
@@ -1591,24 +1624,27 @@ function updateInfo(itemname, n, props) //{{{
         return;
     }
 
-    info.updateInfo(itemname, n, props);
+    info.updateInfo(itemname, n, len(), props);
     signal("info_update");
 }//}}}
 
 function updateTitle ()//{{{
 {
     var t = getConfig( 'title_fmt', '%{title}: %{now}/%{max} "%{filename}"' );
-    t=t.replace( /%{title}/g, (title ? title : "untitled") );
-    t=t.replace( /%{now}/g, n );
-    t=t.replace( /%{max}/g, len() );
-    t=t.replace( /%{filename}/g, info.name() );
+    t = t.replace( /%\{title\}/g, (title ? title : "untitled") );
+    t=t.replace( /%\{now\}/g, n );
+    t=t.replace( /%\{remaining\}/g, len()-n );
+    t=t.replace( /%\{max\}/g, len() );
+    t=t.replace( /%\{filename\}/g, info.name() );
     document.title = t;
 }//}}}
 
 function getUrlVars()//{{{
 {
-	var map = {};
-	var parts = location.hash.replace(/[#&]+([^=&]+)=([^&]*)/gi,
+    var map, parts;
+
+	map = {};
+	parts = location.hash.replace(/[#&]+([^=&]+)=([^&]*)/gi,
         function (m,key,value) {
 		    map[key] = value;
 	    });
@@ -1617,7 +1653,7 @@ function getUrlVars()//{{{
 
 function updateClassName()//{{{
 {
-	b.className = "mode" + mode() + " item" + n + (n === len() ? " last" : "")
+	b.className = "mode" + mode() + " item" + n + (n === len() ? " last" : "");
 }//}}}
 
 function updateUrl (timeout)//{{{
@@ -1643,29 +1679,30 @@ function updateUrl (timeout)//{{{
 
 function preloadImages()//{{{
 {
+    var maxnum, num, new_preloaded, begin, end, i, im, item, filename, view;
     if (preloaded === null) {
         // don't preload images when started
         preloaded = {};
         return;
     }
 
-    var maxnum = getConfig('preload_images',2);
-    var num = maxnum - (n+2) % maxnum;
+    maxnum = getConfig('preload_images',2);
+    num = maxnum - (n+2) % maxnum;
 
-    var new_preloaded = {};
-    var end = Math.min( n+num, len() );
-    var begin = Math.max(n-maxnum+num+1,0);
-    for(var i = begin; i < n; ++i) {
+    new_preloaded = {};
+    end = Math.min( n+num, len() );
+    begin = Math.max(n-maxnum+num+1,0);
+    for(i = begin; i < n; i+=1) {
         new_preloaded[i] = preloaded[i];
     }
-    for(var i = n; i < end; ++i) {
+    for(i = n; i < end; i+=1) {
         // try to use already preloaded image
-        var im = preloaded[i];
+        im = preloaded[i];
         if ( !im ) {
             // type of item must be image
-			var item = this.ls[i];
-            var filename = item instanceof Array ? item[0] : item;
-            var view = ViewFactory.prototype.newView(filename);
+			item = this.ls[i];
+            filename = item instanceof Array ? item[0] : item;
+            view = ViewFactory.prototype.newView(filename);
             if (!view || view.type() !== "image") {
                 continue;
             }
@@ -1696,6 +1733,51 @@ function toggleList()//{{{
     }
 }//}}}
 
+function scroll (x,y,absolute)//{{{
+{
+    var oldx, oldy, newx, newy;
+
+    if (!viewer) {
+        return false;
+    }
+
+    oldx = window.pageXOffset;
+    oldy = window.pageYOffset;
+	if (absolute) {
+		window.scrollTo(x,y);
+    } else {
+		window.scrollBy(x,y);
+    }
+
+    newx = window.pageXOffset;
+    newy = window.pageYOffset;
+    if ( newy !== oldy ) {
+        signal("scroll");
+
+        if (newy === 0) {
+            signal("top");
+        }
+        if (newy+window.innerHeight >= document.documentElement.scrollHeight) {
+            signal("bottom");
+        }
+
+        return true;
+    } else if ( newx !== oldx ) {
+        signal("scroll");
+
+        if (newx === 0) {
+            signal("leftmost");
+        }
+        if (newx+window.innerWidth >= document.documentElement.scrollWidth) {
+            signal("rightmost");
+        }
+
+        return true;
+    } else {
+        return false;
+    }
+}//}}}
+
 function scrollDown(how)//{{{
 {
     return scroll(0,how ? how : window.innerHeight/4);
@@ -1716,50 +1798,6 @@ function scrollRight(how)//{{{
     return scroll(how ? how : window.innerWidth/4,0);
 }//}}}
 
-function scroll (x,y,absolute)//{{{
-{
-    if (!viewer) {
-        return false;
-    }
-
-    var oldx = window.pageXOffset;
-    var oldy = window.pageYOffset;
-	if (absolute) {
-		window.scrollTo(x,y);
-    } else {
-		window.scrollBy(x,y);
-    }
-
-    var newx = window.pageXOffset;
-    var newy = window.pageYOffset;
-    if ( newy !== oldy ) {
-        signal("scroll");
-
-        if (newy === 0) {
-            signal("top");
-        }
-        if (newy+window.innerHeight >= document.documentElement.scrollHeight) {
-            signal("bottom");
-        }
-
-        return true
-    }
-	else if ( newx !== oldx ) {
-        signal("scroll");
-
-        if (newx === 0) {
-            signal("leftmost");
-        }
-        if (newx+window.innerWidth >= document.documentElement.scrollWidth) {
-            signal("rightmost");
-        }
-
-        return true
-    }
-    else
-        return false;
-}//}}}
-
 function go (i)//{{{
 {
     var pg, r, item, itemname, props;
@@ -1777,9 +1815,9 @@ function go (i)//{{{
             updateUrl();
             location.reload();
             return;
-        }
-        else
+        } else {
             count_n += 1;
+        }
     }
 
     // hide item list and select current item
@@ -1794,9 +1832,9 @@ function go (i)//{{{
 	if (item instanceof Array) {
 		itemname = item[0];
 		props = item[1];
-	}
-	else
+	} else {
 		itemname = item;
+    }
 
     updateInfo(itemname, n, props);
 
@@ -1919,16 +1957,6 @@ function forward ()//{{{
     window.setTimeout("location.reload();",100);
 }//}}}
 
-function popInfo ()//{{{
-{
-    if (!info) {
-        return false;
-    }
-
-    info.popInfo();
-    return true;
-}//}}}
-
 function popPreview ()//{{{
 {
     if (!viewer) {
@@ -1942,7 +1970,7 @@ function popPreview ()//{{{
 //}}}
 
 // INTERACTION//{{{
-var keycodes = []//{{{
+var keycodes = [];//{{{
 keycodes[13] = "Enter";
 keycodes[27] = "Escape";
 keycodes[32] = "Space";
@@ -1997,27 +2025,20 @@ function prev ()//{{{
 
 function keyPress (e)//{{{
 {
-	var keycode = e.keyCode ? e.keyCode : e.which;
-	var keyname;
+    var keycode, keyname, trymode_stack, i, k, fn, t;
+
+	keycode = e.keyCode ? e.keyCode : e.which;
 
     keyname = keycodes[keycode];
     if ( !keyname ) {
 		keyname = String.fromCharCode(keycode);
     }
 
-    keyname = keyname.toUpperCase()
-    if ( e.altKey ) {
-        keyname = "A-"+keyname
-    }
-    if ( e.ctrlKey ) {
-        keyname = "C-"+keyname
-    }
-    if ( e.metaKey ) {
-        keyname = "M-"+keyname
-    }
-    if ( e.shiftKey ) {
-        keyname = "S-"+keyname
-    }
+    keyname = (e.altKey ? "A-" : "") +
+              (e.ctrlKey ? "C-" : "") +
+              (e.metaKey ? "M-" : "") +
+              (e.shiftKey ? "S-" : "") +
+              keyname.toUpperCase();
 
 	if ( getConfig("show_keys", false) ) {
 		info.updateProperty("key: " + keyname + " ("+keycode+")");
@@ -2025,15 +2046,15 @@ function keyPress (e)//{{{
     }
 
     // try keys in this mode or modes.any
-    var trymode_stacks = [mode(),modes.any];
-    for (var i in trymode_stacks) {
-        var k = keys[trymode_stacks[i]];
+    trymode_stack = [mode(), modes.any];
+    for (i in trymode_stack) {
+        k = keys[trymode_stack[i]];
         if (!k) {
             continue;
         }
 
-        var fn = k[keyname];
-        var t = typeof(fn);
+        fn = k[keyname];
+        t = typeof(fn);
         if (t === "string") {
             eval(fn);
         } else if (t === "function") {
@@ -2046,29 +2067,28 @@ function keyPress (e)//{{{
     }
 }//}}}
 
-function onMouseWheel (e) {//{{{
-    var delta = e.detail ? -e.detail*4 : e.wheelDelta/10;
-    scroll(0,-delta);
-    e.preventDefault();
-}//}}}
-
 function addKeys (newkeys, desc, fn, keymode)//{{{
 {
+    var ekeys, k, tomod, i, modifiers, key, modekeydesc;
+
     if (!keymode) {
         keymode = modes.any;
     }
 
-    var ekeys = keys[keymode];
+    ekeys = keys[keymode];
     if (!ekeys) {
         ekeys = keys[keymode] = {};
     }
 
-    var k = newkeys instanceof Array ? newkeys : [newkeys];
-    for (var i in k) {
-		var modifiers = k[i].toUpperCase().split("-");
-		var key = modifiers.pop();
+    // Alt-k -> ALT-K
+    k = newkeys instanceof Array ? newkeys : [newkeys];
+    tomod = function (x) {return x[0];};
+    for (i in k) {
+		modifiers = k[i].toUpperCase().split("-");
+		key = modifiers.pop();
+
 		// sort modifiers
-		modifiers = modifiers.map( function (x) {return x[0]} ).sort();
+		modifiers = modifiers.map(tomod).sort();
 		key = modifiers.length ? modifiers.join("-")+"-"+key : key;
         ekeys[key] = fn;
 	}
@@ -2080,13 +2100,20 @@ function addKeys (newkeys, desc, fn, keymode)//{{{
     if (!keydesc) {
         keydesc = {};
     }
-    var modekeydesc = keydesc[keymode];
+    modekeydesc = keydesc[keymode];
     if (!modekeydesc) {
         modekeydesc = keydesc[keymode] = {};
     }
     modekeydesc[desc] = k;
 }//}}}
 
+function onMouseWheel (e) {//{{{
+    var delta = e.detail ? -e.detail*4 : e.wheelDelta/10;
+    scroll(0,-delta);
+    e.preventDefault();
+}//}}}
+
+// dragScroll () {{{
 var tt = 0;
 jQuery.extend( jQuery.easing,
 {
@@ -2100,14 +2127,70 @@ easeOutCubic: function (x, t, b, c, d) {
         }
         return (t=t/1000-1)*t*t + 1;
     }
-})
+});
 
-function dragScroll(t,p) {
-    var x,y,z;
-    var w = $(window);
+function dragScroll (t,p)
+{
+    var x, y, z, w, win, start, d, dx, dy;
+
+    function continueDragScroll(e) {
+        var t, pos;
+
+        scrolling = true;
+        if(e) {
+            mouseX = e.clientX;
+            mouseY = e.clientY;
+        }
+
+        t = new Date().getTime();
+		//info.updateProperty( (oldy-mouseY)/(t-start) );
+		//info.popInfo();
+		if (t-start > 100) {
+			start = t;
+			dx[d] = mouseX;
+			dy[d] = mouseY;
+			d = d?0:1;
+		}
+
+        if (p) {
+            pos = p.position();
+            scroll( z*(mouseX+window.pageXOffset-x-pos.left),
+                    z*(mouseY+window.pageYOffset-y-pos.top), true );
+        } else {
+            scroll(x-mouseX,y-mouseY,true);
+        }
+
+        signal("scroll");
+        if (e) {
+            e.preventDefault();
+        }
+    }
+
+    function stopDragScroll(e) {
+        var accel, vx, vy;
+
+        scrolling = false;
+        w.unbind('mousemove');
+        w.unbind('mouseup');
+
+        accel = getConfig('slide_scroll',100)/(new Date().getTime()-start);
+        vx = (dx[d]-mouseX)*accel;
+        vy = (dy[d]-mouseY)*accel;
+
+        tt = mode() === modes.viewer ? 50 : 1000;
+        $('html,body').animate({
+            scrollLeft: window.pageXOffset+vx+"px",
+            scrollTop: window.pageYOffset+vy+"px"
+            }, 1000, "easeOutCubic");
+
+        signal("drag_scroll_end");
+        e.preventDefault();
+    }
+
+    w = $(window);
 
     if (p) {
-        var win = p.find(".window");
+        win = p.find(".window");
         x = win.innerWidth()/2;
         y = win.innerHeight()/2;
         z = t.innerHeight()/p.innerHeight();
@@ -2122,61 +2205,11 @@ function dragScroll(t,p) {
     w.mouseup(stopDragScroll);
     w.mousemove(continueDragScroll);
 
-    var start = new Date().getTime()-100;
-	var d = 0;
-    var dx = [mouseX,mouseX];
-    var dy = [mouseY,mouseY];
-
-    function stopDragScroll(e) {
-        scrolling = false;
-        w.unbind('mousemove');
-        w.unbind('mouseup');
-
-        var accel = getConfig('slide_scroll',100)/(new Date().getTime()-start);
-        var vx = (dx[d]-mouseX)*accel;
-        var vy = (dy[d]-mouseY)*accel;
-
-        tt = mode() === modes.viewer ? 50 : 1000;
-        $('html,body').animate({
-            scrollLeft: window.pageXOffset+vx+"px",
-            scrollTop: window.pageYOffset+vy+"px"},
-            1000, "easeOutCubic");
-
-        signal("drag_scroll_end");
-        e.preventDefault();
-    }
-
-    function continueDragScroll(e) {
-        scrolling = true;
-        if(e) {
-            mouseX = e.clientX;
-            mouseY = e.clientY;
-        }
-
-        var t = new Date().getTime();
-		//info.updateProperty( (oldy-mouseY)/(t-start) );
-		//info.popInfo();
-		if (t-start > 100) {
-			start = t;
-			dx[d] = mouseX;
-			dy[d] = mouseY;
-			d = d?0:1;
-		}
-
-        if (p) {
-            var pos = p.position();
-            scroll( z*(mouseX+window.pageXOffset-x-pos.left),
-                    z*(mouseY+window.pageYOffset-y-pos.top), true );
-        }
-        else
-            scroll(x-mouseX,y-mouseY,true);
-
-        signal("scroll");
-        if (e) {
-            e.preventDefault();
-        }
-    }
-}
+    start = new Date().getTime()-100;
+	d = 0;
+    dx = [mouseX,mouseX];
+    dy = [mouseY,mouseY];
+}//}}}
 //}}}
 
 function viewerOnLoad()//{{{
@@ -2197,27 +2230,27 @@ function createItemList()//{{{
     itemlist = new ItemList(e, ls, getConfig);
 
     itemlist.onSubmit = go;
-    itemlist.onMouseDown = function () {signal("itemlist_mouse_down")};
+    itemlist.onMouseDown = function () {signal("itemlist_mouse_down");};
 }//}}}
 
 function createViewer(e, preview, info)//{{{
 {
     viewer = new Viewer(e, preview, getConfig);
     viewer.onLoad = viewerOnLoad;
-    viewer.imageOnMouseDown   = function () {signal("image_mouse_down")};
-    viewer.videoOnMouseDown   = function () {signal("video_mouse_down")};
-    viewer.fontOnMouseDown    = function () {signal("font_mouse_down")};
-    viewer.previewOnMouseDown = function () {signal("preview_mouse_down")};
-    viewer.onTooBig           = function () {signal("too_big")};
+    viewer.imageOnMouseDown   = function () {signal("image_mouse_down");};
+    viewer.videoOnMouseDown   = function () {signal("video_mouse_down");};
+    viewer.fontOnMouseDown    = function () {signal("font_mouse_down");};
+    viewer.previewOnMouseDown = function () {signal("preview_mouse_down");};
+    viewer.onTooBig           = function () {signal("too_big");};
     viewer.onFontTextChange   = function (text) {config.font_test = text;};
     viewer.onNext             = next;
 
     if (info) {
-        viewer.onUpdateStatus = function (msg,class_name) { info.updateProperty( msg, class_name ); }
+        viewer.onUpdateStatus = function (msg,class_name) { info.updateProperty( msg, class_name ); };
         viewer.onError = function (msg) {
             info.updateProperty( msg, "error" );
             signal("error");
-        }
+        };
     }
 
     viewer.onZoomChanged = function (state) {
@@ -2229,7 +2262,7 @@ function createViewer(e, preview, info)//{{{
             delete vars.zoom;
         }
         updateUrl(1000);
-    }
+    };
 
     if ( preview.length ) {
         $('html,body').scroll(
@@ -2244,6 +2277,8 @@ function createViewer(e, preview, info)//{{{
 
 function createNavigation ()//{{{
 {
+    var m, i, k, km;
+
     // keyboard
     if ( userAgent() === userAgents.webkit ) {
         window.onkeydown = keyPress;
@@ -2253,33 +2288,35 @@ function createNavigation ()//{{{
 
     // mouse
     window.onmousewheel = document.onmousewheel = onMouseWheel;
-    window.addEventListener('DOMMouseScroll', onmousewheel, false);
+    window.addEventListener('DOMMouseScroll', onMouseWheel, false);
 
     // user controls
     if (controls) {
-        for (var m in controls) {
-            var km = controls[m];
-            for (var i in controls[m]) {
-                var k = km[i];
+        for (m in controls) {
+            km = controls[m];
+            for (i in controls[m]) {
+                k = km[i];
                 addKeys(k[0],k[2],k[1],m);
             }
         }
-        delete controls;
+        controls = {};
     }
 }//}}}
 
 function createKeyHelp(e)//{{{
 {
-    for (var i in modes) {
-        var cat = $( document.createElement("div") );
+    var i, j, cat, modekeydesc, key;
+
+    for (i in modes) {
+        cat = $( document.createElement("div") );
         cat.addClass('category');
         cat.appendTo(e);
 
         $('<h3>'+modes[i]+'</h3>').appendTo(cat);
 
-        var modekeydesc = keydesc[modes[i]];
-        for (var j in modekeydesc) {
-            var key = $( document.createElement("div") );
+        modekeydesc = keydesc[modes[i]];
+        for (j in modekeydesc) {
+            key = $( document.createElement("div") );
             key.addClass("key");
             key.appendTo(cat);
 
@@ -2291,16 +2328,18 @@ function createKeyHelp(e)//{{{
 
 function createConfigHelp(e)//{{{
 {
+    var confdesc, i, j, cat, desc, opt;
+
     // configuration//{{{
-    var confdesc = {
+    confdesc = {
         "Images": {
         'zoom_step': "zoom multiplier",
-        'preload_images': "number of images to preload",
+        'preload_images': "number of images to preload"
         },
 
         "Font": {
         'font_size': "font size",
-        'font_test': "default text",
+        'font_test': "default text"
         },
 
         "Progress bar": {
@@ -2310,32 +2349,32 @@ function createConfigHelp(e)//{{{
         'progress_bg': "background color",
         'progress_fg': "foreground color",
         'progress_blur': "blur amount",
-        'progress_shadow': "shadow size",
+        'progress_shadow': "shadow size"
         },
 
         "Thumbnail": {
         'thumbnail_min_width': "minimum width",
         'thumbnail_max_width': "maximum width",
-        'thumbnail_font_test': "default text for fonts",
+        'thumbnail_font_test': "default text for fonts"
         },
 
 		"Audio/Video": {
 		'autoplay': "Play audio/video when viewed",
 		'loop': "Replay when playback ends",
-		'autonext': "Go to next item whed playback ends",
+		'autonext': "Go to next item whed playback ends"
 		}
     };//}}}
 
-    for (var i in confdesc) {
-        var cat = $( document.createElement("div") );
+    for (i in confdesc) {
+        cat = $( document.createElement("div") );
         cat.addClass('category');
         cat.appendTo(e);
 
         $('<h3>'+i+'</h3>').appendTo(cat);
 
-        var desc = confdesc[i];
-        for (var j in desc) {
-            var opt = $( document.createElement("div") );
+        desc = confdesc[i];
+        for (j in desc) {
+            opt = $( document.createElement("div") );
             opt.addClass("option");
             opt.appendTo(cat);
 
@@ -2347,15 +2386,17 @@ function createConfigHelp(e)//{{{
 
 function createAbout(e)//{{{
 {
-    var content = [
+    var content, i, x, cat;
+
+    content = [
         ["gallery created with","mkgallery v1.0"],
         ["author","Lukáš Holeček"],
-        ["e-mail",'<a href="mailto:hluk@email.cz">hluk@email.cz</a>'],
+        ["e-mail",'<a href="mailto:hluk@email.cz">hluk@email.cz</a>']
     ];
 
-    for (var i in content) {
-        var x = content[i];
-        var cat = $( document.createElement("div") );
+    for (i in content) {
+        x = content[i];
+        cat = $( document.createElement("div") );
         cat.addClass("category");
         cat.appendTo(e);
 
@@ -2366,17 +2407,19 @@ function createAbout(e)//{{{
 
 function createHelp(e)//{{{
 {
-    var ekeys = e.find(".keys");
+    var ekeys, econf, eother;
+
+    ekeys = e.find(".keys");
     if (ekeys.length) {
         createKeyHelp(ekeys);
     }
 
-    var econf = e.find(".options");
+    econf = e.find(".options");
     if (econf.length) {
         createConfigHelp(econf);
     }
 
-    var eother = e.find(".about");
+    eother = e.find(".about");
     if (eother.length) {
         createAbout(eother);
     }
@@ -2423,9 +2466,9 @@ function exit_slideshow()//{{{
         return;
     }
 
-    mode_stack.pop()
-    if (slidedhow_t) {
-        window.clearTimeout(slidedhow_t);
+    mode_stack.pop();
+    if (slideshow_t) {
+        window.clearTimeout(slideshow_t);
     }
 }//}}}
 
@@ -2435,8 +2478,8 @@ function slideshow()//{{{
     if ( mode() !== modes.slideshow ) {
         mode_stack.push(modes.slideshow);
     }
-    slidedhow_t = window.setTimeout( function (){
-                viewer.e.fadeOut( 1000, function () {next()} );
+    slideshow_t = window.setTimeout( function (){
+                viewer.e.fadeOut(1000, next);
                 slideshow();
             }, getConfig('slideshow_delay', 8000) );
 }//}}}

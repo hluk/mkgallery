@@ -388,6 +388,11 @@ def main(argv):#{{{
 
 	items = prepare_html(template,itemfile,css,gdir,files)
 
+	# no usable items found
+	if not items:
+		print("No items in gallery!")
+		exit(1)
+
 	template.close()
 	css.close()
 

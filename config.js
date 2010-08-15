@@ -1,5 +1,12 @@
 // USER CONFIGURATION//{{{
 config = { // -- these can be overriden in URL
+// title format:
+// special expressions are enclosed in curly brackets:
+//   title     -- gallery title
+//   now       -- current item id
+//   max       -- number of items
+//   filename  -- filename
+//   remaining -- number of items after the current
 title_fmt: '%{title}: %{now}/%{max} "%{filename}"',
 
 zoom_step: 0.125,
@@ -168,6 +175,8 @@ load: "",
 // item view at top/bottom
 top: "",
 bottom: "",
+leftmost: "",
+rightmost: "",
 // item view scrolled
 scroll: "mode() == modes.viewer && popPreview()",
 // video played/paused
