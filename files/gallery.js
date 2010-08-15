@@ -945,8 +945,9 @@ init: function (elem, items, getConfig)//{{{
     }
 
     this.ls = items;
-    this.length = items.length;
+    this.len = items.length;
     this.selected = 0;
+    this.selection_needs_update = true;
 
     this.lastpos = [0,0];
 
@@ -968,7 +969,7 @@ hidden: function ()//{{{
 addThumbnails: function (i)//{{{
 {
     var items, thumb_e, item, filename, thumb, t;
-    if ( i<0 || i>=this.length ) {
+    if ( i<0 || i>=this.len ) {
         return;
     }
 
@@ -1087,7 +1088,7 @@ appendItems: function ()//{{{
     // avoid changing the document each time item is added
     e.css("display","none");
 
-    for(i=0; i<this.length; i+=1) {
+    for(i=0; i<this.len; i+=1) {
         item = this.newItem(i+1,ls[i]);
         item.appendTo(e);
         items.push(item);
@@ -1190,6 +1191,7 @@ updateSelection: function ()//{{{
 selectItem: function (i)//{{{
 {
     if (!this.items) {
+        this.selected = i;
         return;
     }
 
@@ -1225,7 +1227,7 @@ listVertically: function (direction)//{{{
 
         if ( newdist === null ) {
             ny = pos.top + e.innerHeight()/2;
-            if ( (direction > 0 && ny-y < 10) || (direction < 0 && y-ny < 10) ) {
+            if ( direction*(ny-y) < 10 ) {
                 continue;
             }
         }
@@ -1264,7 +1266,7 @@ listRight: function ()//{{{
 {
     // select next
     var i = this.selected+1;
-    if ( i >= this.length ) {
+    if ( i >= this.len ) {
         return;
     }
 
@@ -1290,7 +1292,7 @@ listPageDown: function ()//{{{
 
     min_pos = this.selection.offset().top+window.innerHeight;
     i = this.selected+1;
-    while ( i < this.length && min_pos > this.get(i).offset().top ) {
+    while ( i < this.len && min_pos > this.get(i).offset().top ) {
         i += 1;
     }
     this.selectItem(i-1);

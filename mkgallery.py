@@ -20,7 +20,7 @@ rm_error = "ERROR: Existing gallery contains files that aren't symbolic links!\n
 
 import_error = "WARNING: Generating {0} was unsuccessfull! To generate {0} Python Imaging Library needs to be installed."
 
-re_img  = re.compile('\.(jpg|png|gif|svg)$',re.I)
+re_img  = re.compile('\.(jpg|png|apng|gif|svg)$',re.I)
 re_font = re.compile('\.(otf|ttf)$',re.I)
 re_vid = re.compile('\.(mp4|mov|flv|ogg|mp3|wav)$',re.I)
 re_remote = re.compile('^\w+://',re.I)
@@ -283,12 +283,12 @@ def prepare_html(template,itemfile,css,gdir,files):#{{{
 					isvid = re_vid.search(f) != None
 
 			if isimg or isfont or isvid:
-				if is_local(f):
+				# file is local and not viewed localy
+				if is_local(f) and not local:
 					fdir = imgdir+S+dirname(f)
 					if not os.path.isdir(fdir):
 						os.makedirs(fdir)
-					if not local:
-						cp( abs_f, fdir +S+ os.path.basename(f) )
+					cp( abs_f, fdir +S+ os.path.basename(f) )
 
 				# if file is font: create font-face line in css
 				alias = ""
@@ -355,7 +355,8 @@ def create_thumbnails(items, imgdir, thumbdir, resolution, itemfile):#{{{
 				else:
 					w,h = create_thumbnail( os.path.abspath(f), resolution, path(f,thumbdir) )
 			except ImportError:
-				pass
+				print("WARNING: Thumbnails not generated -- please install Python Imaging Library (PIL) module.")
+				return
 			except Exception as e:
 				print("ERROR: "+str(e)+" (file: \""+f+"\")")
 
