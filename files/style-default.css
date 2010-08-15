@@ -66,13 +66,13 @@ a {font-weight: inherit; color: inherit; font-size: inherit; font-family: inheri
 
 .preview .window .window_border {
     border: 2px dashed red;
-    background-color: rgba(255,255,255,0.15);
+    background-color: rgba(255,255,255,0.2);
 
     position: absolute;
-    top: 2px;
-    left: 2px;
-    bottom: -2px;
-    right: -2px;
+    top: -2px;
+    left: -2px;
+    bottom: -8px;
+    right: -7px;
 
     -webkit-box-shadow: 0px 0px 15px rgba(0,0,0,0.8);
     -moz-box-shadow: 0px 0px 15px rgba(0,0,0,0.8);
@@ -136,10 +136,10 @@ a {font-weight: inherit; color: inherit; font-size: inherit; font-family: inheri
     top:0;
     left:0;
 }
-.countermax, .counternow {color: white;}
-.counternow {font-weight: bold;}
-.countermax {font-size: 0.7em; border-top: 1px solid #bbb; color: #ddd;}
-.last .counternow {text-shadow: white 0px 0px 7px;}
+.counter_max, .counter_now {color: white;}
+.counter_now {font-weight: bold;}
+.counter_max {font-size: 0.7em; border-top: 1px solid #bbb; color: #ddd;}
+.last .counter_now {text-shadow: white 0px 0px 7px;}
 
 /* item directory, filename, alias */
 .itemlink {max-width: 90%; text-decoration: none; z-index: 1; float: left; text-align: left;}

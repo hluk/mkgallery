@@ -163,6 +163,8 @@ Slideshow: [
 
 // EVENTS//{{{
 events = {
+// document loaded
+load: "",
 // item view at top/bottom
 top: "",
 bottom: "",
@@ -171,7 +173,7 @@ scroll: "mode() == modes.viewer && popPreview()",
 // video played/paused
 video_play: "",
 // window resized
-resized: "",
+resize: "",
 // other item viewed
 go: "",
 // first/last item viewed

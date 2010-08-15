@@ -104,7 +104,7 @@ The variables "title" is optional (title of gallery; default value is "default")
 
 
 fonts.css
---------
+---------
 This file contains font definitions.
 For example:
     @font-face{font-family:fonts_LinLibertine_Re_otf;src:url('items/fonts/LinLibertine_Re.otf');}

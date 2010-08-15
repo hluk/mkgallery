@@ -21,11 +21,48 @@
 // CLASSES//{{{
 function esc (str) {//{{{
 	// don't escape protocols (i.e. "http://" -> "http%3A//"
-    if (str.search(/^\w+:\/\//) > -1)
+    if (str.search(/^\w+:\/\//) > -1) {
 		return encodeURI(str);
-	else
+    } else {
 		return escape(str);
+    }
 }//}}}
+
+function createPathElements(dir_e,filename_e,ext_e,path) {//{{{
+    var m, dir, filename;
+
+    m = path.lastIndexOf("/");
+    if ( m === -1 ) {
+        m  = path.lastIndexOf("\\");
+    }
+
+    // directory
+    dir = path.substring(0,m);
+    if (dir_e.length) {
+        dir = dir.replace(/^items\/?/,'');
+        if (dir) {
+            dir_e.html(dir);
+            dir_e.show();
+        } else {
+            dir_e.hide();
+        }
+    }
+
+    filename = path.substring(m+1,path.length);
+
+    m = filename.lastIndexOf(".");
+
+    // filename
+    if (filename_e.length) {
+        filename_e.html( filename.substring(0,m) );
+    }
+
+    // extension
+    if (ext_e.length) {
+        ext_e.html( filename.substring(m+1,filename.length) );
+    }
+}//}}}
+
 
 // this section should be independent from the rest
 //! \interface ItemView
@@ -76,68 +113,65 @@ type: function ()//{{{
 
 show: function ()//{{{
 {
-    var view, e, use_canvas;
+    var view, e, ee, use_canvas, use_embed;
     view = this;
 
-    if ( this.e )
+    if ( this.e ) {
         return;
+    }
 
     this.parent.onUpdateStatus("loading","msg");
-
-    // TODO: SVG -- for some reason this doesn't work in Chromium
-	/*
-	if (this.path.search(/\.svg$/i) > -1) {
-		this.e = document.createElement("embed");
-	}
-	else {
-		this.e = document.createElement("img");
-	}
-	*/
 
     // don't use canvas in some cases:
     //  - user configuration
     //  - GIF: redraw animated images in intervals
     use_canvas = this.parent.getConfig('image_on_canvas', false) &&
-        filepath.search(/\.gif$/i) == -1;
+        this.path.search(/\.gif$/i) === -1;
 
-    if ( use_canvas ) {
-        e = this.e = $( document.createElement("img") );
+    if ( !use_canvas ) {
+        e = this.e = this.img = $( document.createElement("img") );
         this.ctx = {
             drawImage: function (img,x,y,width,height) {
-                           if( !e.attr("src") )
+                           if( !e.attr("src") ) {
                                e.attr("src", img.src);
+                           }
                            e.width = width;
                            e.height = height;
                        }
         };
-    }
-    else {
+    } else {
         e = this.e = $( document.createElement("canvas") );
         this.ctx = this.e[0].getContext('2d');
     }
+
     e.css("display","block");
     e.addClass("imageview");
     e.appendTo(this.parent.e);
 
-    e = this.img = $( document.createElement("img") );
-    e.attr( "id", "img" );
+    // image element
+    if ( !this.img && !use_embed ) {
+        e = this.img = $( document.createElement("img") );
+    }
+    if ( !use_embed ) {
+        e.load( function () {
+            view.parent.onUpdateStatus(null,"msg");
+
+            view.orig_width = this.width ? this.width : this.naturalWidth;
+            view.orig_height = this.height ? this.height : this.naturalHeight;
+
+            view.parent.zoom();
+            view.parent.onLoad();
+        } );
+    }
     e.attr( "src", esc(this.path) );
-    e.load( function () {
-        view.parent.onUpdateStatus(null,"msg");
-
-        view.orig_width = this.width ? this.width : this.naturalWidth;
-        view.orig_height = this.height ? this.height : this.naturalHeight;
-
-        view.parent.zoom();
-        view.parent.onLoad();
-    } );
 },//}}}
 
 remove: function ()//{{{
 {
     var e = this.e;
-    if ( e )
+    if (e) {
         e.remove();
+    }
 },//}}}
 
 thumbnail: function ()//{{{
@@ -162,15 +196,17 @@ zoom: function (z)//{{{
 {
     var w, h;
 
-    if (!z)
+    if (!z) {
         return this.width/this.orig_width;
+    }
 
     w = this.orig_width;
     h = this.orig_height;
 
     // clear canvas
-    if(this.width && this.ctx.clearRect)
+    if(this.width && this.ctx.clearRect) {
         this.ctx.clearRect(0,0,this.width,this.height);
+    }
 
     this.width = this.e[0].width = w*z;
     this.height = this.e[0].height = h*z;
@@ -182,7 +218,6 @@ zoom: function (z)//{{{
     this.parent.onUpdateStatus( w+"x"+h, "resolution" );
     this.parent.onUpdateStatus( z===1 ? null : Math.floor(z*100), "zoom" );
 
-    this.parent.zoomChanged(z,this.zoom_factor);
     this.parent.center();
 
     return this.width/this.w;
@@ -222,8 +257,9 @@ show: function ()//{{{
     view = this;
     p = this.parent;
 
-    if ( this.e )
+    if ( this.e ) {
         return;
+    }
 
     p.onUpdateStatus("loading","msg");
 
@@ -234,13 +270,15 @@ show: function ()//{{{
     e.addClass("videoview");
     e.attr("id","video");
 
-	if ( p.getConfig('autoplay',false) )
+	if ( p.getConfig('autoplay',false) ) {
 		e.attr("autoplay","autoplay");
-	if ( p.getConfig('loop',false) )
+    }
+	if ( p.getConfig('loop',false) ) {
 		e.attr("loop","loop");
-	// TODO: onended event doesn't work -- WHY?
-	if ( p.getConfig('autonext',false) && next )
-		e.bind("ended",next);
+    }
+	if ( p.getConfig('autonext',false) ) {
+		e.bind( "ended", function () {this.parent.next();} );
+    }
 
     e.bind('canplay', function () {
         var s, m;
@@ -269,33 +307,39 @@ show: function ()//{{{
 remove: function ()//{{{
 {
     var e = this.e;
-    if ( e )
+    if ( e ) {
         e.remove();
+    }
 },//}}}
 
 thumbnail: function ()//{{{
 {
-    if ( !this.thumb ) {
+    var thumb = this.thumb;
+
+    if ( !thumb ) {
         thumb = this.thumb = $( document.createElement("div") );
         thumb.addClass("thumbnail " + this.type());
 
         this.thumbnailOnLoad();
     }
 
-    return this.thumb;
+    return thumb;
 },//}}}
 
 zoom: function (z)//{{{
 {
-    var w,h;
+    var w,h,ww,wh;
 
-    if (!z)
+    if (!z) {
         return this.width/this.orig_width;
+    }
 
     w = this.orig_width;
     h = this.orig_height;
 
     if(!w) {
+        ww = window.innerWidth;
+        wh = window.innerHeight;
 		this.width = this.e[0].width = ww;
 		this.height = this.e[0].height = wh/2;
         this.updateStatus();
@@ -308,7 +352,6 @@ zoom: function (z)//{{{
 
     this.updateStatus();
 
-    this.parent.zoomChanged(z,this.zoom_factor);
     this.parent.center();
 
     return this.width/this.orig_width;
@@ -350,7 +393,11 @@ slower: function ()//{{{
 
 togglePlay: function ()//{{{
 {
-    this.e[0].paused ? this.e[0].play() : this.e[0].pause();
+    if ( this.e[0].paused ) {
+        this.e[0].play();
+    } else {
+        this.e[0].pause();
+    }
 },//}}}
 
 seek: function (how) {//{{{
@@ -362,8 +409,8 @@ seek: function (how) {//{{{
  * \fn thumbnailOnLoad()
  * \brief event is triggered after thumbnail is loaded
  */
-thumbnailOnLoad: function (){},
-}
+thumbnailOnLoad: function () {}
+};
 //}}}
 
 //! \class FontView
@@ -388,8 +435,11 @@ type: function ()//{{{
 
 show: function ()//{{{
 {
-    if (this.e)
+    var e, view;
+
+    if (this.e) {
         return;
+    }
 
     e = this.e = $( document.createElement("textarea") );
     e.attr("src", esc(this.path));
@@ -399,18 +449,19 @@ show: function ()//{{{
     e.css("font-family",this.font);
 
     // disable keyboard navigation when textarea focused
-    var view = this;
+    view = this;
     e.focus( function () {
         view.keydown = window.onkeydown;
         view.keypress = window.onkeypress;
-        window.onkeydown = function (ev){
-            if(ev.keyCode === 27)
+        window.onkeydown = function (ev) {
+            if (ev.keyCode === 27) {
                 view.e.blur();
+            }
         };
         window.onkeypress = null;
     } );
     e.blur( function () {
-        config['font_test'] = this.value;
+        this.parent.onFontTextChange(this.value);
         window.onkeydown = view.keydown;
         window.onkeypress = view.keypress;
         view.updateHeight();
@@ -425,14 +476,15 @@ show: function ()//{{{
 remove: function ()//{{{
 {
     var e = this.e;
-    if ( e )
+    if (e) {
         e.remove();
+    }
 },//}}}
 
 thumbnail: function ()//{{{
 {
     if ( !this.thumb ) {
-        var font, p;
+        var font, p, thumb;
         font = this.path.replace(/.*\//gi, "").replace(".","-");
         p = this.parent;
 
@@ -453,13 +505,15 @@ thumbnail: function ()//{{{
 
 zoom: function (how)//{{{
 {
-    var orig = this.parent.getConfig('font_size',16);
+    var orig, z, zz;
+    orig = this.parent.getConfig('font_size',16);
 
-    if ( !this.orig_height )
+    if (!this.orig_height) {
         this.orig_height = this.e.offsetHeight;
+    }
 
-    var z = this.zoom_factor;
-    var zz = Math.ceil(z*orig);
+    z = this.zoom_factor;
+    zz = Math.ceil(z*orig);
 
     switch(how) {
     case "+":
@@ -472,8 +526,9 @@ zoom: function (how)//{{{
         break;
     default:
         z = parseFloat(how);
-        if (!z)
+        if (!z) {
             z = 1;
+        }
         zz = Math.ceil(z*orig);
         break;
     }
@@ -483,7 +538,6 @@ zoom: function (how)//{{{
 
     this.zoom_factor = z;
 
-    this.parent.zoomChanged(how,this.zoom_factor);
     this.parent.center();
 
     // for firefox this.e.css("font-size") is "...px" not "pt"
@@ -492,9 +546,10 @@ zoom: function (how)//{{{
 
 updateHeight: function ()//{{{
 {
+    var view, e;
     // TODO: better solution
-    var view = this;
-    var e = this.e;
+    view = this;
+    e = this.e;
     e.hide();
     e.css("height","50%");
     window.setTimeout(
@@ -510,8 +565,8 @@ updateHeight: function ()//{{{
  * \fn thumbnailOnLoad()
  * \brief event is triggered after thumbnail is loaded
  */
-thumbnailOnLoad: function (){},
-}
+thumbnailOnLoad: function (){}
+};
 //}}}
 
 //! \class ViewFactory
@@ -526,16 +581,17 @@ init: function (parent) {//{{{
 },//}}}
 
 newView: function (filepath) {//{{{
-    if (filepath.search(/\.(png|jpg|gif)$/i) > -1)
+    if (filepath.search(/\.(png|jpg|gif|svg)$/i) > -1) {
         return new ImageView(filepath, this.parent);
-    else if (filepath.search(/\.(ttf|otf)$/i) > -1)
+    } else if (filepath.search(/\.(ttf|otf)$/i) > -1) {
         return new FontView(filepath, this.parent);
-    else if (filepath.search(/\.(mp4|mov|flv|ogg|mp3|wav)$/i) > -1)
+    } else if (filepath.search(/\.(mp4|mov|flv|ogg|mp3|wav)$/i) > -1) {
         return new VideoView(filepath, this.parent);
-    else
+    } else {
         return null;
-},//}}}
-}
+    }
+}//}}}
+};
 //}}}
 
 //! \class Viewer
@@ -549,7 +605,7 @@ init: function (e, preview, getConfig)//{{{
 {
     var t, win;
 
-    t = this
+    t = this;
     this.e = e;
     e.mousedown( function (ev){
                 if (ev.button === 0 && t.view) {
@@ -576,7 +632,7 @@ init: function (e, preview, getConfig)//{{{
         }
     }
 
-    this.zoom_state = getConfig('zoom',1);
+    this.zoom_state = getConfig('zoom','1');
 
     this.getConfig = getConfig;
 
@@ -585,21 +641,24 @@ init: function (e, preview, getConfig)//{{{
 
 zoom: function (how)//{{{
 {
-    var v = this.view;
-    if ( !v )
-        return;
+    var v, ww, wh, w, h, z, zs, zoom_state;
 
+    v = this.view;
+    if ( !v ) {
+        return;
+    }
+
+    // if how is not set -- restore the original
+    if (!how) {
+        how = this.zoom_state;
+    }
+
+    // treat font zoom differently
     if( v.type() === 'font' ) {
         v.zoom(how);
         return;
     }
 
-    if (!how)
-        how = this.zoom_state;
-    else
-        this.zoom_state = how;
-
-    var ww, wh, w, h, z, zs;
 	ww = window.innerWidth;
 	wh = window.innerHeight;
     w = v.orig_width;
@@ -610,57 +669,52 @@ zoom: function (how)//{{{
     // determine zoom factor
     switch(how) {
     case "+":
-        if ( z*0.8 > zs )
+        if ( z*0.8 > zs ) {
             z += zs;
-        else
+        } else {
             // round to 3 decimal places
             z = Math.round(1000*z*5/4)/1000;
+        }
+        zoom_state = z;
         break;
     case "-":
-        if ( z*0.8 > zs )
+        if ( z*0.8 > zs ) {
             z -= zs;
-        else
+        } else {
             // round to 3 decimal places
             z = Math.round(1000*z*4/5)/1000;
+        }
+        zoom_state = z;
         break;
     case "fit":
-		if (w > ww || h > wh)
+		if (w > ww || h > wh) {
 			z = ( ww*h < wh*w ) ? ww/w : wh/h;
-		else
+        } else {
 			z = 1;
+        }
+        zoom_state = how;
         break;
     case "fill":
         z = ( ww*h < wh*w ) ? wh/h : ww/w;
+        zoom_state = how;
         break;
     default:
         z = how ? parseFloat(how) : 1;
+        zoom_state = z;
         break;
     }
 
+    // zoom view
     v.zoom(z);
-},//}}}
 
-zoomChanged: function (zoom_state,zoom_factor)//{{{
-{
-    var z;
-
-    switch(zoom_state) {
-    case "fit":
-    case "fill":
-        z = zoom_state;
-        break;
-    default:
-        z = zoom_factor;
-        break;
+    if ( zoom_state === this.zoom_state ) {
+        return;
     }
 
-    if ( this.zoom_state !== z ) {
-        this.zoom_state = z;
-        if (this.onZoomChanged) {
-            this.onZoomChanged(z);
-        }
-    }
+    this.zoom_state = zoom_state;
+    this.onZoomChanged( this.zoom_state );
 
+    // if image doesn't fit in the window
     if ( this.view.type() === "image" &&
          ( window.innerHeight < this.view.e.innerHeight() ||
            window.innerWidth < this.view.e.innerWidth() ) ) {
@@ -672,11 +726,14 @@ zoomChanged: function (zoom_state,zoom_factor)//{{{
 
 createPreview: function (filepath)//{{{
 {
-    var p = this.preview;
-    if (!p)
-        return;
+    var p, img;
 
-    var img = this.preview_img;
+    p = this.preview;
+    if (!p) {
+        return;
+    }
+
+    img = this.preview_img;
 
     // remove preview if item is not an image
     if ( this.view.type() !== "image" ) {
@@ -697,29 +754,30 @@ createPreview: function (filepath)//{{{
 
 updatePreview: function (force)//{{{
 {
-    var img, win;
+    var img, win, imgw, imgh, ww, wh, w, h, doc;
 
     img = this.preview_img;
-    if ( !img || !img.attr("src") )
+    if ( !img || !img.attr("src") ) {
         return false;
-    else if ( !force && !this.preview.hasClass("focused") )
+    } else if ( !force && !this.preview.hasClass("focused") ) {
 		return true;
+    }
 
     // highlights the part of the image in window
     win = this.preview_win;
     if (win) {
-        var imgw = img.innerWidth();
-        var imgh = img.innerHeight();
-        var ww = window.innerWidth;
-        var wh = window.innerHeight;
-        var w = this.view.width;
-        var h = this.view.height;
-        var doc = document.documentElement;
+        imgw = img.innerWidth();
+        imgh = img.innerHeight();
+        ww = window.innerWidth;
+        wh = window.innerHeight;
+        w = this.view.width;
+        h = this.view.height;
+        doc = document.documentElement;
         win.css({
                 "height": Math.floor( h<wh ? imgh : (imgh*wh/h) ) +"px",
                 "width":  Math.floor( w<ww ? imgw : (imgw*ww/w) ) +"px",
                 "top":    Math.floor( h<wh ? "0" : imgh*window.pageYOffset/doc.scrollHeight) +"px",
-                "left":   Math.floor( w<ww ? "0" : imgw*window.pageXOffset/doc.scrollWidth) +"px",
+                "left":   Math.floor( w<ww ? "0" : imgw*window.pageXOffset/doc.scrollWidth) +"px"
               });
     }
 
@@ -730,10 +788,13 @@ popPreview: function ()//{{{
 {
     var preview, t;
 
-    if ( !this.updatePreview(true) )
+    if ( !this.updatePreview(true) ) {
         return;
+    }
 
-    if (this.preview_t) clearTimeout(this.preview_t);
+    if (this.preview_t) {
+        window.clearTimeout(this.preview_t);
+    }
 
     preview = this.preview;
     preview.addClass("focused");
@@ -746,20 +807,22 @@ popPreview: function ()//{{{
 hidePreview: function ()//{{{
 {
     var p = this.preview;
-    if (!p)
+    if (!p) {
         return;
+    }
 
     if (this.preview_t) {
-        clearTimeout(this.preview_t);
+        window.clearTimeout(this.preview_t);
         p.removeClass("focused");
     }
 },//}}}
 
 center: function ()//{{{
 {
+    var h, newtop;
     // center item in window
-    var h = this.view.e.innerHeight();
-    var newtop = h ? ( window.innerHeight - this.view.e.innerHeight() )/2 : 0;
+    h = this.view.e.innerHeight();
+    newtop = h ? ( window.innerHeight - this.view.e.innerHeight() )/2 : 0;
     this.view.e.css("margin-top",(newtop > 0 ? newtop : 0) + "px");
 },//}}}
 
@@ -767,16 +830,18 @@ show: function (filepath)//{{{
 {
     var v;
 
-    if (this.view)
+    if (this.view) {
         this.view.remove();
+    }
 
     v = this.view = this.viewFactory.newView(filepath);
     if ( v ) {
         v.show();
         this.createPreview(filepath);
     }
-    else if (this.onError)
+    else if (this.onError) {
         this.onError("Unknown format: \""+filepath+"\"");
+    }
 },//}}}
 
 width: function ()//{{{
@@ -818,7 +883,11 @@ onZoomChanged: function (zoom_state) {},
  */
 
 onTooBig: function () {},
-}
+
+onFontTextChange: function (text) {},
+
+onNext: function () {}
+};
 //}}}
 
 //! \class ItemList
@@ -831,12 +900,13 @@ init: function (elem, items, getConfig)//{{{
     var t, item, e;
 
     // itemlist element
-    if (!elem)
+    if (!elem) {
         return null;
+    }
     this.e = elem;
 
     // mouse down
-    var t = this;
+    t = this;
     elem.mousedown( function (ev){
                 if (ev.button === 0 && t.onMouseDown) {
                     t.onMouseDown();
@@ -848,25 +918,29 @@ init: function (elem, items, getConfig)//{{{
     item = this.template = elem.find(".item");
     if (this.template.length) {
         e = item.find(".itemident");
-        if (e.length)
+        if (e.length) {
             this.e_ident = e;
+        }
 
         e = item.find(".thumbnail_width");
-        if (e.length)
+        if (e.length) {
             this.e_w = e;
+        }
 
         this.e_dir = item.find(".directory");
         this.e_filename = item.find(".filename");
         this.e_ext = item.find(".extension");
 
         e = item.find(".thumbnail");
-        if (e.length)
+        if (e.length) {
             this.e_thumb = e;
-    }
-    else
+        }
+    } else {
         return null;
+    }
 
     this.ls = items;
+    this.selected = 0;
 
     this.lastpos = [0,0];
 
@@ -892,30 +966,36 @@ size: function ()//{{{
 
 addThumbnails: function (i)//{{{
 {
-    if ( i<0 || i>=len() )
+    var items, thumb_e, item, filename, thumb, t;
+    if ( i<0 || i>=this.items.length ) {
         return;
+    }
 
     items = this.items;
 
-    var thumb_e = items[i].find(".thumbnail");
+    thumb_e = items[i].find(".thumbnail");
     if (thumb_e.length) {
-        var item = this.ls[i];
-		var filename = item instanceof Array ? item[0] : item;
-        var thumb = this.viewFactory.newView(filename);
+        item = this.ls[i];
+		filename = item instanceof Array ? item[0] : item;
+        thumb = this.viewFactory.newView(filename);
 
-        var t = this;
+        t = this;
         thumb.thumbnailOnLoad = function (error) {
-			if (error === true)
+			if (error === true) {
 				thumb_e.remove();
-            else
+            } else {
                 thumb_e.css('display','');
+            }
+
             // recursively load thumbnails from currently viewed
             // - flood load:
             //      previous and next thumbnails (from the current) are loaded in parallel
-            if (i+1>=n)
+            if (i+1>=this.selected) {
                 t.addThumbnails(i+1);
-            if (i+1<=n)
+            }
+            if (i+1<=this.selected) {
                 t.addThumbnails(i-1);
+            }
         };
 
         thumb.thumbnail().appendTo(thumb_e);
@@ -924,29 +1004,31 @@ addThumbnails: function (i)//{{{
 
 newItem: function (i,props)//{{{
 {
-    var e;
+    var e, item, itemname, tags, w, h, key, t;
     item = this.template;
 
     // image identification
     e = this.e_ident;
-    if (e)
+    if (e) {
         e.html(i);
+    }
 
 	// get item filename, user tags, width, height
-    var itemname, tags, w, h;
     if (props instanceof Array) {
         itemname = props[0];
         tags = props[1];
 		w = props[2];
 		h = props[3];
-    }
-    else
+    } else {
         itemname = props;
+    }
 
 	// set .thumbnail_width max-width
     e = this.e_w;
-	if (e)
-		e.css("max-width",w>100 ? w+20 : this.getConfig('thumbnail_max_width',300)+'px');
+	if (e) {
+		e.css("max-width",
+                w>100 ? w+20 : this.getConfig('thumbnail_max_width',300)+'px');
+    }
 
     // filename
     createPathElements(
@@ -967,25 +1049,30 @@ newItem: function (i,props)//{{{
     item = item.clone();
 
     // user tags
-    for (var key in tags) {
-        e = item.find("."+key);
-        if (e.length)
-            e.html(tags[key]);
+    for (key in tags) {
+        if ( tags.hasOwnProperty(key) ) {
+            e = item.find("."+key);
+            if (e.length) {
+                e.html(tags[key]);
+            }
+        }
     }
 
     // remove empty elements
     item.find('.remove_if_empty').each(
             function () {
                 var t = $(this);
-                if( !t.html() )
+                if( !t.html() ) {
                     t.remove();
+                }
             });
 
     // mouse click event
-    var t = this;
-    item.mouseup( function (ev){
-                if (ev.button === 0 && !scrolling)
+    t = this;
+    item.mouseup( function (ev) {
+                if (ev.button === 0 && !scrolling) {
                     t.onSubmit(i);
+                }
             } );
 
     return item;
@@ -1025,9 +1112,6 @@ toggle: function ()//{{{
         // selection cursor
         this.selection = this.e.find(".selection");
         this.selection.css("position","absolute");
-
-        // select current
-        this.selectItem(n-1);
     }
 
     var lastpos2 = [window.pageXOffset,window.pageYOffset];
@@ -1055,29 +1139,33 @@ ensureCurrentVisible: function ()//{{{
     var wx = window.pageXOffset;
 
     var y = e.position().top;
-    if ( y < window.pageYOffset )
+    if ( y < window.pageYOffset ) {
         window.scrollTo(wx,y);
+    }
 
     y = y + e.innerHeight() - window.innerHeight;
-    if ( y > window.pageYOffset )
+    if ( y > window.pageYOffset ) {
         window.scrollTo(wx,y);
+    }
 
     var wy = window.pageYOffset;
 
     var x = e.position().left;
-    if ( x < window.pageXOffset )
+    if ( x < window.pageXOffset ) {
         window.scrollTo(x,wy);
+    }
 
     x = x + e.innerWidth() - window.innerWidth;
-    if ( x > window.pageXOffset )
+    if ( x > window.pageXOffset ) {
         window.scrollTo(x,wy);
+    }
 },//}}}
 
 updateSelection: function ()//{{{
 {
-    if ( this.hidden() )
+    if ( this.hidden() ) {
         this.selection_needs_update = true;
-    else {
+    } else {
         this.selection_needs_update = false;
 
         var e = this.items[this.selected];
@@ -1098,13 +1186,15 @@ updateSelection: function ()//{{{
 
 selectItem: function (i)//{{{
 {
-    if (!this.items)
+    if (!this.items) {
         return;
+    }
 
     // remove id="selected" from previously selected item
     var sel = this.items[this.selected];
-    if(sel)
+    if(sel) {
         sel.attr("id","");
+    }
 
     this.selected = i;
 
@@ -1132,22 +1222,26 @@ listVertically: function (direction)//{{{
 
         if ( newdist === null ) {
             ny = pos.top + e.innerHeight()/2;
-            if ( (direction > 0 && ny-y < 10) || (direction < 0 && y-ny < 10) )
+            if ( (direction > 0 && ny-y < 10) || (direction < 0 && y-ny < 10) ) {
                 continue;
+            }
         }
-        else if( ny - pos.top - e.innerHeight()/2 > 10 )
+        else if( ny - pos.top - e.innerHeight()/2 > 10 ) {
             break;
+        }
 
         var newdist = Math.abs( pos.left + e.innerWidth()/2 - x );
-        if ( newdist > dist )
+        if ( newdist > dist ) {
             break;
+        }
 
         dist = newdist;
     }
 
     // no new line encountered
-    if (newdist === null)
+    if (newdist === null) {
         return;
+    }
 
     // select new
     this.selectItem(i-direction);
@@ -1167,8 +1261,9 @@ listRight: function ()//{{{
 {
     // select next
     var i = this.selected+1;
-    if ( i >= this.items.length )
+    if ( i >= this.items.length ) {
         return;
+    }
 
     // deselect current and select new
     this.selectItem(i);
@@ -1178,8 +1273,9 @@ listLeft: function ()//{{{
 {
     // select next
     var i = this.selected-1;
-    if ( i < 0 )
+    if ( i < 0 ) {
         return;
+    }
 
     // deselect current and select new
     this.selectItem(i);
@@ -1203,7 +1299,7 @@ listPageUp: function ()//{{{
 
 /** events */
 onMouseDown: null,
-}
+};
 //}}}
 
 //! \class Info
@@ -1222,8 +1318,9 @@ init: function (e, getConfig)//{{{
 
     this.progress = e.find(".progress")[0];
     this.counter = e.find(".counter");
-    this.counternow = e.find(".counternow");
-    this.countermax = e.find(".countermax");
+    this.counter_now = e.find(".counter_now");
+    this.counter_max = e.find(".counter_max");
+    this.counter_rem = e.find(".counter_remain");
 
     this.dir_e = e.find(".directory");
     this.filename_e = e.find(".filename");
@@ -1234,8 +1331,9 @@ init: function (e, getConfig)//{{{
 
 updateProgress: function ()//{{{
 {
-    if ( !this.progress )
+    if ( !this.progress ) {
         return;
+    }
 
     var r = this.getConfig('progress_radius',22);
     var w1 = this.getConfig('progress_width',8);
@@ -1288,8 +1386,9 @@ updateProgress: function ()//{{{
 
 updateItemTitle: function ()//{{{
 {
-    if (this.itemlink.length)
+    if (this.itemlink.length) {
         this.itemlink.attr( "href", this.itempath );
+    }
 
     createPathElements(this.dir_e,this.filename_e,this.ext_e,this.href);
 },//}}}
@@ -1332,8 +1431,9 @@ updateInfo: function (href,i,properties)//{{{
 {
     this.href = href;
     this.n = i;
-	this.countermax.html( len() );
-    this.counternow.html(i);
+	this.counter_max.html( len() );
+    this.counter_now.html(i);
+    this.counter_rem.html( len() - i );
     this.itempath = esc(href);
 
     this.updateProgress();
@@ -1343,8 +1443,9 @@ updateInfo: function (href,i,properties)//{{{
 
 popInfo: function ()//{{{
 {
-    if (this.info_t)
-        clearTimeout(this.info_t);
+    if (this.info_t) {
+        window.clearTimeout(this.info_t);
+    }
 
     this.e.addClass("focused");
 
@@ -1364,7 +1465,7 @@ hidden: function ()//{{{
  * \param n identification of submitted item
  */
 onSubmit: function (n){},
-}
+};
 //}}}
 //}}}
 
@@ -1416,12 +1517,14 @@ var userAgents = {unknown:0, webkit:1, opera:2};
 
 function userAgent ()//{{{
 {
-    if ( navigator.userAgent.indexOf("WebKit") !== -1 )
+    if ( navigator.userAgent.indexOf("WebKit") !== -1 ) {
         return userAgents.webkit;
-    if ( navigator.userAgent.indexOf("Opera") !== -1 )
+    }
+    if ( navigator.userAgent.indexOf("Opera") !== -1 ) {
         return userAgents.opera;
-    else
+    } else {
         return userAgents.unknown;
+    }
 }//}}}
 
 function len ()//{{{
@@ -1456,38 +1559,6 @@ function getConfig (name,default_value)//{{{
     return default_value;
 }//}}}
 
-function createPathElements(dir_e,filename_e,ext_e,path) {//{{{
-    var m, dir, filename;
-
-    m = path.lastIndexOf("/");
-    if ( m === -1 )
-        m  = path.lastIndexOf("\\");
-
-    // directory
-    dir = path.substring(0,m);
-    if (dir_e.length) {
-        dir = dir.replace(/^items\/?/,'');
-        if (dir) {
-            dir_e.html(dir);
-            dir_e.show();
-        }
-        else
-            dir_e.hide();
-    }
-
-    filename = path.substring(m+1,path.length);
-
-    m = filename.lastIndexOf(".");
-
-    // filename
-    if (filename_e.length)
-        filename_e.html( filename.substring(0,m) );
-
-    // extension
-    if (ext_e.length)
-        ext_e.html( filename.substring(m+1,filename.length) );
-}//}}}
-
 function getPage (i)//{{{
 {
     return i ? Math.min( Math.max(i,1), len() ) : 1;
@@ -1495,8 +1566,9 @@ function getPage (i)//{{{
 
 function signal (sgn)//{{{
 {
-    if (!events)
+    if (!events) {
         return;
+    }
 
 	if ( getConfig("show_events", false) ) {
 		info.updateProperty("event: " + sgn);
@@ -1506,16 +1578,18 @@ function signal (sgn)//{{{
 
     var fn = events[sgn];
     var t = typeof(fn);
-    if (t === "string")
+    if (t === "string") {
         eval(fn);
-    else if (t === "function")
+    } else if (t === "function") {
         fn();
+    }
 }//}}}
 
 function updateInfo(itemname, n, props) //{{{
 {
-    if(!info)
+    if(!info) {
         return;
+    }
 
     info.updateInfo(itemname, n, props);
     signal("info_update");
@@ -1550,17 +1624,20 @@ function updateUrl (timeout)//{{{
 {
     hash = "";
 
-    for (var key in vars)
+    for (var key in vars) {
         hash += (hash ? "&" : "") + key + "=" + vars[key];
+    }
 
     if ( hash !== location.hash ) {
         // if url is updated immediately, user cannot browse images rapidly
-		if (url_t)
-			clearTimeout(url_t);
-		if (timeout)
+		if (url_t) {
+			window.clearTimeout(url_t);
+        }
+		if (timeout) {
             url_t = window.setTimeout( 'if( hash === "'+hash+'" ) location.hash = "#'+hash+'";',timeout );
-		else
+        } else {
 			location.hash = "#"+hash;
+        }
     }
 }//}}}
 
@@ -1578,8 +1655,9 @@ function preloadImages()//{{{
     var new_preloaded = {};
     var end = Math.min( n+num, len() );
     var begin = Math.max(n-maxnum+num+1,0);
-    for(var i = begin; i < n; ++i)
+    for(var i = begin; i < n; ++i) {
         new_preloaded[i] = preloaded[i];
+    }
     for(var i = n; i < end; ++i) {
         // try to use already preloaded image
         var im = preloaded[i];
@@ -1588,8 +1666,9 @@ function preloadImages()//{{{
 			var item = this.ls[i];
             var filename = item instanceof Array ? item[0] : item;
             var view = ViewFactory.prototype.newView(filename);
-            if (!view || view.type() !== "image")
+            if (!view || view.type() !== "image") {
                 continue;
+            }
 
             // create image
             im = new Image();
@@ -1608,10 +1687,11 @@ function toggleList()//{{{
 {
     if (itemlist) {
         itemlist.toggle();
-        if ( itemlist.hidden() )
+        if ( itemlist.hidden() ) {
             mode_stack.pop();
-        else if ( mode_stack[0] !== modes.itemlist )
+        } else if ( mode_stack[0] !== modes.itemlist ) {
             mode_stack.push(modes.itemlist);
+        }
 		updateClassName();
     }
 }//}}}
@@ -1638,34 +1718,41 @@ function scrollRight(how)//{{{
 
 function scroll (x,y,absolute)//{{{
 {
-    if (!viewer) return false;
+    if (!viewer) {
+        return false;
+    }
 
     var oldx = window.pageXOffset;
     var oldy = window.pageYOffset;
-	if (absolute)
+	if (absolute) {
 		window.scrollTo(x,y);
-	else
+    } else {
 		window.scrollBy(x,y);
+    }
 
     var newx = window.pageXOffset;
     var newy = window.pageYOffset;
     if ( newy !== oldy ) {
         signal("scroll");
 
-        if (newy === 0)
+        if (newy === 0) {
             signal("top");
-        if (newy+window.innerHeight >= document.documentElement.scrollHeight)
+        }
+        if (newy+window.innerHeight >= document.documentElement.scrollHeight) {
             signal("bottom");
+        }
 
         return true
     }
 	else if ( newx !== oldx ) {
         signal("scroll");
 
-        if (newx === 0)
+        if (newx === 0) {
             signal("leftmost");
-        if (newx+window.innerWidth >= document.documentElement.scrollWidth)
+        }
+        if (newx+window.innerWidth >= document.documentElement.scrollWidth) {
             signal("rightmost");
+        }
 
         return true
     }
@@ -1697,8 +1784,9 @@ function go (i)//{{{
 
     // hide item list and select current item
     if ( itemlist ) {
-        if ( !itemlist.hidden() )
+        if ( !itemlist.hidden() ) {
             toggleList();
+        }
         itemlist.selectItem(i-1);
     }
 
@@ -1721,16 +1809,19 @@ function go (i)//{{{
     window.scrollTo(0,0);
 
     signal("go");
-    if ( n === 1 )
+    if ( n === 1 ) {
         signal("first");
-    if ( n === len() )
+    }
+    if ( n === len() ) {
         signal("last");
+    }
 }//}}}
 
 function zoom(how)//{{{
 {
-    if (!viewer)
+    if (!viewer) {
         return false;
+    }
 
     viewer.zoom(how);
     signal("zoom");
@@ -1739,12 +1830,14 @@ function zoom(how)//{{{
 
 function editText()//{{{
 {
-    if (!viewer)
+    if (!viewer) {
         return false;
+    }
 
     var v = viewer.view;
-    if (!v || v.type() !== "font")
+    if (!v || v.type() !== "font") {
         return false;
+    }
 
     v.e.focus();
     return true;
@@ -1752,12 +1845,14 @@ function editText()//{{{
 
 function videoTogglePlay ()//{{{
 {
-    if (!viewer)
+    if (!viewer) {
         return false;
+    }
 
     var v = viewer.view;
-    if (!v || v.type() !== "video")
+    if (!v || v.type() !== "video") {
         return false;
+    }
 
     v.togglePlay();
     signal("video_play");
@@ -1766,19 +1861,23 @@ function videoTogglePlay ()//{{{
 
 function videoSpeed (d)//{{{
 {
-    if (!viewer)
+    if (!viewer) {
         return false;
+    }
 
     var v = viewer.view;
-    if (!v || v.type() !== "video")
+    if (!v || v.type() !== "video") {
         return false;
+    }
 
-    if (d>0)
+    if (d>0) {
         v.faster();
-    if (d<0)
+    } else if (d<0) {
         v.slower();
-    else
+    } else {
         v.normalSpeed();
+    }
+
     return true;
 }//}}}
 
@@ -1794,12 +1893,14 @@ function videoSlower ()//{{{
 
 function videoSeek (how)//{{{
 {
-    if (!viewer)
+    if (!viewer) {
         return false;
+    }
 
     var v = viewer.view;
-    if (!v || v.type() !== "video")
+    if (!v || v.type() !== "video") {
         return false;
+    }
 
     v.seek(how);
 
@@ -1820,8 +1921,9 @@ function forward ()//{{{
 
 function popInfo ()//{{{
 {
-    if (!info)
+    if (!info) {
         return false;
+    }
 
     info.popInfo();
     return true;
@@ -1829,8 +1931,9 @@ function popInfo ()//{{{
 
 function popPreview ()//{{{
 {
-    if (!viewer)
+    if (!viewer) {
         return false;
+    }
 
     viewer.popPreview();
     return true;
@@ -1872,8 +1975,9 @@ if ( userAgent() === userAgents.webkit ) {
 
 function next ()//{{{
 {
-    if ( n === len() )
+    if ( n === len() ) {
         return false;
+    }
 
     signal("next");
     go(n+1);
@@ -1882,8 +1986,9 @@ function next ()//{{{
 
 function prev ()//{{{
 {
-    if ( n === 1 )
+    if ( n === 1 ) {
         return false;
+    }
 
     signal("prev");
     go(n-1);
@@ -1896,18 +2001,23 @@ function keyPress (e)//{{{
 	var keyname;
 
     keyname = keycodes[keycode];
-    if ( !keyname )
+    if ( !keyname ) {
 		keyname = String.fromCharCode(keycode);
+    }
 
     keyname = keyname.toUpperCase()
-    if ( e.altKey )
+    if ( e.altKey ) {
         keyname = "A-"+keyname
-    if ( e.ctrlKey )
+    }
+    if ( e.ctrlKey ) {
         keyname = "C-"+keyname
-    if ( e.metaKey )
+    }
+    if ( e.metaKey ) {
         keyname = "M-"+keyname
-    if ( e.shiftKey )
+    }
+    if ( e.shiftKey ) {
         keyname = "S-"+keyname
+    }
 
 	if ( getConfig("show_keys", false) ) {
 		info.updateProperty("key: " + keyname + " ("+keycode+")");
@@ -1918,16 +2028,19 @@ function keyPress (e)//{{{
     var trymode_stacks = [mode(),modes.any];
     for (var i in trymode_stacks) {
         var k = keys[trymode_stacks[i]];
-        if (!k) continue;
+        if (!k) {
+            continue;
+        }
 
         var fn = k[keyname];
         var t = typeof(fn);
-        if (t === "string")
+        if (t === "string") {
             eval(fn);
-        else if (t === "function")
+        } else if (t === "function") {
             fn();
-        else
+        } else {
             continue;
+        }
         e.preventDefault();
         break;
     }
@@ -1941,12 +2054,14 @@ function onMouseWheel (e) {//{{{
 
 function addKeys (newkeys, desc, fn, keymode)//{{{
 {
-    if (!keymode)
+    if (!keymode) {
         keymode = modes.any;
+    }
 
     var ekeys = keys[keymode];
-    if (!ekeys)
+    if (!ekeys) {
         ekeys = keys[keymode] = {};
+    }
 
     var k = newkeys instanceof Array ? newkeys : [newkeys];
     for (var i in k) {
@@ -1959,12 +2074,16 @@ function addKeys (newkeys, desc, fn, keymode)//{{{
 	}
 
     // key description
-    if (!desc) return;
-    if (!keydesc)
+    if (!desc) {
+        return;
+    }
+    if (!keydesc) {
         keydesc = {};
+    }
     var modekeydesc = keydesc[keymode];
-    if (!modekeydesc)
+    if (!modekeydesc) {
         modekeydesc = keydesc[keymode] = {};
+    }
     modekeydesc[desc] = k;
 }//}}}
 
@@ -1975,8 +2094,9 @@ easeOutCubic: function (x, t, b, c, d) {
         // refresh preview every 30ms
         if ( t>tt ) {
             tt = t+25;
-            if ( mode() === modes.viewer )
+            if ( mode() === modes.viewer ) {
                 viewer.updatePreview();
+            }
         }
         return (t=t/1000-1)*t*t + 1;
     }
@@ -2052,24 +2172,27 @@ function dragScroll(t,p) {
             scroll(x-mouseX,y-mouseY,true);
 
         signal("scroll");
-        if (e)
+        if (e) {
             e.preventDefault();
+        }
     }
 }
 //}}}
 
 function viewerOnLoad()//{{{
 {
-    if ( mode() === modes.slideshow )
+    if ( mode() === modes.slideshow ) {
         viewer.e.fadeIn(1000);
+    }
     preloadImages();
 }//}}}
 
 function createItemList()//{{{
 {
     var e = $("#itemlist");
-    if (!e.length)
+    if (!e.length) {
         return;
+    }
 
     itemlist = new ItemList(e, ls, getConfig);
 
@@ -2086,6 +2209,8 @@ function createViewer(e, preview, info)//{{{
     viewer.fontOnMouseDown    = function () {signal("font_mouse_down")};
     viewer.previewOnMouseDown = function () {signal("preview_mouse_down")};
     viewer.onTooBig           = function () {signal("too_big")};
+    viewer.onFontTextChange   = function (text) {config.font_test = text;};
+    viewer.onNext             = next;
 
     if (info) {
         viewer.onUpdateStatus = function (msg,class_name) { info.updateProperty( msg, class_name ); }
@@ -2096,20 +2221,22 @@ function createViewer(e, preview, info)//{{{
     }
 
     viewer.onZoomChanged = function (state) {
-        if (vars['zoom'] === state)
+        if (state === vars.zoom) {
             return;
-        if (state !== 1)
-            vars['zoom'] = state;
-        else if ( vars['zoom'] )
-            delete vars['zoom'];
+        } else if (state !== 1) {
+            vars.zoom = state;
+        } else if ( vars.zoom ) {
+            delete vars.zoom;
+        }
         updateUrl(1000);
     }
 
     if ( preview.length ) {
         $('html,body').scroll(
                 function (){
-                    if ( mode() === modes.viewer )
+                    if ( mode() === modes.viewer ) {
                         viewer.updatePreview();
+                    }
                 }
         );
     }
@@ -2118,10 +2245,11 @@ function createViewer(e, preview, info)//{{{
 function createNavigation ()//{{{
 {
     // keyboard
-    if ( userAgent() === userAgents.webkit )
+    if ( userAgent() === userAgents.webkit ) {
         window.onkeydown = keyPress;
-    else
+    } else {
         window.onkeypress = keyPress;
+    }
 
     // mouse
     window.onmousewheel = document.onmousewheel = onMouseWheel;
@@ -2239,16 +2367,19 @@ function createAbout(e)//{{{
 function createHelp(e)//{{{
 {
     var ekeys = e.find(".keys");
-    if (ekeys.length)
+    if (ekeys.length) {
         createKeyHelp(ekeys);
+    }
 
     var econf = e.find(".options");
-    if (econf.length)
+    if (econf.length) {
         createConfigHelp(econf);
+    }
 
     var eother = e.find(".about");
-    if (eother.length)
+    if (eother.length) {
         createAbout(eother);
+    }
 }//}}}
 
 function toggleHelp()//{{{
@@ -2256,8 +2387,9 @@ function toggleHelp()//{{{
     // key bindings
     if (!help) {
         help = $(".help");
-        if (!help.length)
+        if (!help.length) {
             return;
+        }
         createHelp(help);
     }
 
@@ -2276,28 +2408,33 @@ function toggleHelp()//{{{
 
 function onResize()//{{{
 {
-    if (viewer)
+    if (viewer) {
         viewer.zoom();
-    if (itemlist)
+    }
+    if (itemlist) {
         itemlist.resize();
-    signal("resized");
+    }
+    signal("resize");
 }//}}}
 
 function exit_slideshow()//{{{
 {
-    if ( mode() !== modes.slideshow )
+    if ( mode() !== modes.slideshow ) {
         return;
+    }
 
     mode_stack.pop()
-    if (slidedhow_t)
-        clearTimeout(slidedhow_t);
+    if (slidedhow_t) {
+        window.clearTimeout(slidedhow_t);
+    }
 }//}}}
 
 function slideshow()//{{{
 {
     zoom('fit');
-    if ( mode() !== modes.slideshow )
+    if ( mode() !== modes.slideshow ) {
         mode_stack.push(modes.slideshow);
+    }
     slidedhow_t = window.setTimeout( function (){
                 viewer.e.fadeOut( 1000, function () {next()} );
                 slideshow();
@@ -2335,13 +2472,15 @@ function onLoad()//{{{
 
     // info
     e = $('#info');
-    if (e)
+    if (e) {
         info = new Info(e, getConfig);
+    }
 
     // viewer
     e = $('#canvas');
-    if (e.length)
+    if (e.length) {
         createViewer(e,$('.preview'),info);
+    }
 
     // refresh zoom on resize
     window.onresize = onResize;
@@ -2352,9 +2491,12 @@ function onLoad()//{{{
     // navigation
     createNavigation();
 
+    signal('load');
+
     go(n);
 
-    if ( getConfig('slideshow') )
+    if ( getConfig('slideshow') ) {
         slideshow();
+    }
 }//}}}
 

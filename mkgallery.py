@@ -81,16 +81,18 @@ options:
 """	% (sys.argv[0], title, gdir, d, url, resolution) )
 #}}}
 
-def dirname(filename):
+def dirname(filename):#{{{
 	return os.path.dirname(filename).replace(':','_')
+#}}}
 
-def path(filename, dir='items'):
+def path(filename, dir='items'):#{{{
 	global local
 
 	if local:
 		return 'file://'+os.path.abspath(filename).replace('\\','/')
 	else:
 		return dir+'/'+filename.replace(':',"_").replace('\\','/')
+#}}}
 
 def walk(root):#{{{
 	if os.path.isdir(root):
@@ -119,7 +121,7 @@ def parse_args(argv):#{{{
 	global title, resolution, gdir, url, d, cp, force, local
 
 	try:
-		opts, args = getopt.getopt(argv[1:], "ht:r:d:u:cfl",
+		opts, args = getopt.getopt(argv, "ht:r:d:u:cfl",
 				["help", "title=", "resolution=", "directory=", "url=","template=","copy","force","local"])
 	except getopt.GetoptError:
 		usage()
@@ -308,7 +310,6 @@ def prepare_html(template,itemfile,css,gdir,files):#{{{
 def create_thumbnail(filename, resolution, outfilename):#{{{
 	from PIL import Image
 
-	print(filename,outfilename)
 	# create directory for output file
 	d = dirname(outfilename).replace(':','_')
 	if not os.path.exists(d):
@@ -406,5 +407,5 @@ def main(argv):#{{{
 #}}}
 
 if __name__ == "__main__":
-	main(sys.argv)
+	main(sys.argv[1:])
 
