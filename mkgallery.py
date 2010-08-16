@@ -1,14 +1,18 @@
 #!/usr/bin/python
+# -*- coding: utf-8 -*-
 """
 Creates web gallery of images and fonts present in current directory
 """
+
 import os, sys, re, getopt, shutil, glob
+
 S = os.sep
+
 # default values:
 title="default" # html title and gallery directory name
 resolution = 300 # thumbnail resolution
 d = os.path.dirname(sys.argv[0]) or "." # path to template
-home = os.environ.has_key('HOME') and os.environ['HOME'] or os.environ['HOMEDRIVE']+os.environ['HOMEPATH']+S+"My Documents"
+home = 'HOME' in os.environ and os.environ['HOME'] or os.environ['HOMEDRIVE']+os.environ['HOMEPATH']+S+"My Documents"
 gdir = home +S+ "Galleries" +S+ "%s"; # path to gallery
 url = "file:///<path_to_gallery>/index.html" # browser url
 progress_len = 40 # progress bar length
@@ -20,11 +24,12 @@ rm_error = "ERROR: Existing gallery contains files that aren't symbolic links!\n
 
 import_error = "WARNING: Generating {0} was unsuccessfull! To generate {0} Python Imaging Library needs to be installed."
 
-re_img  = re.compile('\.(jpg|png|apng|gif|svg)$',re.I)
-re_font = re.compile('\.(otf|ttf)$',re.I)
-re_vid = re.compile('\.(mp4|mov|flv|ogg|mp3|wav)$',re.I)
-re_remote = re.compile('^\w+://',re.I)
-re_fontname = re.compile('[^a-zA-Z0-9_]')
+re_flags = re.IGNORECASE|re.UNICODE
+re_img  = re.compile(ur'\.(jpg|png|apng|gif|svg)$', re_flags)
+re_font = re.compile(ur'\.(otf|ttf)$', re_flags)
+re_vid = re.compile(ur'\.(mp4|mov|flv|ogg|mp3|wav)$', re_flags)
+re_remote = re.compile(ur'^\w+://', re_flags)
+re_fontname = re.compile(ur'[^a-z0-9_]+', re_flags)
 
 local = False
 
@@ -226,7 +231,7 @@ def addFont(fontfile,css):#{{{
 		print("ERROR: "+str(e)+" (file: \""+fontfile+"\")")
 
 	p = path(fontfile)
-	css.write("@font-face{font-family:"+re_fontname.sub("_",p)+";src:url('"+p+"');}\n")
+	css.write("@font-face{font-family:"+re_fontname.sub("_", p)+";src:url('"+p+"');}\n")
 
 	return fontname
 #}}}

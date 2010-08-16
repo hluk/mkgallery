@@ -26,11 +26,8 @@ var scrolling = false;
 
 function esc (str) {//{{{
 	// don't escape protocols (i.e. "http://" -> "http%3A//"
-    if (str.search(/^\w+:\/\//) > -1) {
-		return encodeURI(str);
-    } else {
-		return escape(str);
-    }
+    //return escape(str).replace('%3A//','://');
+    return encodeURI(str);
 }//}}}
 
 function createPathElements(dir_e,filename_e,ext_e,path) {//{{{
@@ -429,7 +426,7 @@ init: function (itempath, parent)//{{{
     this.path = itempath;
     this.parent = parent;
     this.zoom_factor = 1;
-    this.font = this.path.replace(/[^a-zA-Z0-9_]/g,"_");
+    this.font = this.path.replace(/[^a-zA-Z0-9_]+/g,"_");
 	this.width = this.height = 0;
 },//}}}
 
@@ -992,10 +989,10 @@ addThumbnails: function (i)//{{{
             // recursively load thumbnails from currently viewed
             // - flood load:
             //      previous and next thumbnails (from the current) are loaded in parallel
-            if (i+1>=this.selected) {
+            if (i+1>=t.selected) {
                 t.addThumbnails(i+1);
             }
-            if (i+1<=this.selected) {
+            if (i+1<=t.selected) {
                 t.addThumbnails(i-1);
             }
         };
