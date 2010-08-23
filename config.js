@@ -49,7 +49,7 @@ slideshow: false,
 slideshow_delay: 5000,
 
 // slide scroll coefficient (0 to turn off)
-slide_scroll: 100,
+slide_scroll: 200,
 }
 
 configStrict = { // -- these can't be overridden in URL
@@ -143,7 +143,7 @@ Viewer: [
     [["Down","KP2","2","s"], "itemlist.listDown()", "Move cursor down"],
     [["PageUp","KP9","9"], "itemlist.listPageUp();", "Previous page"],
     [["PageDown","KP3","3"], "itemlist.listPageDown()", "Next page"],
-    [["End","KP1","1"], "itemlist.selectItem(itemlist.length-1)","Move cursor on last thumbnail"],
+    [["End","KP1","1"], "itemlist.selectItem(itemlist.len-1)","Move cursor on last thumbnail"],
     [["Home","KP7","7"], "itemlist.selectItem(0)", "Move cursor on first thumbnail"],
 ],
 
@@ -178,7 +178,7 @@ bottom: "",
 leftmost: "",
 rightmost: "",
 // item view scrolled
-scroll: "mode() == modes.viewer && popPreview()",
+scroll: "popPreview()",
 // video played/paused
 video_play: "",
 // window resized

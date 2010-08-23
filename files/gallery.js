@@ -131,7 +131,7 @@ show: function ()//{{{
         this.path.search(/\.gif$/i) === -1;
 
     if ( !use_canvas ) {
-        e = this.e = this.img = $( document.createElement("img") );
+        e = this.e = this.img = $("<img>");
         this.ctx = {
             drawImage: function (img,x,y,width,height) {
                            if( !e.attr("src") ) {
@@ -142,7 +142,7 @@ show: function ()//{{{
                        }
         };
     } else {
-        e = this.e = $( document.createElement("canvas") );
+        e = this.e = $("<canvas>");
         this.ctx = this.e[0].getContext('2d');
     }
 
@@ -152,7 +152,7 @@ show: function ()//{{{
 
     // image element
     if ( !this.img && !use_embed ) {
-        e = this.img = $( document.createElement("img") );
+        e = this.img = $("<img>");
     }
     if ( !use_embed ) {
         e.load( function () {
@@ -165,7 +165,7 @@ show: function ()//{{{
             view.parent.onLoad();
         } );
     }
-    e.attr( "src", esc(this.path) );
+    e.attr( "src", this.path );
 },//}}}
 
 remove: function ()//{{{
@@ -182,13 +182,12 @@ thumbnail: function ()//{{{
         var thumbpath, thumb, t;
         thumbpath = "thumbs/" + this.path.replace(/^items\//,'').replace(/:/g,'_') + ".png";
 
-        thumb = this.thumb = $( document.createElement("img") );
-        thumb.addClass("thumbnail " + this.type());
+        thumb = this.thumb = $("<img>", {'class': "thumbnail " + this.type()});
 
         thumb.load(this.thumbnailOnLoad);
 		t = this;
         thumb.error( function () { t.thumbnailOnLoad(true); } );
-        thumb.attr( "src", esc(thumbpath) );
+        thumb.attr( "src", thumbpath );
     }
 
     return this.thumb;
@@ -302,7 +301,7 @@ show: function ()//{{{
         view.parent.onUpdateStatus( "Unsupported format!", "error" );
 	} );
 
-    e.attr("src",esc(this.path));
+    e.attr("src", this.path);
     e.appendTo(this.parent.e);
 },//}}}
 
@@ -444,7 +443,7 @@ show: function ()//{{{
     }
 
     e = this.e = $( document.createElement("textarea") );
-    e.attr("src", esc(this.path));
+    e.attr("src", this.path);
     e.addClass("fontview");
 
     e.attr( "value", this.parent.getConfig('font_test', '+-1234567890, abcdefghijklmnopqrstuvwxyz, ABCDEFGHIJKLMNOPQRSTUVWXYZ, ?!.#$\\/"\'') );
@@ -709,21 +708,23 @@ zoom: function (how)//{{{
     // zoom view
     v.zoom(z);
 
+    this.updatePreview();
+
+    // if image doesn't fit in the window
+    if ( window.innerHeight < this.view.e.innerHeight() ||
+         window.innerWidth < this.view.e.innerWidth() ) {
+        this.onTooBig();
+    } else {
+        // image fits the window -- preview is not necessary
+        this.hidePreview();
+    }
+
     if ( zoom_state === this.zoom_state ) {
         return;
     }
 
     this.zoom_state = zoom_state;
     this.onZoomChanged( this.zoom_state );
-
-    // if image doesn't fit in the window
-    if ( this.view.type() === "image" &&
-         ( window.innerHeight < this.view.e.innerHeight() ||
-           window.innerWidth < this.view.e.innerWidth() ) ) {
-        this.onTooBig();
-    } else {
-        this.hidePreview();
-    }
 },//}}}
 
 createPreview: function (filepath)//{{{
@@ -750,19 +751,17 @@ createPreview: function (filepath)//{{{
         img = this.preview_img = $( document.createElement("img") );
         img.appendTo(p);
     }
-    img.attr( "src", esc(filepath) );
+    img.attr("src", filepath);
     p.show();
 },//}}}
 
-updatePreview: function (force)//{{{
+updatePreview: function ()//{{{
 {
     var img, win, imgw, imgh, ww, wh, w, h, doc;
 
     img = this.preview_img;
     if ( !img || !img.attr("src") ) {
         return false;
-    } else if ( !force && !this.preview.hasClass("focused") ) {
-		return true;
     }
 
     // highlights the part of the image in window
@@ -790,7 +789,7 @@ popPreview: function ()//{{{
 {
     var preview, t;
 
-    if ( !this.updatePreview(true) ) {
+    if ( !this.updatePreview() ) {
         return;
     }
 
@@ -989,10 +988,10 @@ addThumbnails: function (i)//{{{
             // recursively load thumbnails from currently viewed
             // - flood load:
             //      previous and next thumbnails (from the current) are loaded in parallel
-            if (i+1>=t.selected) {
+            if (i>=t.selected) {
                 t.addThumbnails(i+1);
             }
-            if (i+1<=t.selected) {
+            if (i<=t.selected) {
                 t.addThumbnails(i-1);
             }
         };
@@ -1014,10 +1013,13 @@ newItem: function (i,props)//{{{
 
 	// get item filename, user tags, width, height
     if (props instanceof Array) {
-        itemname = props[0];
         tags = props[1];
 		w = props[2];
 		h = props[3];
+		itemname = tags['link'];
+		if ( !itemname ) {
+			itemname = props[0];
+		}
     } else {
         itemname = props;
     }
@@ -1103,7 +1105,7 @@ toggle: function ()//{{{
 
         // add thumbnails
         this.thumbs = [];
-        this.addThumbnails(this.selected-1);
+        this.addThumbnails(this.selected);
 
         this.template.remove();
 
@@ -1112,6 +1114,7 @@ toggle: function ()//{{{
         this.selection.css("position","absolute");
     }
 
+    // show/hide list and restore scroll position
     var lastpos2 = [window.pageXOffset,window.pageYOffset];
     this.e.toggleClass("focused");
     window.scrollTo( this.lastpos[0], this.lastpos[1] );
@@ -1188,7 +1191,7 @@ updateSelection: function ()//{{{
 selectItem: function (i)//{{{
 {
     if (!this.items) {
-        this.selected = i;
+        this.selected = Math.min( Math.max(0,i), this.len-1 );
         return;
     }
 
@@ -1399,7 +1402,7 @@ updateProgress: function ()//{{{
 updateItemTitle: function ()//{{{
 {
     if (this.itemlink.length) {
-        this.itemlink.attr( "href", this.itempath );
+        this.itemlink.attr( "href", this.href );
     }
 
     createPathElements(this.dir_e,this.filename_e,this.ext_e,this.href);
@@ -1425,6 +1428,11 @@ updateProperties: function (props)//{{{
 updateProperty: function (status_msg, class_name)//{{{
 {
     var cls, e;
+
+    // treat 'link' property as href value
+    if ( class_name === 'link' ) {
+        this.href = status_msg;
+    }
 
     cls = class_name ? class_name : "msg";
     e = this.e.find( "." + cls );
@@ -1456,11 +1464,10 @@ updateInfo: function (href,i,len,properties)//{{{
 	this.counter_max.html( len );
     this.counter_now.html(i);
     this.counter_rem.html( len - i );
-    this.itempath = esc(href);
 
+    this.updateProperties(properties);
     this.updateProgress();
     this.updateItemTitle();
-    this.updateProperties(properties);
 },//}}}
 
 popInfo: function ()//{{{
@@ -1707,8 +1714,7 @@ function preloadImages()//{{{
             }
 
             // create image
-            im = new Image();
-            im.src = esc(filename);
+            im = $('<img>', {src:filename});
 
             // since we access the disk (read the image) we can also
             // change the url - browser saves history
@@ -1736,12 +1742,12 @@ function scroll (x,y,absolute)//{{{
 {
     var oldx, oldy, newx, newy;
 
-    if (!viewer) {
-        return false;
-    }
+    stopDragScroll();
 
     oldx = window.pageXOffset;
     oldy = window.pageYOffset;
+
+    // scroll
 	if (absolute) {
 		window.scrollTo(x,y);
     } else {
@@ -1750,9 +1756,17 @@ function scroll (x,y,absolute)//{{{
 
     newx = window.pageXOffset;
     newy = window.pageYOffset;
-    if ( newy !== oldy ) {
-        signal("scroll");
 
+    if ( newx === oldx && newy === oldy ) {
+        return false;
+    } else {
+        if ( viewer ) {
+            viewer.updatePreview();
+        }
+        signal("scroll");
+    }
+
+    if ( newy !== oldy ) {
         if (newy === 0) {
             signal("top");
         }
@@ -1761,9 +1775,9 @@ function scroll (x,y,absolute)//{{{
         }
 
         return true;
-    } else if ( newx !== oldx ) {
-        signal("scroll");
+    }
 
+    if ( newx !== oldx ) {
         if (newx === 0) {
             signal("leftmost");
         }
@@ -1772,8 +1786,6 @@ function scroll (x,y,absolute)//{{{
         }
 
         return true;
-    } else {
-        return false;
     }
 }//}}}
 
@@ -1807,17 +1819,17 @@ function go (i)//{{{
 
     // TODO: fix memory leaks!!!
     // reload window on every nth item
-    r = getConfig('reload_every');
-    if (r) {
-        if (count_n > 0 && r && count_n%r === 0 && mode() !== modes.slideshow) {
-            count_n = 0;
-            updateUrl();
-            location.reload();
-            return;
-        } else {
-            count_n += 1;
-        }
-    }
+    //r = getConfig('reload_every');
+    //if (r) {
+        //if (count_n > 0 && r && count_n%r === 0 && mode() !== modes.slideshow) {
+            //count_n = 0;
+            //updateUrl();
+            //location.reload();
+            //return;
+        //} else {
+            //count_n += 1;
+        //}
+    //}
 
     // hide item list and select current item
     if ( itemlist ) {
@@ -1835,15 +1847,14 @@ function go (i)//{{{
 		itemname = item;
     }
 
+    viewer.show(itemname);
+    scroll(0,0,true);
+
     updateInfo(itemname, n, props);
 
     updateTitle();
 	updateUrl(1000);
 	updateClassName();
-
-    viewer.show(itemname);
-
-    window.scrollTo(0,0);
 
     signal("go");
     if ( n === 1 ) {
@@ -1958,7 +1969,7 @@ function forward ()//{{{
 
 function popPreview ()//{{{
 {
-    if (!viewer) {
+    if (!viewer || mode() !== modes.viewer) {
         return false;
     }
 
@@ -2209,6 +2220,11 @@ function dragScroll (t,p)
     dx = [mouseX,mouseX];
     dy = [mouseY,mouseY];
 }//}}}
+
+function stopDragScroll ()//{{{
+{
+    $('html,body').stop();
+}//}}}
 //}}}
 
 function viewerOnLoad()//{{{
@@ -2307,20 +2323,18 @@ function createKeyHelp(e)//{{{
     var i, j, cat, modekeydesc, key;
 
     for (i in modes) {
-        cat = $( document.createElement("div") );
-        cat.addClass('category');
+        cat = $("<div>", {'class': "category"});
         cat.appendTo(e);
 
-        $('<h3>'+modes[i]+'</h3>').appendTo(cat);
+        $('<h3>', {text: modes[i]}).appendTo(cat);
 
         modekeydesc = keydesc[modes[i]];
         for (j in modekeydesc) {
-            key = $( document.createElement("div") );
-            key.addClass("key");
+            key = $("<div>", {'class': "key"});
             key.appendTo(cat);
 
-            $('<div class="which">'+modekeydesc[j].join(", ")+'</div>').appendTo(key);
-            $('<div class="desc">'+j+'</div>').appendTo(key);
+            $('<div>', {'class': "which", text: modekeydesc[j].join(", ")}).appendTo(key);
+            $('<div>', {'class': "desc", text: j}).appendTo(key);
         }
     }
 }//}}}
@@ -2365,20 +2379,18 @@ function createConfigHelp(e)//{{{
     };//}}}
 
     for (i in confdesc) {
-        cat = $( document.createElement("div") );
-        cat.addClass('category');
+        cat = $("<div>", {'class': "category"});
         cat.appendTo(e);
 
-        $('<h3>'+i+'</h3>').appendTo(cat);
+        $('<h3>',{text: i}).appendTo(cat);
 
         desc = confdesc[i];
         for (j in desc) {
-            opt = $( document.createElement("div") );
-            opt.addClass("option");
+            opt = $("<div>", {'class': "option"});
             opt.appendTo(cat);
 
-            $('<div class="which">'+j+'</div>').appendTo(opt);
-            $('<div class="desc">'+confdesc[i][j]+'</div>').appendTo(opt);
+            $('<div>', {'class': "which", text: j}).appendTo(opt);
+            $('<div>', {'class': "desc", text: confdesc[i][j]}).appendTo(opt);
         }
     }
 }//}}}
@@ -2395,12 +2407,12 @@ function createAbout(e)//{{{
 
     for (i in content) {
         x = content[i];
-        cat = $( document.createElement("div") );
-        cat.addClass("category");
+
+        cat = $("<div>", {'class': "category"});
         cat.appendTo(e);
 
-        $('<div class="which">'+x[0]+'</div>').appendTo(cat);
-        $('<div class="desc">'+x[1]+'</div>').appendTo(cat);
+        $('<div>', {'class': "which", text: x[0]}).appendTo(cat);
+        $('<div>', {'class': "desc", html: x[1]}).appendTo(cat);
     }
 }//}}}
 

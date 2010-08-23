@@ -4,9 +4,11 @@
 Creates web gallery of images and fonts present in current directory
 """
 
-import os, sys, re, getopt, shutil, glob
+import os, sys, re, getopt, shutil, glob, locale, codecs
 
 S = os.sep
+# input/argument encoding
+Locale = locale.getdefaultlocale()[1]
 
 # default values:
 title="default" # html title and gallery directory name
@@ -17,7 +19,9 @@ gdir = home +S+ "Galleries" +S+ "%s"; # path to gallery
 url = "file:///<path_to_gallery>/index.html" # browser url
 progress_len = 40 # progress bar length
 
-force = False # don't delete files
+force = False # force file deletion?
+font_render = False # render fonts?
+font_size, font_text = 16, ""
 
 rm_error = "ERROR: Existing gallery contains files that aren't symbolic links!\n"+\
           "       Use -f (--force) to remove all files."
@@ -32,6 +36,11 @@ re_remote = re.compile(ur'^\w+://', re_flags)
 re_fontname = re.compile(ur'[^a-z0-9_]+', re_flags)
 
 local = False
+
+def from_locale(string):#{{{
+	global Locale
+	return string.decode( Locale ).replace('\\n', '\n')
+#}}}
 
 def copy(src, dest):#{{{
 	if os.path.isdir(src):
@@ -80,6 +89,8 @@ options:
     -f, --force             overwrites existing gallery
     -l, --local             don't copy or create links to gallery items,
                             browse items locally, i.e. protocol is "file://"
+	-x, --render=<size>,<text>
+							render fonts instead using them directly
 
     -r 0, --resolution=0    don't generate thumbnails
     -u "", --url=""         don't launch web browser
@@ -90,10 +101,10 @@ def dirname(filename):#{{{
 	return os.path.dirname(filename).replace(':','_')
 #}}}
 
-def path(filename, dir='items'):#{{{
+def path(filename, dir = 'items', remote = False):#{{{
 	global local
 
-	if local:
+	if local and not remote:
 		return 'file://'+os.path.abspath(filename).replace('\\','/')
 	else:
 		return dir+'/'+filename.replace(':',"_").replace('\\','/')
@@ -101,7 +112,7 @@ def path(filename, dir='items'):#{{{
 
 def walk(root):#{{{
 	if os.path.isdir(root):
-		for f in os.listdir(root):
+		for f in os.listdir(unicode(root)):
 			for ff in walk(root == "." and f or root+S+f):
 				yield ff
 	else:
@@ -114,7 +125,9 @@ def launch_browser(url):#{{{
 
 	try:
 		import webbrowser
-		if webbrowser.open(url):
+		# open browser in background
+		w = webbrowser.BackgroundBrowser( webbrowser.get().basename )
+		if w.open(url):
 			ok = True;
 	except:
 		pass;
@@ -123,11 +136,13 @@ def launch_browser(url):#{{{
 #}}}
 
 def parse_args(argv):#{{{
-	global title, resolution, gdir, url, d, cp, force, local
+	global title, resolution, gdir, url, d, cp, force, local, \
+			font_render, font_size, font_text
 
 	try:
-		opts, args = getopt.getopt(argv, "ht:r:d:u:cfl",
-				["help", "title=", "resolution=", "directory=", "url=","template=","copy","force","local"])
+		opts, args = getopt.getopt(argv, "ht:r:d:u:cflx:",
+				["help", "title=", "resolution=", "directory=", "url=",
+					"template=", "copy", "force", "local", "render="])
 	except getopt.GetoptError:
 		usage()
 		sys.exit(2)
@@ -156,6 +171,10 @@ def parse_args(argv):#{{{
 			local = True
 		elif opt in ("-f", "--force"):
 			force = True
+		elif opt in ("-x", "--render"):
+			font_render = True
+			font_size, font_text = arg.split(',', 1)
+			font_size = int(font_size)
 
 	try:    gdir = gdir % title
 	except: pass
@@ -213,10 +232,10 @@ def prepare_gallery(d,gdir,force):#{{{
 #}}}
 
 def addFont(fontfile,css):#{{{
-	global re_fontname
+	global re_fontname, gdir
 
+	# font name
 	fontname = ""
-
 	try:
 		from PIL import ImageFont
 
@@ -230,21 +249,79 @@ def addFont(fontfile,css):#{{{
 	except Exception as e:
 		print("ERROR: "+str(e)+" (file: \""+fontfile+"\")")
 
-	p = path(fontfile)
-	css.write("@font-face{font-family:"+re_fontname.sub("_", p)+";src:url('"+p+"');}\n")
+	# render font
+	outfile = ""
+	if font_render:
+		outfile = gdir +S+ path( fontfile, remote = True ) + ".png"
+		try:
+			renderFont(fontfile, font_size, font_text, outfile)
+		except ImportError:
+			print("ERROR: Cannot render font -- please install Python Imaging Library (PIL) module first.")
+			exit(1)
+		except Exception as e:
+			print("ERROR: "+str(e)+" (file: \""+fontfile+"\")")
+	else:
+		p = path(fontfile)
+		css.write("@font-face{font-family:"+re_fontname.sub("_", p)+";src:url('"+p+"');}\n")
 
-	return fontname
+	return outfile, fontname
 #}}}
 
-def itemline(filename,alias=None,width=None,height=None):#{{{
+def renderFont(fontfile, size, text, outfile):#{{{
+	from PIL import Image, ImageFont, ImageDraw, ImageChops
+
+	f = ImageFont.truetype(fontfile, size, encoding="unic")
+
+	w = 0
+	h = size/2
+	im = Image.new("RGB", (w,h), "white")
+
+	# render lines
+	for line in ( from_locale(text) +'\n').split('\n'):
+		if line:
+			w2,h2 = f.getsize(line)
+			w2 = w2+size
+			h2 = h2
+			im2 = Image.new("RGB", (w2,h2), "white")
+
+			# render line
+			draw = ImageDraw.Draw(im2)
+			draw.text( (size/2,0), line, fill="black", font=f )
+		else:
+			# empty line
+			w2 = 0
+			h2 = size/2
+			im2 = Image.new("RGB", (w2,h2), "white")
+
+		w3 = max(w,w2)
+		h3 = h+h2
+		im3 = Image.new("RGB", (w3,h3), "white")
+
+		# join images
+		im3.paste( im, (0,0,w,h) )
+		im3.paste( im2, (0,h,w2,h3) )
+
+		im = im3
+		w, h = w3, h3
+
+	d = dirname(outfile)
+	if not os.path.isdir(d):
+		os.makedirs(d)
+	im.save(outfile, "PNG")
+#}}}
+
+def itemline(filename, props=None, width=None, height=None):#{{{
 	# filename
 	# TODO: escape double quotes
 	line = '"' + ( is_local(filename) and path(filename) or filename ) + '"'
 
-	if alias or width:
+	if props or width:
 		# alias
 		# TODO: escape double quotes
-		line = line + ',{' + ( alias and ('alias:"'+alias+'"') or '' ) + '}'
+		line = line + ',{'
+		for k,v in props.items():
+			line = line + '"' + k + '":"' + v + '",'
+		line = line + '}'
 
 		# width and height
 		if width:
@@ -288,25 +365,31 @@ def prepare_html(template,itemfile,css,gdir,files):#{{{
 					isvid = re_vid.search(f) != None
 
 			if isimg or isfont or isvid:
-				# file is local and not viewed localy
+				# file is local and not viewed locally
 				if is_local(f) and not local:
 					fdir = imgdir+S+dirname(f)
 					if not os.path.isdir(fdir):
 						os.makedirs(fdir)
 					cp( abs_f, fdir +S+ os.path.basename(f) )
 
-				# if file is font: create font-face line in css
+				# if file is font: create font-face line in css or render it
 				alias = ""
+				link = ""
 				if isfont:
-					alias = addFont(f,css);
+					f2, alias = addFont(f,css);
+					if f2:
+						link, f = f, f2
 
-				items[escape(f)] = alias
+				item = items[escape(f)] = {}
+				if alias:
+					item['alias'] = alias
+				if link:
+					item['link'] = path(link)
 
 	itemfile.write('var title = "'+title+'";\n');
 	itemfile.write("var ls=[\n")
-	for item in sorted(items,key=str.lower):
-		alias = items[item]
-		itemfile.write( itemline(item,alias) )
+	for item in sorted( items, key=lambda x: x.lower() ):
+		itemfile.write( itemline(item, items[item]) )
 	itemfile.write("];\n");
 
 	return items
@@ -349,8 +432,7 @@ def create_thumbnails(items, imgdir, thumbdir, resolution, itemfile):#{{{
 	sys.stdout.write( "Creating thumbnails: [%s] %d/%d\r"%(bar,0,n) )
 
 	lines = "var ls=[\n"
-	for f in sorted(items,key=str.lower):
-		alias = items[f]
+	for f in sorted( items, key=lambda x: x.lower() ):
 		w = h = 0
 		if re_img.search(f):
 			try:
@@ -371,7 +453,7 @@ def create_thumbnails(items, imgdir, thumbdir, resolution, itemfile):#{{{
 			bar = ("="*l) + ">" + (" "*(progress_len-l))
 			sys.stdout.write( "Creating thumbnails: [%s] %d/%d%s"%(bar,i,n,i==n and "\n" or "\r") );
 			sys.stdout.flush()
-		lines = lines + itemline(f,alias,w,h)
+		lines = lines + itemline(f,items[f],w,h)
 	lines = lines + "];\n"
 
 	# rewrite items.js
@@ -388,9 +470,9 @@ def main(argv):#{{{
 
 	prepare_gallery(d,gdir,force)
 
-	template = open( d+S+"template.html", "r" );
-	itemfile = open( gdir+S+"items.js", "w" )
-	css = open( gdir+S+"fonts.css", "w" )
+	template = codecs.open( d+S+"template.html", "r", "utf-8" );
+	itemfile = codecs.open( gdir+S+"items.js", "w", "utf-8" )
+	css = codecs.open( gdir+S+"fonts.css", "w", "utf-8" )
 
 	items = prepare_html(template,itemfile,css,gdir,files)
 
