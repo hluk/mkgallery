@@ -25,9 +25,9 @@
 var scrolling = false;
 
 function esc (str) {//{{{
-	// don't escape protocols (i.e. "http://" -> "http%3A//"
-    //return escape(str).replace('%3A//','://');
-    return encodeURI(str);
+	// escape hash and question mark in filenames
+	// (jQuery won't escape them)
+	return str.replace(/#/g,'%23').replace(/\?/g,'%3F');
 }//}}}
 
 function createPathElements(dir_e,filename_e,ext_e,path) {//{{{
@@ -135,7 +135,7 @@ show: function ()//{{{
         this.ctx = {
             drawImage: function (img,x,y,width,height) {
                            if( !e.attr("src") ) {
-                               e.attr("src", img.src);
+                               e.attr( "src", esc(img.src) );
                            }
                            e.width = width;
                            e.height = height;
@@ -165,7 +165,7 @@ show: function ()//{{{
             view.parent.onLoad();
         } );
     }
-    e.attr( "src", this.path );
+    e.attr( "src", esc(this.path) );
 },//}}}
 
 remove: function ()//{{{
@@ -180,14 +180,14 @@ thumbnail: function ()//{{{
 {
     if ( !this.thumb ) {
         var thumbpath, thumb, t;
-        thumbpath = "thumbs/" + this.path.replace(/^items\//,'').replace(/:/g,'_') + ".png";
+        thumbpath = "thumbs/" + this.path.replace(/:/g,'_') + ".png";
 
         thumb = this.thumb = $("<img>", {'class': "thumbnail " + this.type()});
 
         thumb.load(this.thumbnailOnLoad);
 		t = this;
         thumb.error( function () { t.thumbnailOnLoad(true); } );
-        thumb.attr( "src", thumbpath );
+        thumb.attr( "src", esc(thumbpath) );
     }
 
     return this.thumb;
@@ -301,7 +301,7 @@ show: function ()//{{{
         view.parent.onUpdateStatus( "Unsupported format!", "error" );
 	} );
 
-    e.attr("src", this.path);
+    e.attr( "src", esc(this.path) );
     e.appendTo(this.parent.e);
 },//}}}
 
@@ -443,7 +443,7 @@ show: function ()//{{{
     }
 
     e = this.e = $( document.createElement("textarea") );
-    e.attr("src", this.path);
+    e.attr( "src", esc(this.path) );
     e.addClass("fontview");
 
     e.attr( "value", this.parent.getConfig('font_test', '+-1234567890, abcdefghijklmnopqrstuvwxyz, ABCDEFGHIJKLMNOPQRSTUVWXYZ, ?!.#$\\/"\'') );
@@ -751,7 +751,7 @@ createPreview: function (filepath)//{{{
         img = this.preview_img = $( document.createElement("img") );
         img.appendTo(p);
     }
-    img.attr("src", filepath);
+    img.attr( "src", esc(filepath) );
     p.show();
 },//}}}
 
@@ -1002,7 +1002,7 @@ addThumbnails: function (i)//{{{
 
 newItem: function (i,props)//{{{
 {
-    var e, item, itemname, tags, w, h, key, t;
+    var e, item, itemname, tags, size, w, h, key, t;
     item = this.template;
 
     // image identification
@@ -1014,11 +1014,14 @@ newItem: function (i,props)//{{{
 	// get item filename, user tags, width, height
     if (props instanceof Array) {
         tags = props[1];
-		w = props[2];
-		h = props[3];
 		itemname = tags['link'];
 		if ( !itemname ) {
 			itemname = props[0];
+		}
+		size = tags['thumbnail_size'];
+		if (size) {
+			w = size[0];
+			h = size[1];
 		}
     } else {
         itemname = props;
@@ -1401,8 +1404,9 @@ updateProgress: function ()//{{{
 
 updateItemTitle: function ()//{{{
 {
-    if (this.itemlink.length) {
-        this.itemlink.attr( "href", this.href );
+	var link = this.itemlink;
+    if (link.length) {
+        link.attr( "href", esc(this.href) );
     }
 
     createPathElements(this.dir_e,this.filename_e,this.ext_e,this.href);
