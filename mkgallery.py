@@ -79,6 +79,7 @@ re_flags = re.IGNORECASE|re.UNICODE
 re_img  = re.compile(ur'\.(jpg|png|apng|gif|svg)$', re_flags)
 re_font = re.compile(ur'\.(otf|ttf)$', re_flags)
 re_vid = re.compile(ur'\.(mp4|mov|flv|ogg|mp3|wav)$', re_flags)
+re_html = re.compile(ur'\.html$', re_flags)
 re_remote = re.compile(ur'^\w+://', re_flags)
 re_fontname = re.compile(ur'[^a-z0-9_]+', re_flags)
 
@@ -455,16 +456,20 @@ class Type:
 	IMAGE = 1
 	FONT  = 2
 	VIDEO = 3
+	HTML = 4
 
 def item_type(f):
 	global re_img, re_font, re_vid
+	types = {
+		Type.IMAGE: re_img,
+		Type.FONT:  re_font,
+		Type.VIDEO: re_vid,
+		Type.HTML:  re_html
+	}
 
-	if re_img.search(f) != None:
-		return Type.IMAGE
-	if re_font.search(f) != None:
-		return Type.FONT
-	if re_vid.search(f) != None:
-		return Type.VIDEO
+	for t, re in types.items():
+		if re.search(f) != None:
+			return t
 
 	return Type.UNKNOWN
 #}}}

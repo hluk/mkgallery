@@ -19,6 +19,48 @@
 /*global $, jQuery, window, document, navigator, location, history, escape, alert, Image*/
 
 "use strict";
+// DEFAULT CONFIGURATION {{{
+// option: [default value,category, description]
+configs = {
+	'n': [1, "General", "Current item"],
+	'no_preview': [false, "General", "Disable item preview window"],
+	'no_list': [false, "General", "Disable item list"],
+	'no_info': [false, "General", "Disable item info popup"],
+	'title_fmt': ['%{title}: %{now}/%{max} "%{filename}"' ,"General", "Title format (keywords: title, filename, now, max, remaining)"],
+	'pop_info_delay': [4000, "General", "Number of milliseconds the info is visible"],
+	'slide_scroll': [100, "General", "Slide scroll amount"],
+
+	'font_size': [16, "Font", "font size"],
+	'font_thumbnail_text': ['+-1234567890,<br/>abcdefghijklmnopqrstuvwxyz,<br/>ABCDEFGHIJKLMNOPQRSTUVWXYZ', "Font", "Thumbnail HTML contents"],
+	'font_test': ['+-1234567890, abcdefghijklmnopqrstuvwxyz, ABCDEFGHIJKLMNOPQRSTUVWXYZ, ?!.#$\\/"\''],
+
+	'zoom': ['1', "Images", "Default zoom level"],
+	'zoom_step': [0.125, "Images", "zoom multiplier"],
+	'preload_images': [2, "Images", "number of images to preload"],
+    'image_on_canvas': [false, "Images", "use HTML5 canvas element to draw images"],
+	'pop_preview_delay': [1000, "Images", "Number of milliseconds the preview is visible"],
+
+    'slideshow': [false, "Slideshow", "Default is slideshow mode"],
+	'slideshow_delay': [8000, "Slideshow", "Slideshow delay"],
+
+	'progress_fg': ["rgba(255,200,0,0.8)", "Progress bar", "foreground color"],
+	'progress_bg': ["rgba(200,200,200,0.4)", "Progress bar", "background color"],
+	'progress_radius': [22, "Progress bar", "Radius"],
+	'progress_width': [8, "Progress bar", "Circle stroke width (background)"],
+	'progress_inner_width': [8, "Progress bar", "Circle stroke width (foreground)"],
+	'progress_shadow': [10, "Progress bar", "Shadow size"],
+	'progress_blur': [10, "Progress bar", "Blur amount"],
+
+	'thumbnail_max_width': [300, "Thumbnail", "Maximum width"],
+
+	'autoplay': [false, "Audio/Video", "Play audio/video when viewed"],
+	'autonext': [false, "Audio/Video", "Go to next item whed playback ends"],
+	'loop': [false, "Audio/Video", "Replay when playback ends"],
+
+    'reload_every': [0, "Debug", "Number of items to view after the gallery if refreshed"],
+	'show_keys': [false, "Debug", "Show pressed keys in info"],
+	'show_events': [false, "Debug", "Show events in info"]
+}//}}}
 
 // CLASSES//{{{
 // drag scrolling
@@ -65,6 +107,26 @@ function createPathElements(dir_e,filename_e,ext_e,path) {//{{{
     }
 }//}}}
 
+// disable/enable keyboard shortcuts//{{{
+var saved_keydown, saved_keypress;
+
+function disableKeys ()
+{
+    saved_keydown = window.onkeydown;
+    saved_keypress = window.onkeypress;
+    window.onkeypress = window.onkeydown = null;
+}
+
+function enableKeys ()
+{
+    if (!saved_keydown) {
+        return
+    }
+    window.onkeydown = saved_keydown;
+    window.onkeypress = saved_keypress;
+    saved_keypress = saved_keydown = null;
+}
+//}}}
 
 // this section should be independent from the rest
 //! \interface ItemView
@@ -127,7 +189,7 @@ show: function ()//{{{
     // don't use canvas in some cases:
     //  - user configuration
     //  - GIF: redraw animated images in intervals
-    use_canvas = this.parent.getConfig('image_on_canvas', false) &&
+    use_canvas = this.parent.getConfig('image_on_canvas') &&
         this.path.search(/\.gif$/i) === -1;
 
     if ( !use_canvas ) {
@@ -271,13 +333,13 @@ show: function ()//{{{
     e.addClass("videoview");
     e.attr("id","video");
 
-	if ( p.getConfig('autoplay',false) ) {
+	if ( p.getConfig('autoplay') ) {
 		e.attr("autoplay","autoplay");
     }
-	if ( p.getConfig('loop',false) ) {
+	if ( p.getConfig('loop') ) {
 		e.attr("loop","loop");
     }
-	if ( p.getConfig('autonext',false) ) {
+	if ( p.getConfig('autonext') ) {
 		e.bind( "ended", function () {this.parent.next();} );
     }
 
@@ -446,25 +508,22 @@ show: function ()//{{{
     e.attr( "src", esc(this.path) );
     e.addClass("fontview");
 
-    e.attr( "value", this.parent.getConfig('font_test', '+-1234567890, abcdefghijklmnopqrstuvwxyz, ABCDEFGHIJKLMNOPQRSTUVWXYZ, ?!.#$\\/"\'') );
+    e.attr( "value", this.parent.getConfig('font_test') );
     e.css("font-family",this.font);
 
     // disable keyboard navigation when textarea focused
     view = this;
     e.focus( function () {
-        view.keydown = window.onkeydown;
-        view.keypress = window.onkeypress;
+        disableKeys();
         window.onkeydown = function (ev) {
             if (ev.keyCode === 27) {
                 view.e.blur();
             }
         };
-        window.onkeypress = null;
     } );
     e.blur( function () {
         this.parent.onFontTextChange(this.value);
-        window.onkeydown = view.keydown;
-        window.onkeypress = view.keypress;
+        enableKeys();
         view.updateHeight();
     } );
 
@@ -484,30 +543,22 @@ remove: function ()//{{{
 
 thumbnail: function ()//{{{
 {
-    if ( !this.thumb ) {
-        var font, p, thumb;
-        font = this.path.replace(/.*\//gi, "").replace(".","-");
-        p = this.parent;
+    var thumb = this.thumb;
 
-        thumb = this.thumb = $( document.createElement("div") );
-        thumb.addClass("thumbnail " + this.type());
-        thumb.css({
-                "max-width": p.getConfig('thumbnail_max_width',300) + "px",
-                "font-family": this.font
-                });
-        thumb.html( p.getConfig('thumbnail_font_test',
-                    '+-1234567890, abcdefghijklmnopqrstuvwxyz, ABCDEFGHIJKLMNOPQRSTUVWXYZ, ?!.#$\\/"\'') );
+    if ( !thumb ) {
+        thumb = this.thumb = $('<div>', {'class': "thumbnail " + this.type(), html: this.parent.getConfig('font_thumbnail_text')});
+        thumb.css("font-family",this.font);
 
         this.thumbnailOnLoad();
     }
 
-    return this.thumb;
+    return thumb;
 },//}}}
 
 zoom: function (how)//{{{
 {
     var orig, z, zz;
-    orig = this.parent.getConfig('font_size',16);
+    orig = this.parent.getConfig('font_size');
 
     if (!this.orig_height) {
         this.orig_height = this.e.offsetHeight;
@@ -570,6 +621,86 @@ thumbnailOnLoad: function (){}
 };
 //}}}
 
+//! \class HTMLView
+//! \implements ItemView
+//{{{
+var HTMLView = function (itempath, parent) { this.init(itempath, parent); };
+
+HTMLView.prototype = {
+init: function (itempath, parent)//{{{
+{
+    this.path = itempath;
+    this.parent = parent;
+	this.width = this.height = 0;
+},//}}}
+
+type: function ()//{{{
+{
+    return "html";
+},//}}}
+
+show: function ()//{{{
+{
+    var e, view;
+	view = this;
+    p = this.parent;
+
+    if (this.e) {
+        return;
+    }
+
+    p.onUpdateStatus("loading", "msg");
+
+    e = this.e = $('<iframe>', {'class': 'htmlview'});
+    e.attr( "src", esc(this.path) );
+
+    e.appendTo(p.e);
+
+	e.load( function () {
+		p.onUpdateStatus(null, "msg");
+
+		view.orig_width = this.width ? this.width : this.naturalWidth;
+		view.orig_height = this.height ? this.height : this.naturalHeight;
+
+		view.parent.onLoad();
+	} );
+},//}}}
+
+remove: function ()//{{{
+{
+    var e = this.e;
+    if (e) {
+        e.remove();
+    }
+},//}}}
+
+thumbnail: function ()//{{{
+{
+    var thumb = this.thumb;
+
+    if ( !thumb ) {
+        thumb = this.thumb = $( document.createElement("div") );
+        thumb.addClass("thumbnail " + this.type());
+
+        this.thumbnailOnLoad();
+    }
+
+    return thumb;
+},//}}}
+
+zoom: function (how)//{{{
+{
+},//}}}
+
+/** events */
+/**
+ * \fn thumbnailOnLoad()
+ * \brief event is triggered after thumbnail is loaded
+ */
+thumbnailOnLoad: function (){}
+};
+//}}}
+
 //! \class ViewFactory
 //{{{
 var ViewFactory = function (parent) {
@@ -588,6 +719,8 @@ newView: function (filepath) {//{{{
         return new FontView(filepath, this.parent);
     } else if (filepath.search(/\.(mp4|mov|flv|ogg|mp3|wav)$/i) > -1) {
         return new VideoView(filepath, this.parent);
+    } else if (filepath.search(/\.html$/i) > -1) {
+        return new HTMLView(filepath, this.parent);
     } else {
         return null;
     }
@@ -618,7 +751,7 @@ init: function (e, preview, getConfig)//{{{
                 }
             } );
 
-    if (preview.length) {
+    if (preview) {
         this.preview = preview;
         preview.mousedown( function (ev){
                     if (ev.button === 0 && t.previewOnMouseDown) {
@@ -633,7 +766,7 @@ init: function (e, preview, getConfig)//{{{
         }
     }
 
-    this.zoom_state = getConfig('zoom','1');
+    this.zoom_state = getConfig('zoom');
 
     this.getConfig = getConfig;
 
@@ -642,7 +775,7 @@ init: function (e, preview, getConfig)//{{{
 
 zoom: function (how)//{{{
 {
-    var v, ww, wh, w, h, z, zs, zoom_state;
+    var v, ww, wh, w, h, z, zs, zoom_state, type;
 
     v = this.view;
     if ( !v ) {
@@ -654,8 +787,9 @@ zoom: function (how)//{{{
         how = this.zoom_state;
     }
 
-    // treat font zoom differently
-    if( v.type() === 'font' ) {
+    // treat font/html zoom differently
+	type = v.type();
+    if( type === 'font' || type === 'html' ) {
         v.zoom(how);
         return;
     }
@@ -665,7 +799,7 @@ zoom: function (how)//{{{
     w = v.orig_width;
     h = v.orig_height;
     z = v.zoom();
-    zs = this.getConfig('zoom_step', 0.125);
+    zs = this.getConfig('zoom_step');
 
     // determine zoom factor
     switch(how) {
@@ -802,7 +936,7 @@ popPreview: function ()//{{{
 
     t = this;
     this.preview_t = window.setTimeout(function (){preview.removeClass("focused");},
-            this.getConfig('pop_preview_delay',1000));
+            this.getConfig('pop_preview_delay'));
 },//}}}
 
 hidePreview: function ()//{{{
@@ -1031,7 +1165,7 @@ newItem: function (i,props)//{{{
     e = this.e_w;
 	if (e) {
 		e.css("max-width",
-                w>100 ? w+20 : this.getConfig('thumbnail_max_width',300)+'px');
+                w>100 ? w+20 : this.getConfig('thumbnail_max_width')+'px');
     }
 
     // filename
@@ -1145,12 +1279,11 @@ ensureCurrentVisible: function ()//{{{
     wx = window.pageXOffset;
 
     y = e.position().top;
-    if ( y < window.pageYOffset ) {
-        window.scrollTo(wx,y);
+    if ( y+e.innerHeight() > window.pageYOffset+window.innerHeight ) {
+        window.scrollTo(wx,y+e.innerHeight()-window.innerHeight);
     }
 
-    y = y + e.innerHeight() - window.innerHeight;
-    if ( y > window.pageYOffset ) {
+    if ( y < window.pageYOffset ) {
         window.scrollTo(wx,y);
     }
 
@@ -1353,11 +1486,11 @@ updateProgress: function ()//{{{
         return;
     }
 
-    r = this.getConfig('progress_radius',22);
-    w1 = this.getConfig('progress_width',8);
-    w2 = this.getConfig('progress_inner_width',8);
-    shadow = this.getConfig('progress_shadow',10);
-    blur = this.getConfig('progress_blur',10);
+    r = this.getConfig('progress_radius');
+    w1 = this.getConfig('progress_width');
+    w2 = this.getConfig('progress_inner_width');
+    shadow = this.getConfig('progress_shadow');
+    blur = this.getConfig('progress_blur');
 
     ctx = this.progress.getContext("2d");
     pi = 3.1415;
@@ -1376,7 +1509,7 @@ updateProgress: function ()//{{{
     ctx.shadowBlur = shadow;
     ctx.shadowColor = "black";
     ctx.lineWidth = w1;
-    ctx.strokeStyle = this.getConfig('progress_bg',"rgba(200,200,200,0.4)");
+    ctx.strokeStyle = this.getConfig('progress_bg');
     ctx.moveTo(x, y);
     ctx.beginPath();
     ctx.arc(x, y, r-w1/2, 0, 2*pi, false);
@@ -1384,9 +1517,9 @@ updateProgress: function ()//{{{
 
     // filled part of pie
     ctx.shadowBlur = blur;
-    ctx.shadowColor = this.getConfig('progress_fg',"rgba(255,200,0,0.8)");
+    ctx.shadowColor = this.getConfig('progress_fg');
     ctx.lineWidth = w2;
-    ctx.strokeStyle = this.getConfig('progress_fg',"rgba(255,200,0,0.8)");
+    ctx.strokeStyle = this.getConfig('progress_fg');
     ctx.moveTo(x, y);
     ctx.beginPath();
     ctx.arc(x, y, r-w1/2, -pi/2, angle-pi/2, false);
@@ -1484,7 +1617,7 @@ popInfo: function ()//{{{
 
     var t = this;
     this.info_t = window.setTimeout(function (){t.e.removeClass("focused");},
-            this.getConfig('pop_info_delay',4000));
+            this.getConfig('pop_info_delay'));
 },//}}}
 
 hidden: function ()//{{{
@@ -1527,7 +1660,7 @@ var b;
 var mouseX, mouseY;
 
 // objects (created if appropriate HTML element is available)
-var itemlist, info, viewer, help;
+var itemlist, info, viewer, help, options;
 
 // image cache
 var preloaded = null;
@@ -1540,7 +1673,7 @@ var slideshow_t;
 
 var keys = {};
 var keydesc;
-var modes = {any:"Any", viewer:"Viewer", itemlist:"Item List", help:"Help", slideshow: "Slideshow"};
+var modes = {any:"Any", viewer:"Viewer", itemlist:"Item List", help:"Help", slideshow: "Slideshow", options: "Options"};
 var mode_stack = [modes.viewer];
 //}}}
 
@@ -1569,9 +1702,32 @@ function mode ()//{{{
     return mode_stack[mode_stack.length-1];
 }//}}}
 
-function getConfig (name,default_value)//{{{
+function updateClassName()//{{{
 {
-    var x;
+	b.className = "mode" + mode().replace(' ','') + " item" + n + (n === len() ? " last" : "");
+}//}}}
+
+function modeDrop ()//{{{
+{
+    mode_stack.pop();
+    updateClassName();
+}//}}}
+
+function modeAdd (newmode)//{{{
+{
+    mode_stack.push(newmode);
+    updateClassName();
+}//}}}
+
+function getConfig (name)//{{{
+{
+    var x, default_value;
+    default_value = configs[name];
+    if (default_value === undefined) {
+        alert("ERROR: Unknown configuration name ('"+name+"')");
+        return null;
+    }
+    default_value = default_value[0];
 
     if ( (x = configStrict[name]) ||
          (x = vars[name])    ||
@@ -1579,6 +1735,8 @@ function getConfig (name,default_value)//{{{
     {
         // value should be same type as the default value
         switch( typeof(default_value) ) {
+            case "boolean":
+                return x?true:false;
             case "string":
                 return ""+x;
             case "number":
@@ -1614,7 +1772,7 @@ function signal (sgn)//{{{
         return;
     }
 
-	if ( getConfig("show_events", false) ) {
+	if ( getConfig("show_events") ) {
 		info.updateProperty("event: " + sgn);
         popInfo();
     }
@@ -1640,16 +1798,22 @@ function updateInfo(itemname, n, props) //{{{
 
 function updateTitle ()//{{{
 {
-    var t = getConfig( 'title_fmt', '%{title}: %{now}/%{max} "%{filename}"' );
+    var t, item, filename;
+
+    t = getConfig( 'title_fmt' );
     t = t.replace( /%\{title\}/g, (title ? title : "untitled") );
-    t=t.replace( /%\{now\}/g, n );
-    t=t.replace( /%\{remaining\}/g, len()-n );
-    t=t.replace( /%\{max\}/g, len() );
-    t=t.replace( /%\{filename\}/g, info.name() );
+    t = t.replace( /%\{now\}/g, n );
+    t = t.replace( /%\{remaining\}/g, len()-n );
+    t = t.replace( /%\{max\}/g, len() );
+
+    // document title
+	item = ls[n-1];
+	filename = item instanceof Array ? item[0] : item;
+    t = t.replace( /%\{filename\}/g, filename );
     document.title = t;
 }//}}}
 
-function getUrlVars()//{{{
+function getUrlVars ()//{{{
 {
     var map, parts;
 
@@ -1659,11 +1823,6 @@ function getUrlVars()//{{{
 		    map[key] = value;
 	    });
 	return map;
-}//}}}
-
-function updateClassName()//{{{
-{
-	b.className = "mode" + mode() + " item" + n + (n === len() ? " last" : "");
 }//}}}
 
 function updateUrl (timeout)//{{{
@@ -1696,7 +1855,7 @@ function preloadImages()//{{{
         return;
     }
 
-    maxnum = getConfig('preload_images',2);
+    maxnum = getConfig('preload_images');
     num = maxnum - (n+2) % maxnum;
 
     new_preloaded = {};
@@ -1734,9 +1893,9 @@ function toggleList()//{{{
     if (itemlist) {
         itemlist.toggle();
         if ( itemlist.hidden() ) {
-            mode_stack.pop();
+            modeDrop();
         } else if ( mode_stack[0] !== modes.itemlist ) {
-            mode_stack.push(modes.itemlist);
+            modeAdd(modes.itemlist);
         }
 		updateClassName();
     }
@@ -1823,17 +1982,17 @@ function go (i)//{{{
 
     // TODO: fix memory leaks!!!
     // reload window on every nth item
-    //r = getConfig('reload_every');
-    //if (r) {
-        //if (count_n > 0 && r && count_n%r === 0 && mode() !== modes.slideshow) {
-            //count_n = 0;
-            //updateUrl();
-            //location.reload();
-            //return;
-        //} else {
-            //count_n += 1;
-        //}
-    //}
+    r = getConfig('reload_every');
+    if (r) {
+        if (count_n > 0 && r && count_n%r === 0 && mode() !== modes.slideshow) {
+            count_n = 0;
+            updateUrl();
+            location.reload();
+            return;
+        } else {
+            count_n += 1;
+        }
+    }
 
     // hide item list and select current item
     if ( itemlist ) {
@@ -2054,7 +2213,7 @@ function keyPress (e)//{{{
               (e.shiftKey ? "S-" : "") +
               keyname.toUpperCase();
 
-	if ( getConfig("show_keys", false) ) {
+	if ( getConfig('show_keys') ) {
 		info.updateProperty("key: " + keyname + " ("+keycode+")");
         popInfo();
     }
@@ -2187,7 +2346,7 @@ function dragScroll (t,p)
         w.unbind('mousemove');
         w.unbind('mouseup');
 
-        accel = getConfig('slide_scroll',100)/(new Date().getTime()-start);
+        accel = getConfig('slide_scroll')/(new Date().getTime()-start);
         vx = (dx[d]-mouseX)*accel;
         vy = (dy[d]-mouseY)*accel;
 
@@ -2283,7 +2442,7 @@ function createViewer(e, preview, info)//{{{
         updateUrl(1000);
     };
 
-    if ( preview.length ) {
+    if (preview) {
         $('html,body').scroll(
                 function (){
                     if ( mode() === modes.viewer ) {
@@ -2343,62 +2502,6 @@ function createKeyHelp(e)//{{{
     }
 }//}}}
 
-function createConfigHelp(e)//{{{
-{
-    var confdesc, i, j, cat, desc, opt;
-
-    // configuration//{{{
-    confdesc = {
-        "Images": {
-        'zoom_step': "zoom multiplier",
-        'preload_images': "number of images to preload"
-        },
-
-        "Font": {
-        'font_size': "font size",
-        'font_test': "default text"
-        },
-
-        "Progress bar": {
-        'progress_radius': "radius",
-        'progress_width': "circle stroke width (background)",
-        'progress_inner_width': "circle stroke width (foreground)",
-        'progress_bg': "background color",
-        'progress_fg': "foreground color",
-        'progress_blur': "blur amount",
-        'progress_shadow': "shadow size"
-        },
-
-        "Thumbnail": {
-        'thumbnail_min_width': "minimum width",
-        'thumbnail_max_width': "maximum width",
-        'thumbnail_font_test': "default text for fonts"
-        },
-
-		"Audio/Video": {
-		'autoplay': "Play audio/video when viewed",
-		'loop': "Replay when playback ends",
-		'autonext': "Go to next item whed playback ends"
-		}
-    };//}}}
-
-    for (i in confdesc) {
-        cat = $("<div>", {'class': "category"});
-        cat.appendTo(e);
-
-        $('<h3>',{text: i}).appendTo(cat);
-
-        desc = confdesc[i];
-        for (j in desc) {
-            opt = $("<div>", {'class': "option"});
-            opt.appendTo(cat);
-
-            $('<div>', {'class': "which", text: j}).appendTo(opt);
-            $('<div>', {'class': "desc", text: confdesc[i][j]}).appendTo(opt);
-        }
-    }
-}//}}}
-
 function createAbout(e)//{{{
 {
     var content, i, x, cat;
@@ -2429,11 +2532,6 @@ function createHelp(e)//{{{
         createKeyHelp(ekeys);
     }
 
-    econf = e.find(".options");
-    if (econf.length) {
-        createConfigHelp(econf);
-    }
-
     eother = e.find(".about");
     if (eother.length) {
         createAbout(eother);
@@ -2454,13 +2552,114 @@ function toggleHelp()//{{{
     if ( help.length ) {
         if ( help.hasClass("focused") ) {
             help.removeClass("focused");
-            mode_stack.pop();
+            modeDrop();
         }
         else {
             help.addClass("focused");
-            mode_stack.push(modes.help);
+            modeAdd(modes.help);
         }
-		updateClassName();
+    }
+}//}}}
+
+function saveOptions ()//{{{
+{
+    $('.options .option').each(
+        function(){
+            var t, which, value, orig_value;
+            t = $(this);
+
+            value = t.children('.value');
+            if ( value.attr('type') === 'checkbox' ) {
+                value = value.is(':checked');
+            } else {
+                value = value.val();
+            }
+            which = t.children('.which').text();
+
+            orig_value = getConfig(which);
+            vars[which] = value;
+            //alert(which+' : '+value+' : '+getConfig(which)+'; changed? '+ (orig_value !== getConfig(which)));
+            if ( orig_value === getConfig(which) ) {
+                delete vars[which];
+            }
+        } );
+    updateUrl();
+    location.reload();
+}//}}}
+
+function createOptions(e)//{{{
+{
+    var i, j, cats, cat, catname, conf, desc, opt, value, input, box, button;
+
+    cats = {};
+    for (i in configs) {
+        conf = configs[i];
+        if (conf.length != 3) {
+            continue;
+        }
+        catname = conf[1];
+        if (!catname) {
+            continue;
+        }
+
+        if( !cats[catname] ) {
+            cats[catname] = cat = $("<div>", {'class': "category"});
+            $('<h3>',{text: catname}).appendTo(cat);
+            cat.appendTo(e);
+        }
+        cat = cats[catname];
+
+        opt = $("<div>", {'class': "option"});
+        opt.appendTo(cat);
+
+        value = getConfig(i);
+        if ( typeof(value) === "boolean" ) {
+            input = $('<input>', {type:'checkbox', 'class': "value", checked: value?"yes":""});
+        } else {
+            input = $('<input>', {type:'text', 'class': "value", value: value});
+            input.width( Math.min((value+"  ").length, 20) + 'ex');
+        }
+        input.focus( function() {disableKeys(); $(this).parent().addClass('focused');} );
+        input.blur( function() {enableKeys(); $(this).parent().removeClass('focused');} );
+        input.appendTo(opt);
+        $('<div>', {'class': "which", text: i}).appendTo(opt);
+        $('<div>', {'class': "desc", text: conf[2]}).appendTo(opt);
+    }
+
+    // buttons
+    box = $('<div>', {'class':'buttonbox'});
+    box.appendTo(e);
+
+    button = $('<input>', {type:'submit','class':'button','value':'Cancel'});
+    button.click( function(){toggleOptions()} );
+    button.appendTo(box);
+
+    button = $('<input>', {type:'submit','class':'button','value':'Save'});
+    button.click( function(){saveOptions(); toggleOptions();} );
+    button.appendTo(box);
+}//}}}
+
+function toggleOptions()//{{{
+{
+    // key bindings
+    if (!options) {
+        options = $(".options");
+        if (!options.length) {
+            return;
+        }
+        createOptions(options);
+    }
+
+    if ( options.length ) {
+        if ( options.hasClass("focused") ) {
+            options.removeClass("focused");
+            modeDrop();
+        }
+        else {
+            options.addClass("focused");
+            modeAdd(modes.options);
+            scrollTo(0,0);
+        }
     }
 }//}}}
 
@@ -2481,7 +2680,7 @@ function exit_slideshow()//{{{
         return;
     }
 
-    mode_stack.pop();
+    modeDrop();
     if (slideshow_t) {
         window.clearTimeout(slideshow_t);
     }
@@ -2491,17 +2690,17 @@ function slideshow()//{{{
 {
     zoom('fit');
     if ( mode() !== modes.slideshow ) {
-        mode_stack.push(modes.slideshow);
+        modeAdd(modes.slideshow);
     }
     slideshow_t = window.setTimeout( function (){
                 viewer.e.fadeOut(1000, next);
                 slideshow();
-            }, getConfig('slideshow_delay', 8000) );
+            }, getConfig('slideshow_delay') );
 }//}}}
 
 function onLoad()//{{{
 {
-    var e;
+    var e, preview;
 
 	if ( len() === 0 ) {
 		alert("No items in gallery!");
@@ -2512,7 +2711,7 @@ function onLoad()//{{{
 
     // get URL variables
     vars = getUrlVars();
-    n = getPage( getConfig('n',0) );
+    n = getPage( getConfig('n') );
     count_n = 0;
 
     // capture mouse position
@@ -2522,22 +2721,30 @@ function onLoad()//{{{
             mouseY = e.clientY;
             });
 
-    // no scrollbars
-    document.body.style.overflow = "hidden";
-
     // item list
-    createItemList();
+    if ( !getConfig('no_list') ) {
+        createItemList();
+    }
 
     // info
     e = $('#info');
-    if (e) {
-        info = new Info(e, getConfig);
+    if ( e.length ) {
+        if ( getConfig('no_info') ) {
+            e.hide();
+        } else {
+            info = new Info(e, getConfig);
+        }
     }
 
     // viewer
     e = $('#canvas');
     if (e.length) {
-        createViewer(e,$('.preview'),info);
+        preview = $('.preview');
+        if ( getConfig('no_preview') ) {
+            preview.hide();
+            preview = undefined;
+        }
+        createViewer(e, preview, info);
     }
 
     // refresh zoom on resize

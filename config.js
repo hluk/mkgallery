@@ -89,14 +89,14 @@ controls = {
 // global keys
 Any: [
     [["KP5","5"], toggleList, "Toggle thumbnail list"],
-    [["S-?","?","h"], toggleHelp, "Show this help"],
+    [["S-?","?","h"], toggleHelp, "Show help"],
+    ["S-p", toggleOptions, "Show options"],
     // emulate browser history
     [["Alt-Left"], back, "Go back in history"],
     [["Alt-Right"], forward, "Go forward in history"],
     ["o", "info && popInfo(); popPreview()", "Show info"]
 ],
 
-// item viewer
 Viewer: [
     // scroll right OR video seek OR
     // view next item in gallery (if current item fits horizontally to window)
@@ -133,7 +133,6 @@ Viewer: [
     ["p", slideshow, "Slideshow"],
 ],
 
-// item list
 "Item List": [
     ["Escape", toggleList, "Hide item list"],
     ["Enter", "go(itemlist.selected+1)", "Go to selected item"],
@@ -147,19 +146,30 @@ Viewer: [
     [["Home","KP7","7"], "itemlist.selectItem(0)", "Move cursor on first thumbnail"],
 ],
 
-// help
 Help: [
-    [["?","h","Escape","Enter","Space"], toggleHelp, "Hide help"],
-    // disable showing item list in help mode
+    [["S-?", "?","h","Escape","Enter","Space"], toggleHelp, "Hide help"],
+    // disable item list and options
     [["KP5","5"], ""],
+    ["S-p", ""],
     // scroll help
-    [["KP8","8","Up","w"], scrollUp, ""],
-    [["KP2","2","Down","s"], scrollDown, ""],
-    [["KP6","6","Right","d"], scrollRight, ""],
-    [["KP4","4","Left","a"], scrollLeft, ""],
+    [["KP8","8","Up","w"], scrollUp],
+    [["KP2","2","Down","s"], scrollDown],
+    [["KP6","6","Right","d"], scrollRight],
+    [["KP4","4","Left","a"], scrollLeft],
 ],
 
-// slideshow
+Options: [
+    [["Escape", "S-p"], toggleOptions, "Hide options"],
+    // disable item list and help
+    [["KP5","5"], ""],
+    [["S-?","?","h"], ""],
+    // scroll help
+    [["KP8","8","Up","w"], scrollUp],
+    [["KP2","2","Down","s"], scrollDown],
+    [["KP6","6","Right","d"], scrollRight],
+    [["KP4","4","Left","a"], scrollLeft],
+],
+
 Slideshow: [
     ["Escape", exit_slideshow, "Exit slideshow"],
     [["Right", "Space", "Enter", "PageDown", "d"], next, "Next item"],
