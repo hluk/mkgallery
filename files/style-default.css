@@ -369,6 +369,7 @@ h3 {
 .about {
 	border-top: 2px dashed #aaa;
 }
+.logo {float: left; margin-left: 2em; margin-right: 2em;}
 .options .which {
 	display: inline;
 	display: inline-block;
