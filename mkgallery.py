@@ -19,11 +19,11 @@ Function create_gallery() returns list of items. The list format is:
 		"item": # this represents the item in gallery (i.e. "items/img.png")
 			{ # all keys here are optional
 				# use another name (e.g. font name)
-				"alias": "item alias",
+				"alias_": "item alias",
 				# path to the original file
-				"link": "link to original filename",
+				"link_": "link to original filename",
 				# thumbnail size (see description below)
-				"thumbnail_size": [width, height]
+				"thumbnail_size_": [width, height]
 			}
 		...
 	}
@@ -32,17 +32,17 @@ Function write_items() saves the list in JavaScript format:
 var ls = [
 	[ "item",
 		{
-			"alias": "item alias",
-			"link": "link to original filename",
-			"thumbnail_size": [width, height],
+			"alias_": "item alias",
+			"link_": "link to original filename",
+			"thumbnail_size_": [width, height],
 		}
 	],
 	...
 ]
 
 Creating thumbnails can take a long time to complete therefore if user wants to
-view the gallery, the list of items is saved before without "thumbnail_size" and
-the thumbnails are generated afterwards.
+view the gallery, the list of items is saved before without "thumbnail_size_"
+property and the thumbnails are generated afterwards.
 """
 
 import os, sys, re, getopt, shutil, glob, locale, codecs
@@ -84,6 +84,7 @@ re_remote = re.compile(ur'^\w+://', re_flags)
 re_fontname = re.compile(ur'[^a-z0-9_]+', re_flags)
 
 local = False
+page = -1
 
 def from_locale(string):#{{{
 	global Locale
@@ -135,10 +136,14 @@ options:
                             browse items locally, i.e. protocol is "file://"
     -x, --render=<size>,<text>
                             render fonts instead using them directly
+    -p, --page              maximal number of items on one page
+                            (default: 0 (unlimited))
+                            NOTE: Use empty item filename (i.e. "") to break
+                            page in specific place.
 
     -r 0, --resolution=0    don't generate thumbnails
     -u "", --url=""         don't launch web browser
-"""	% (sys.argv[0], title, gdir, d, url, resolution) )
+""" % (sys.argv[0], title, gdir, d, url, resolution) )
 #}}}
 
 def dirname(filename):#{{{
@@ -189,13 +194,13 @@ def launch_browser(url):#{{{
 #}}}
 
 def parse_args(argv):#{{{
-	global title, resolution, gdir, url, d, cp, force, local, \
+	global title, resolution, gdir, url, d, cp, force, local, page, \
 			font_render, font_size, font_text
 
 	try:
-		opts, args = getopt.getopt(argv, "ht:r:d:u:cflx:",
+		opts, args = getopt.getopt(argv, "ht:r:d:u:cflx:p:",
 				["help", "title=", "resolution=", "directory=", "url=",
-					"template=", "copy", "force", "local", "render="])
+					"template=", "copy", "force", "local", "render=", "page="])
 	except getopt.GetoptError:
 		usage()
 		sys.exit(2)
@@ -219,7 +224,7 @@ def parse_args(argv):#{{{
 				if resolution<0:
 					resolution = 0
 			except:
-				print("ERROR: Resolution must be single number!")
+				print("ERROR: Resolution must be a single number!")
 				sys.exit(1)
 		elif opt in ("-c", "--copy"):
 			cp = copy
@@ -234,6 +239,14 @@ def parse_args(argv):#{{{
 				font_size = int(font_size)
 			except:
 				usage()
+				sys.exit(1)
+		elif opt in ("-p", "--page"):
+			try:
+				page = int(arg)
+				if page<0:
+					page = 0
+			except:
+				print("ERROR: Page must be a single number!")
 				sys.exit(1)
 
 	# no PIL: warnings, errors
@@ -262,7 +275,19 @@ def parse_args(argv):#{{{
 	except:
 		pass
 
-	return args and args or ["."]
+	# parse files
+	allfiles = [["."]]
+	if args:
+		files = []
+		for arg in args:
+			# empty filename is page divider
+			if not arg:
+				allfiles.append(files)
+				files = []
+				continue
+			files.append(arg)
+
+	return allfiles
 #}}}
 
 def clean_gallery():#{{{
@@ -392,34 +417,6 @@ def renderFont(fontfile, size, text, outfile):#{{{
 	im.save(outfile, "PNG")
 #}}}
 
-def itemline(filename, props=None):#{{{
-	# filename
-	# TODO: escape double quotes
-	#if not (props and 'link' in props) and is_local(filename):
-		#line = '"' + to_url(filename) + '"'
-	#else:
-		#line = '"' + filename + '"'
-	line = '"' + to_url(filename) + '"'
-
-	if props:
-		# alias
-		# TODO: escape double quotes
-		line = line + ',{'
-		for k,v in props.items():
-			line = line + '"' + k + '":'
-			if type(v) == list:
-				line = line + str(v) + ','
-			else:
-				line = line + '"' + v + '",'
-		line = line + '}'
-		line = '[' + line + ']'
-
-	# end item line
-	line = line + ",\n"
-
-	return line
-#}}}
-
 def is_local(filename):#{{{
 	global re_remote
 
@@ -474,19 +471,16 @@ def item_type(f):
 	return Type.UNKNOWN
 #}}}
 
-def create_gallery(files):#{{{
+def gallery_items(files):#{{{
 	"""
 	finds all usable items in specified files/directories (argument),
 	copy items to "items/" (if --local not set),
-	write font-faces into css OR render fonts,
 	return items
 	"""
 	global re_img, re_font, re_vid, gdir
 
 	items = {}
 	imgdir = gdir+S+"items"
-	cssfile = codecs.open( gdir +S+ "fonts.css", "w", "utf-8" )
-
 	# find items in input files/directories
 	for f in find_items(files):
 		# filetype (image, font, audio/video)
@@ -503,22 +497,45 @@ def create_gallery(files):#{{{
 				cp( os.path.abspath(f), fdir +S+ basename )
 				f = "items" +S+ (destdir and destdir+S or "") + os.path.basename(f)
 
-			# item properties
-			props = {}
-
-			# if file is font: create font-face line in css or render it
-			if t == Type.FONT:
-				f, alias, link = addFont(f, cssfile)
-				if alias:
-					props['alias'] = alias
-				if link:
-					props['link'] = to_url(link)
-
-			items[f] = props
-
-	cssfile.close()
+			items[f] = {}
 
 	return items
+#}}}
+
+def create_fontfaces(items):#{{{
+	cssfile = codecs.open( gdir +S+ "fonts.css", "w", "utf-8" )
+
+	fonts = [font for font in filter(lambda x: re_font.search(x[0]), items)]
+
+	# number of fonts
+	n = len(fonts)
+	if n == 0:
+		return # no fonts
+
+	# progress bar
+	i = 0
+	bar = ">" + (" "*progress_len)
+	sys.stdout.write( "Creating fontfaces: [%s] %d/%d\r"%(bar,0,n) )
+
+	for font in fonts:
+		# if file is font: create font-face line in css or render it
+		f, alias, link = addFont(font[0], cssfile)
+		font[0] = f
+
+		props = font[1]
+		if alias:
+			props['alias_'] = alias
+		if link:
+			props['link_'] = to_url(link)
+
+		# show progress bar
+		i=i+1
+		l = int(i*progress_len/n)
+		bar = ("="*l) + ">" + (" "*(progress_len-l))
+		sys.stdout.write( "Creating fontfaces: [%s] %d/%d%s"%(bar,i,n,i==n and "\n" or "\r") );
+		sys.stdout.flush()
+
+	cssfile.close()
 #}}}
 
 def create_thumbnail(filename, resolution, outfile):#{{{
@@ -545,7 +562,7 @@ def create_thumbnails(items):#{{{
 
 	thumbdir = gdir+S+"thumbs"
 
-	images = [img for img in filter(re_img.search, items.keys())]
+	images = [img for img in filter(lambda x: re_img.search(x[0]), items)]
 
 	# number of images
 	n = len(images)
@@ -555,15 +572,18 @@ def create_thumbnails(items):#{{{
 	# create thumbnail directory
 	os.makedirs(thumbdir)
 
+	# progress bar
 	i = 0
 	bar = ">" + (" "*progress_len)
 	sys.stdout.write( "Creating thumbnails: [%s] %d/%d\r"%(bar,0,n) )
 
 	lines = "var ls=[\n"
-	for f in sorted( images, key=lambda x: x.lower() ):
+	for img in images:
+		f = img[0]
+		props = img[1]
 		w = h = 0
 		try:
-			if 'link' in items[f]:
+			if 'link' in props:
 				# use rendered image in '<gallery>/items/<filename>.png'
 				infile = gdir +S+ f.replace(':','_')
 				if local:
@@ -578,7 +598,7 @@ def create_thumbnails(items):#{{{
 				outfile = thumbdir +S+ to_url(f).replace(':','_')
 
 			w,h = create_thumbnail(infile, resolution, outfile)
-			items[f]['thumbnail_size'] = [w,h]
+			props['thumbnail_size_'] = [w,h]
 		except Exception as e:
 			print("ERROR: "+str(e)+" (file: \""+f+"\")")
 
@@ -613,41 +633,69 @@ def thumbnail_size(filename, resolution):#{{{
 
 def write_items(items):#{{{
 	itemfile = codecs.open( gdir +S+ "items.js", "w", "utf-8" )
-	itemfile.write('var title = "'+title+'";\n');
-	itemfile.write("var ls=[\n")
-	for item in sorted( items, key=lambda x: x.lower() ):
-		itemfile.write( from_locale(itemline(item, items[item])) )
+	itemfile.write('var title = "'+title+'";\nvar ls=[\n');
+
+	for item in items:
+		itemfile.write( from_locale(str(item))+',\n' )
+
 	itemfile.write("];\n");
 	itemfile.close()
 #}}}
 
+def sort_items(items, allitems):#{{{
+	""" create pages of sorted items """
+	global page
+
+	# page divider
+	if allitems:
+		allitems.append([""])
+
+	i = 0
+	# maximal number of items per page
+	for item in sorted( items, key=lambda x: x.lower() ):
+		allitems.append([item, items[item]])
+		if page > 0:
+			i=i+1
+			if i%page == 0:
+				allitems.append([""])
+
+	return allitems
+#}}}
+
 def main(argv):#{{{
-	global title, resolution, gdir, url, d, force
+	global title, resolution, gdir, url, d, force, page
 
 	# arguments
-	files = parse_args(argv)
+	allfiles = parse_args(argv)
 
 	# clean gallery directory
 	clean_gallery()
 
-	items = create_gallery(files)
+	# sorted items with page dividers
+	allitems = []
+	for files in allfiles:
+		items = gallery_items(files)
+		sort_items(items, allitems)
 
 	# no usable items found
-	if not items:
+	if not allitems:
 		print("No items in gallery!")
 		exit(1)
+
+	# write font faces to CSS file
+	create_fontfaces(allitems)
 
 	# open browser?
 	if url:
 		# write items.js so we can open it in browser
-		write_items(items)
+		write_items(allitems)
 		launch_browser(url)
 
 	if resolution:
-		create_thumbnails(items)
+		create_thumbnails(allitems)
 
 	if not url or resolution:
-		write_items(items)
+		write_items(allitems)
 
 	print("New gallery was created in: '"+gdir+"'")
 #}}}

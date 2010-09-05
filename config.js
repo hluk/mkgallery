@@ -85,12 +85,16 @@ preload_images: 3,
  * e.g.: "A-S-Left" (Alt+Shift+Left arrow)
  *
  */
+var list_keys = ["KP5","5","l"];
+var help_keys = ["S-?","?","h"];
+var option_keys = ["c", "S-p"];
+var exit_keys = ["Escape","Enter","Space"];
 controls = {
 // global keys
 Any: [
-    [["KP5","5"], toggleList, "Toggle thumbnail list"],
-    [["S-?","?","h"], toggleHelp, "Show help"],
-    ["S-p", toggleOptions, "Show options"],
+    [list_keys, "mode(modes.itemlist)", "Toggle thumbnail list"],
+    [help_keys, "mode(modes.help)", "Show help"],
+    [option_keys, "mode(modes.options)", "Show options"],
     // emulate browser history
     [["Alt-Left"], back, "Go back in history"],
     [["Alt-Right"], forward, "Go forward in history"],
@@ -118,7 +122,7 @@ Viewer: [
     ["Shift-Space", "scrollUp(window.innerHeight*9/10) || prev()",
             "Move window up/Previous gallery item"],
     ["x", editText, "Edit font text"],
-    [["KP1","1"], "go(len())", "Browse to last gallery item"],
+    [["KP1","1"], "go(ls.length())", "Browse to last gallery item"],
     [["KP3","3"], "go(n+5)", "Browse to fifth next gallery item"],
     [["KP4","4","k","K","q","Q"], prev, "Previous"],
     [["KP6","6","Enter","j","J","e","E"], next, "Next"],
@@ -130,27 +134,29 @@ Viewer: [
     ["*", "zoom(1)", "Zoom to original size"],
     ["/", "zoom('fit')", "Zoom to fit"],
     [".", "zoom('fill')", "Zoom to fill"],
-    ["p", slideshow, "Slideshow"],
+    ["p", "mode(mode.slideshow)", "Slideshow"],
 ],
 
 "Item List": [
-    ["Escape", toggleList, "Hide item list"],
-    ["Enter", "go(itemlist.selected+1)", "Go to selected item"],
-    [["Left","KP4","4","a"], "itemlist.listLeft()", "Move cursor left"],
-    [["Right","KP6","6","d"],"itemlist.listRight()", "Move cursor right"],
+    [list_keys.concat(exit_keys), modeDrop],
+    ["Enter", "itemlist.submit()", "Go to selected item"],
+    [["Left","KP4","4","a","j"], "itemlist.listLeft()", "Move cursor left"],
+    [["Right","KP6","6","d","k"],"itemlist.listRight()", "Move cursor right"],
     [["Up","KP8","8","w"], "itemlist.listUp()", "Move cursor up"],
     [["Down","KP2","2","s"], "itemlist.listDown()", "Move cursor down"],
     [["PageUp","KP9","9"], "itemlist.listPageUp();", "Previous page"],
     [["PageDown","KP3","3"], "itemlist.listPageDown()", "Next page"],
-    [["End","KP1","1"], "itemlist.selectItem(itemlist.len-1)","Move cursor on last thumbnail"],
-    [["Home","KP7","7"], "itemlist.selectItem(0)", "Move cursor on first thumbnail"],
+    [["End","KP1","1"], "itemlist.listEnd()","Move cursor on last item in list"],
+    [["Home","KP7","7"], "itemlist.listHome()", "Move cursor on first item in list"],
+    ["n", "itemlist.nextPage()", "Next page"],
+    ["b", "itemlist.prevPage()", "Previous page"],
 ],
 
 Help: [
-    [["S-?", "?","h","Escape","Enter","Space"], toggleHelp, "Hide help"],
+    [help_keys.concat(exit_keys), modeDrop],
     // disable item list and options
-    [["KP5","5"], ""],
-    ["S-p", ""],
+    [list_keys, ""],
+    [option_keys, ""],
     // scroll help
     [["KP8","8","Up","w"], scrollUp],
     [["KP2","2","Down","s"], scrollDown],
@@ -159,10 +165,10 @@ Help: [
 ],
 
 Options: [
-    [["Escape", "S-p"], toggleOptions, "Hide options"],
+    [option_keys.concat(exit_keys), modeDrop],
     // disable item list and help
-    [["KP5","5"], ""],
-    [["S-?","?","h"], ""],
+    [list_keys, ""],
+    [help_keys, ""],
     // scroll help
     [["KP8","8","Up","w"], scrollUp],
     [["KP2","2","Down","s"], scrollDown],
@@ -171,7 +177,7 @@ Options: [
 ],
 
 Slideshow: [
-    ["Escape", exit_slideshow, "Exit slideshow"],
+    ["Escape", modeDrop, "Exit slideshow"],
     [["Right", "Space", "Enter", "PageDown", "d"], next, "Next item"],
     [["Left", "S-Space", "PageUp", "a"], prev, "Previous item"],
 ],

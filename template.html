@@ -92,18 +92,22 @@
 		<div id="itemlist"><!-- container item list -->
 			<div class="selection"></div><!-- selection cursor -->
 
+			<div class="pagenav prevpage">Previous Page</div><!-- previous page -->
+
             <!-- remove_if_empty class means that the element
                  will be removed if it is empty (simplifies DOM) -->
 			<div class="item"><!-- template for all items in list -->
 				<div class="itemident"></div><!-- item identification number -->
 				<div class="thumbnail_width"><!-- max-width of this is set to thumbnail width -->
-					<div class="alias remove_if_empty"></div><!-- same as above -->
+					<div class="alias_ remove_if_empty"></div><!-- same as above -->
 					<div class="filename"></div><!-- same as above -->
 					<div class="extension"></div><!-- same as above -->
 					<div class="directory remove_if_empty">.</div><!-- same as above -->
 				</div>
 				<div class="thumbnail"></div><!-- item preview -->
 			</div>
+
+			<div class="pagenav nextpage">Next Page</div><!-- next page -->
 
 			<div class="navigation" id="list" onclick="toggleList()">Hide list</div>
 		</div>
@@ -116,13 +120,13 @@
             <div class="logo"><img width=128 height=128 src="files/logo.png"><img></div>
 			<div class="about"></div><!-- about application -->
 
-            <h2>Keys</h2>
+            <h2>Keyboard Controls</h2>
 			<div class="keys"></div><!-- shortcuts -->
 		</div>
 
 
         <div class="options"><!-- options window -->
-			<h1>Options</h1>
+        <h1>Options</h1>
         </div>
 
 

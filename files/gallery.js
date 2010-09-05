@@ -52,6 +52,8 @@ configs = {
 	'progress_blur': [10, "Progress bar", "Blur amount"],
 
 	'thumbnail_max_width': [300, "Thumbnail", "Maximum width"],
+    'use_svg_thumbnails': [false, "Thumbnail", "Use original vector image as thumbnail (can be slow)"],
+    'max_page_items': [0, "Thumbnail", "Maximum number of items on page"],
 
 	'autoplay': [false, "Audio/Video", "Play audio/video when viewed"],
 	'autonext': [false, "Audio/Video", "Go to next item whed playback ends"],
@@ -128,7 +130,58 @@ function enableKeys ()
 }
 //}}}
 
-// this section should be independent from the rest
+//! \class Items
+//{{{
+var Items = function (ls, max_page_items) { this.init(ls, max_page_items); };
+
+Items.prototype = {
+init: function (ls, max_page_items)//{{{
+{
+	var items, i, len, pg;
+
+	items = [];
+	for(i=0, len=0, pg=1; i<ls.length; i+=1) {
+		item = ls[i]
+
+		// empty filename means page break
+		if( !item ||
+                (max_page_items > 0 && (i+1)%max_page_items == 0) ||
+                (item instanceof Array && (!item.length || !item[0])) ) {
+			pg=pg+1
+			continue;
+		}
+
+		// insert item
+		if (!item instanceof Array) {
+			item = [item,{}];
+		} else if (item.length < 2) {
+			item.push({});
+		}
+		item[1].page_ = pg;
+		items.push(item)
+	}
+	this.ls = items;
+	this.len = len;
+},//}}}
+
+length: function()//{{{
+{
+	return this.ls.length
+},//}}}
+
+get: function(i)//{{{
+{
+	return this.ls[i];
+},//}}}
+
+page: function(i)//{{{
+{
+	return this.ls[i][1].page_;
+}//}}}
+
+};
+//}}}
+
 //! \interface ItemView
 //{{{
 /**
@@ -242,7 +295,10 @@ thumbnail: function ()//{{{
 {
     if ( !this.thumb ) {
         var thumbpath, thumb, t;
-        thumbpath = "thumbs/" + this.path.replace(/:/g,'_') + ".png";
+        thumbpath = this.path.replace(/:/g,'_');
+        if ( !getConfig('use_svg_thumbnails') || this.path.search(/\.svg$/i) == -1 ) {
+            thumbpath = "thumbs/" + thumbpath + ".png";
+        }
 
         thumb = this.thumb = $("<img>", {'class': "thumbnail " + this.type()});
 
@@ -599,7 +655,7 @@ zoom: function (how)//{{{
 updateHeight: function ()//{{{
 {
     var view, e;
-    // TODO: better solution
+    // FIXME: better solution
     view = this;
     e = this.e;
     e.hide();
@@ -1027,10 +1083,10 @@ onNext: function () {}
 
 //! \class ItemList
 //{{{
-var ItemList = function (e, items, getConfig) { this.init(e, items, getConfig); };
+var ItemList = function (e, items, getConfig) { this.init(e, ls, getConfig); };
 
 ItemList.prototype = {
-init: function (elem, items, getConfig)//{{{
+init: function (elem, ls, getConfig)//{{{
 {
     var t, item, e;
 
@@ -1074,9 +1130,9 @@ init: function (elem, items, getConfig)//{{{
         return null;
     }
 
-    this.ls = items;
-    this.len = items.length;
-    this.selected = 0;
+    this.ls = ls;
+    this.len = ls.length();
+    this.selected = this.last = this.first = 0;
     this.selection_needs_update = true;
 
     this.lastpos = [0,0];
@@ -1086,30 +1142,25 @@ init: function (elem, items, getConfig)//{{{
     this.getConfig = getConfig;
 },//}}}
 
-get: function (i)//{{{
-{
-    return this.items[i];
-},//}}}
-
 hidden: function ()//{{{
 {
     return !this.e.hasClass("focused");
 },//}}}
 
-addThumbnails: function (i)//{{{
+addThumbnail: function (i)//{{{
 {
-    var items, thumb_e, item, filename, thumb, t;
-    if ( i<0 || i>=this.len ) {
-        return;
-    }
+    var page, item, thumb_e, filename, thumb, t;
 
-    items = this.items;
+    item = this.items[i];
+	if( !item ) {
+		return
+	}
 
-    thumb_e = items[i].find(".thumbnail");
+    thumb_e = item.find(".thumbnail");
     if (thumb_e.length) {
-        item = this.ls[i];
-		filename = item instanceof Array ? item[0] : item;
-        thumb = this.viewFactory.newView(filename);
+        item = this.ls.get(i);
+
+        thumb = this.viewFactory.newView(item[0]);
 
         t = this;
         thumb.thumbnailOnLoad = function (error) {
@@ -1117,16 +1168,6 @@ addThumbnails: function (i)//{{{
 				thumb_e.remove();
             } else {
                 thumb_e.css('display','');
-            }
-
-            // recursively load thumbnails from currently viewed
-            // - flood load:
-            //      previous and next thumbnails (from the current) are loaded in parallel
-            if (i>=t.selected) {
-                t.addThumbnails(i+1);
-            }
-            if (i<=t.selected) {
-                t.addThumbnails(i-1);
             }
         };
 
@@ -1146,20 +1187,16 @@ newItem: function (i,props)//{{{
     }
 
 	// get item filename, user tags, width, height
-    if (props instanceof Array) {
-        tags = props[1];
-		itemname = tags['link'];
-		if ( !itemname ) {
-			itemname = props[0];
-		}
-		size = tags['thumbnail_size'];
-		if (size) {
-			w = size[0];
-			h = size[1];
-		}
-    } else {
-        itemname = props;
-    }
+	tags = props[1];
+	itemname = tags['link_'];
+	if ( !itemname ) {
+		itemname = props[0];
+	}
+	size = tags['thumbnail_size_'];
+	if (size) {
+		w = size[0];
+		h = size[1];
+	}
 
 	// set .thumbnail_width max-width
     e = this.e_w;
@@ -1207,61 +1244,134 @@ newItem: function (i,props)//{{{
     t = this;
     item.mouseup( function (ev) {
                 if (ev.button === 0 && !scrolling) {
-                    t.onSubmit(i);
+                    t.selectItem(i-1);
+                    t.submit(i);
                 }
             } );
 
     return item;
 },//}}}
 
+nextPage: function()//{{{
+{
+	if (this.last === this.len) {
+		return;
+	}
+	this.toggle();
+	this.selectItem(this.last+1, true);
+	this.toggle();
+},//}}}
+
+prevPage: function()//{{{
+{
+	if (this.first === 0) {
+		return;
+	}
+	this.toggle();
+	this.selectItem(this.first-1, true);
+	this.toggle();
+},//}}}
+
 appendItems: function ()//{{{
 {
-    var e, ls, items, i, item;
+    var e, ee, ls, items, i, page, item, t;
     e = this.e;
     ls = this.ls;
-    items = this.items = [];
+    items = this.items = {};
+	page = ls.page(this.selected);
+	t = this;
 
     // avoid changing the document each time item is added
     e.css("display","none");
 
-    for(i=0; i<this.len; i+=1) {
-        item = this.newItem(i+1,ls[i]);
+	// find index of first item of current page
+    for(i=0; i<this.len && ls.page(i) !== page; i+=1);
+	this.first = i;
+
+	// previous page navigation
+	ee = e.children('.prevpage');
+	if (i>0) {
+		ee.show();
+		ee.click( function() {t.prevPage();} );
+        ee.attr('id','');
+        items[i-1] = ee;
+	} else {
+		ee.hide()
+	}
+
+	// add all items on page
+    for(; i<this.len && ls.page(i) === page; i+=1) {
+		item = ls.get(i);
+        item = this.newItem(i+1, item);
         item.appendTo(e);
-        items.push(item);
+        items[i] = item;
     }
+	this.last = i-1;
+
+	// next page navigation
+	ee = e.children('.nextpage');
+	if (i<this.len) {
+		ee.show();
+		ee.click( function() {t.nextPage();} );
+        ee.attr('id','');
+        items[i] = ee;
+		// show as last element
+		ee.appendTo(e);
+	} else {
+		ee.hide()
+	}
 
     e.css("display","");
 },//}}}
 
+createList: function()//{{{
+{
+	var i;
+
+	// clean list
+	this.e.children('.item').remove();
+
+	// add items to gallery
+	this.appendItems();
+
+	// current page
+	this.page = this.ls.page(this.selected);
+
+	// add thumbnails
+	this.thumbs = [];
+	for(i=this.selected; i in this.items; i+=1) {
+		this.addThumbnail(i);
+	}
+	for(i=this.selected-1; i in this.items; i-=1) {
+		this.addThumbnail(i);
+	}
+
+	this.template.remove();
+
+	// selection cursor
+	this.selection = this.e.find(".selection");
+	this.selection.css("position","absolute");
+},//}}}
+
 toggle: function ()//{{{
 {
-    // are items loaded?
-	if ( !this.items ) {
-        // add items to gallery
-        this.appendItems();
+	var page, t;
 
-        // add thumbnails
-        this.thumbs = [];
-        this.addThumbnails(this.selected);
-
-        this.template.remove();
-
-        // selection cursor
-        this.selection = this.e.find(".selection");
-        this.selection.css("position","absolute");
+    page = this.ls.page(this.selected);
+	if ( !this.items || this.selection_needs_update && this.page !== page ) {
+		this.createList();
     }
 
-    // show/hide list and restore scroll position
-    var lastpos2 = [window.pageXOffset,window.pageYOffset];
     this.e.toggleClass("focused");
-    window.scrollTo( this.lastpos[0], this.lastpos[1] );
-    this.lastpos = lastpos2;
 
     if ( !this.hidden() ) {
-        if ( this.selection_needs_update ) {
-            this.updateSelection();
-            this.ensureCurrentVisible();
-        }
+		t = this;
+		window.setTimeout(function (){
+			if ( t.selection_needs_update ) {
+				t.updateSelection();
+                t.ensureCurrentVisible();
+			}
+		}, 100);
     }
 },//}}}
 
@@ -1275,7 +1385,11 @@ ensureCurrentVisible: function ()//{{{
     var e, wx, wy, x, y;
 
     e = this.items[this.selected];
-    // TODO: scroll horizontally to item
+	if(!e) {
+		return;
+	}
+
+    // TODO: scroll horizontally to an item
     wx = window.pageXOffset;
 
     y = e.position().top;
@@ -1309,6 +1423,9 @@ updateSelection: function ()//{{{
         this.selection_needs_update = false;
 
         e = this.items[this.selected];
+		if (!e) {
+			return;
+		}
 
         e.attr("id","selected");
 
@@ -1324,17 +1441,26 @@ updateSelection: function ()//{{{
     }
 },//}}}
 
-selectItem: function (i)//{{{
+selectItem: function (i, globally)//{{{
 {
-    if (!this.items) {
-        this.selected = Math.min( Math.max(0,i), this.len-1 );
+	// arg: globally: not restricted by items on current page
+	var items, sel;
+
+	items = this.items;
+    if (!items || globally) {
+        this.selected = Math.min( Math.max(0, i), this.len );
+		this.selection_needs_update = true;
         return;
     }
 
+    if( !items[i] ) {
+		return;
+	}
+
     // remove id="selected" from previously selected item
-    var sel = this.items[this.selected];
+    var sel = items[this.selected];
     if(sel) {
-        sel.attr("id","");
+        sel.attr("id", "");
     }
 
     this.selected = i;
@@ -1359,6 +1485,9 @@ listVertically: function (direction)//{{{
     it = this.items;
     for( i = this.selected+direction; i < this.len && i >= 0; i+=direction) {
         e = it[i];
+		if (!e) {
+			break;
+		}
         pos = e.position();
 
         if ( newdist === null ) {
@@ -1402,7 +1531,7 @@ listRight: function ()//{{{
 {
     // select next
     var i = this.selected+1;
-    if ( i >= this.len ) {
+    if ( !this.items[i] ) {
         return;
     }
 
@@ -1414,7 +1543,7 @@ listLeft: function ()//{{{
 {
     // select next
     var i = this.selected-1;
-    if ( i < 0 ) {
+    if ( !this.items[i] ) {
         return;
     }
 
@@ -1422,13 +1551,24 @@ listLeft: function ()//{{{
     this.selectItem(i);
 },//}}}
 
+listHome: function()//{{{
+{
+	this.selectItem(this.first);
+},//}}}
+
+listEnd: function()//{{{
+{
+	this.selectItem(this.last);
+},//}}}
+
 listPageDown: function ()//{{{
 {
-    var min_pos, i;
+    var min_pos, i, items;
 
     min_pos = this.selection.offset().top+window.innerHeight;
     i = this.selected+1;
-    while ( i < this.len && min_pos > this.get(i).offset().top ) {
+	items = this.items;
+    while ( i < this.len && items[i] && min_pos > items[i].offset().top ) {
         i += 1;
     }
     this.selectItem(i-1);
@@ -1436,17 +1576,39 @@ listPageDown: function ()//{{{
 
 listPageUp: function ()//{{{
 {
-    var min_pos, i;
+    var min_pos, i, items;
 
     min_pos = this.selection.offset().top-window.innerHeight;
     i = this.selected;
-    while ( i > 0 && min_pos < this.get(i).offset().top ) {
+	items = this.items;
+    while ( i > 0 && items[i] && min_pos < this.items[i].offset().top ) {
         i -= 1;
     }
     this.selectItem(i+1);
 },//}}}
 
+submit: function()//{{{
+{
+	var item;
+
+    item = this.items[this.selected];
+
+    // onSubmit event on gallery items
+    // OR click event on page navigation buttons
+	if ( item.hasClass('item') ) {
+		this.onSubmit(this.selected+1);
+	} else {
+		item.click();
+	}
+},//}}}
+
 /** events */
+/** \fn onSubmit(n)
+ * \brief event is triggered after selecting item (pressing enter or mouse click)
+ * \param n identification of submitted item
+ */
+onSubmit: function (n){},
+
 onMouseDown: null
 };
 //}}}
@@ -1623,14 +1785,7 @@ popInfo: function ()//{{{
 hidden: function ()//{{{
 {
     return !this.e.hasClass("focused");
-},//}}}
-
-/** events */
-/** \fn onSubmit(n)
- * \brief event is triggered after selecting item (pressing enter or mouse click)
- * \param n identification of submitted item
- */
-onSubmit: function (n){}
+}//}}}
 };
 //}}}
 //}}}
@@ -1671,10 +1826,16 @@ var url_t;
 // slideshow timer
 var slideshow_t;
 
+// assigned keyboard actions
 var keys = {};
+// key action description
 var keydesc;
+
+// modes
 var modes = {any:"Any", viewer:"Viewer", itemlist:"Item List", help:"Help", slideshow: "Slideshow", options: "Options"};
 var mode_stack = [modes.viewer];
+// mode scroll offset
+var mode_offset = {};
 //}}}
 
 // HELPER FUNCTIONS//{{{
@@ -1692,31 +1853,94 @@ function userAgent ()//{{{
     }
 }//}}}
 
-function len ()//{{{
-{
-    return ls.length;
-}//}}}
-
-function mode ()//{{{
-{
-    return mode_stack[mode_stack.length-1];
-}//}}}
-
 function updateClassName()//{{{
 {
-	b.className = "mode" + mode().replace(' ','') + " item" + n + (n === len() ? " last" : "");
+	b.className = "mode" + mode().replace(' ','') + " item" + n + (n === ls.length() ? " last" : "");
+}//}}}
+
+function modeToggle (modename)//{{{
+{
+    switch(modename) {
+        case modes.itemlist:
+            return toggleList_();
+        case modes.help:
+            return toggleHelp_();
+        case modes.slideshow:
+            return toggleSlideshow_();
+        case modes.options:
+            return toggleOptions_();
+        default:
+            return false;
+    }
+}//}}}
+
+function mode (newmode)//{{{
+{
+    if (newmode) {
+        var pos, current_mode;
+        current_mode = mode();
+
+        if (newmode in mode_stack) {
+            return false;
+        }
+
+        // save scroll position
+        mode_offset[current_mode] = [window.pageXOffset, window.pageYOffset];
+
+        // switch to new mode
+        if ( !modeToggle(newmode) ) {
+            return false;
+        }
+
+        // restore scroll position
+        pos = mode_offset[newmode];
+        if (!pos) {
+            pos = [0,0];
+        }
+        window.scrollTo( pos[0], pos[1] );
+        window.setTimeout(function (){
+            window.scrollTo( pos[0], pos[1] );
+        }, 100);
+
+        mode_stack.push(newmode);
+        updateClassName();
+
+        return true;
+    } else {
+        return mode_stack[mode_stack.length-1];
+    }
 }//}}}
 
 function modeDrop ()//{{{
 {
-    mode_stack.pop();
-    updateClassName();
-}//}}}
+    var pos, current_mode;
+    current_mode = mode();
 
-function modeAdd (newmode)//{{{
-{
-    mode_stack.push(newmode);
+    if (mode_stack.length <= 1) {
+        return false;
+    }
+
+    // save scroll position
+    mode_offset[current_mode] = [window.pageXOffset, window.pageYOffset];
+
+    // switch to previous mode
+    modeToggle(current_mode);
+    mode_stack.pop();
+    current_mode = mode();
+
+    // restore scroll position
+    pos = mode_offset[current_mode];
+    if (!pos) {
+        pos = [0,0];
+    }
+    window.scrollTo( pos[0], pos[1] );
+    window.setTimeout(function (){
+        window.scrollTo( pos[0], pos[1] );
+    }, 100);
+
     updateClassName();
+
+    return true;
 }//}}}
 
 function getConfig (name)//{{{
@@ -1751,7 +1975,7 @@ function getConfig (name)//{{{
 
 function getPage (i)//{{{
 {
-    return i ? Math.min( Math.max(i,1), len() ) : 1;
+    return i ? Math.min( Math.max(i,1), ls.length() ) : 1;
 }//}}}
 
 function popInfo ()//{{{
@@ -1792,7 +2016,7 @@ function updateInfo(itemname, n, props) //{{{
         return;
     }
 
-    info.updateInfo(itemname, n, len(), props);
+    info.updateInfo(itemname, n, ls.length(), props);
     signal("info_update");
 }//}}}
 
@@ -1803,12 +2027,12 @@ function updateTitle ()//{{{
     t = getConfig( 'title_fmt' );
     t = t.replace( /%\{title\}/g, (title ? title : "untitled") );
     t = t.replace( /%\{now\}/g, n );
-    t = t.replace( /%\{remaining\}/g, len()-n );
-    t = t.replace( /%\{max\}/g, len() );
+    t = t.replace( /%\{remaining\}/g, ls.length()-n );
+    t = t.replace( /%\{max\}/g, ls.length() );
 
     // document title
-	item = ls[n-1];
-	filename = item instanceof Array ? item[0] : item;
+	item = ls.get(n-1);
+	filename = item[0];
     t = t.replace( /%\{filename\}/g, filename );
     document.title = t;
 }//}}}
@@ -1859,7 +2083,7 @@ function preloadImages()//{{{
     num = maxnum - (n+2) % maxnum;
 
     new_preloaded = {};
-    end = Math.min( n+num, len() );
+    end = Math.min( n+num, ls.length() );
     begin = Math.max(n-maxnum+num+1,0);
     for(i = begin; i < n; i+=1) {
         new_preloaded[i] = preloaded[i];
@@ -1869,8 +2093,8 @@ function preloadImages()//{{{
         im = preloaded[i];
         if ( !im ) {
             // type of item must be image
-			item = this.ls[i];
-            filename = item instanceof Array ? item[0] : item;
+			item = this.ls.get(i);
+            filename = item[0];
             view = ViewFactory.prototype.newView(filename);
             if (!view || view.type() !== "image") {
                 continue;
@@ -1888,17 +2112,14 @@ function preloadImages()//{{{
     preloaded = new_preloaded;
 }//}}}
 
-function toggleList()//{{{
+function toggleList_()//{{{
 {
-    if (itemlist) {
-        itemlist.toggle();
-        if ( itemlist.hidden() ) {
-            modeDrop();
-        } else if ( mode_stack[0] !== modes.itemlist ) {
-            modeAdd(modes.itemlist);
-        }
-		updateClassName();
+    if (!itemlist) {
+        return false
     }
+
+    itemlist.toggle();
+    return true;
 }//}}}
 
 function scroll (x,y,absolute)//{{{
@@ -1974,13 +2195,13 @@ function scrollRight(how)//{{{
 
 function go (i)//{{{
 {
-    var pg, r, item, itemname, props;
+    var newn, r, item, itemname, props;
 
-    pg = getPage(i);
+    newn = getPage(i);
 
-    n = vars.n = pg;
+    n = vars.n = newn;
 
-    // TODO: fix memory leaks!!!
+    // FIXME: fix memory leaks!!!
     // reload window on every nth item
     r = getConfig('reload_every');
     if (r) {
@@ -1994,21 +2215,18 @@ function go (i)//{{{
         }
     }
 
-    // hide item list and select current item
-    if ( itemlist ) {
-        if ( !itemlist.hidden() ) {
-            toggleList();
+    // select item in list
+    if (itemlist) {
+        // hide item list
+        if ( mode() === modes.itemlist ) {
+            modeDrop();
         }
-        itemlist.selectItem(i-1);
+        itemlist.selectItem(i-1, true);
     }
 
-	item = ls[pg-1];
-	if (item instanceof Array) {
-		itemname = item[0];
-		props = item[1];
-	} else {
-		itemname = item;
-    }
+	item = ls.get(n-1);
+	itemname = item[0];
+	props = item[1];
 
     viewer.show(itemname);
     scroll(0,0,true);
@@ -2023,7 +2241,7 @@ function go (i)//{{{
     if ( n === 1 ) {
         signal("first");
     }
-    if ( n === len() ) {
+    if ( n === ls.length() ) {
         signal("last");
     }
 }//}}}
@@ -2176,7 +2394,7 @@ if ( userAgent() === userAgents.webkit ) {
 
 function next ()//{{{
 {
-    if ( n === len() ) {
+    if ( n === ls.length() ) {
         return false;
     }
 
@@ -2257,6 +2475,8 @@ function addKeys (newkeys, desc, fn, keymode)//{{{
     k = newkeys instanceof Array ? newkeys : [newkeys];
     tomod = function (x) {return x[0];};
     for (i in k) {
+        if (!k[i])
+            alert(desc);
 		modifiers = k[i].toUpperCase().split("-");
 		key = modifiers.pop();
 
@@ -2486,12 +2706,16 @@ function createKeyHelp(e)//{{{
     var i, j, cat, modekeydesc, key;
 
     for (i in modes) {
+        modekeydesc = keydesc[modes[i]];
+        if ( !modekeydesc ) {
+            continue;
+        }
+
         cat = $("<div>", {'class': "category"});
         cat.appendTo(e);
 
         $('<h3>', {text: modes[i]}).appendTo(cat);
 
-        modekeydesc = keydesc[modes[i]];
         for (j in modekeydesc) {
             key = $("<div>", {'class': "key"});
             key.appendTo(cat);
@@ -2507,7 +2731,7 @@ function createAbout(e)//{{{
     var content, i, x, cat;
 
     content = [
-        ["gallery created with","mkgallery v1.0"],
+        ["gallery created with","mkgallery v1.0 (<a href='http://github.com/hluk/mkgallery'>website</a>)"],
         ["author","Lukáš Holeček"],
         ["e-mail",'<a href="mailto:hluk@email.cz">hluk@email.cz</a>']
     ];
@@ -2521,6 +2745,13 @@ function createAbout(e)//{{{
         $('<div>', {'class': "which", text: x[0]}).appendTo(cat);
         $('<div>', {'class': "desc", html: x[1]}).appendTo(cat);
     }
+
+    // description
+    $("<div>", {'class': 'description',
+            html: "<p>mkgallery is customizable HTML/Javascript gallery with generator written in Python programming language.</p>"+
+            "<p>Supported gallery item formats are images, fonts and audio/video files "+
+            "(file extensions <span class='code'>PNG</span>, <span class='code'>JPG</span>, <span class='code'>GIF</span>, <span class='code'>SVG</span>, "+
+            "<span class='code'>TTF</span>, <span class='code'>OTF</span> and multimedia files supported by web browser).</p>"}).appendTo(e);
 }//}}}
 
 function createHelp(e)//{{{
@@ -2538,13 +2769,13 @@ function createHelp(e)//{{{
     }
 }//}}}
 
-function toggleHelp()//{{{
+function toggleHelp_()//{{{
 {
     // key bindings
     if (!help) {
         help = $(".help");
         if (!help.length) {
-            return;
+            return false;
         }
         createHelp(help);
     }
@@ -2552,13 +2783,13 @@ function toggleHelp()//{{{
     if ( help.length ) {
         if ( help.hasClass("focused") ) {
             help.removeClass("focused");
-            modeDrop();
         }
         else {
             help.addClass("focused");
-            modeAdd(modes.help);
         }
     }
+
+    return true;
 }//}}}
 
 function saveOptions ()//{{{
@@ -2591,6 +2822,16 @@ function createOptions(e)//{{{
 {
     var i, j, cats, cat, catname, conf, desc, opt, value, input, box, button;
 
+    // information
+    $("<div>", {'class': 'information',
+            html:
+            '<p>Each entry contains '+
+            '<span class="emph">keyword</span> used in URL or the configuration file to set the option, '+
+            '<span class="emph">brief description</span> and '+
+            '<span class="emph">current option value</span>.</p>'+
+            '<p>To make changes permanent edit <span class="code">config.js</span> file.</p>'
+            }).appendTo(e);
+
     cats = {};
     for (i in configs) {
         conf = configs[i];
@@ -2613,6 +2854,8 @@ function createOptions(e)//{{{
         opt.appendTo(cat);
 
         value = getConfig(i);
+        $('<div>', {'class': "which", text: i}).appendTo(opt);
+        $('<div>', {'class': "desc", text: conf[2]}).appendTo(opt);
         if ( typeof(value) === "boolean" ) {
             input = $('<input>', {type:'checkbox', 'class': "value", checked: value?"yes":""});
         } else {
@@ -2622,8 +2865,6 @@ function createOptions(e)//{{{
         input.focus( function() {disableKeys(); $(this).parent().addClass('focused');} );
         input.blur( function() {enableKeys(); $(this).parent().removeClass('focused');} );
         input.appendTo(opt);
-        $('<div>', {'class': "which", text: i}).appendTo(opt);
-        $('<div>', {'class': "desc", text: conf[2]}).appendTo(opt);
     }
 
     // buttons
@@ -2631,21 +2872,21 @@ function createOptions(e)//{{{
     box.appendTo(e);
 
     button = $('<input>', {type:'submit','class':'button','value':'Cancel'});
-    button.click( function(){toggleOptions()} );
+    button.click( function(){mode(modes.options);} );
     button.appendTo(box);
 
     button = $('<input>', {type:'submit','class':'button','value':'Save'});
-    button.click( function(){saveOptions(); toggleOptions();} );
+    button.click( function(){saveOptions(); mode(modes.options);} );
     button.appendTo(box);
 }//}}}
 
-function toggleOptions()//{{{
+function toggleOptions_()//{{{
 {
     // key bindings
     if (!options) {
         options = $(".options");
         if (!options.length) {
-            return;
+            return false;
         }
         createOptions(options);
     }
@@ -2653,14 +2894,13 @@ function toggleOptions()//{{{
     if ( options.length ) {
         if ( options.hasClass("focused") ) {
             options.removeClass("focused");
-            modeDrop();
         }
         else {
             options.addClass("focused");
-            modeAdd(modes.options);
-            scrollTo(0,0);
         }
     }
+
+    return true;
 }//}}}
 
 function onResize()//{{{
@@ -2674,35 +2914,26 @@ function onResize()//{{{
     signal("resize");
 }//}}}
 
-function exit_slideshow()//{{{
+function toggleSlideshow_()//{{{
 {
     if ( mode() !== modes.slideshow ) {
-        return;
-    }
-
-    modeDrop();
-    if (slideshow_t) {
+        zoom('fit');
+        slideshow_t = window.setTimeout( function (){
+                    viewer.e.fadeOut(1000, next);
+                    slideshow();
+                }, getConfig('slideshow_delay') );
+    } else {
         window.clearTimeout(slideshow_t);
     }
-}//}}}
 
-function slideshow()//{{{
-{
-    zoom('fit');
-    if ( mode() !== modes.slideshow ) {
-        modeAdd(modes.slideshow);
-    }
-    slideshow_t = window.setTimeout( function (){
-                viewer.e.fadeOut(1000, next);
-                slideshow();
-            }, getConfig('slideshow_delay') );
+    return true;
 }//}}}
 
 function onLoad()//{{{
 {
     var e, preview;
 
-	if ( len() === 0 ) {
+	if ( ls.length === 0 ) {
 		alert("No items in gallery!");
 		return;
 	}
@@ -2711,6 +2942,11 @@ function onLoad()//{{{
 
     // get URL variables
     vars = getUrlVars();
+
+	// change ls from array to object
+	ls = new Items( ls, getConfig('max_page_items') );
+
+    // viewer on nth item
     n = getPage( getConfig('n') );
     count_n = 0;
 

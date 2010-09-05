@@ -113,8 +113,8 @@ a {font-weight: inherit; color: inherit; font-size: inherit; font-family: inheri
     padding-right: 1.5em;
 
     -webkit-transition: opacity 0.5s ease-in-out, background-color 1.5s ease-in-out, -webkit-box-shadow 1.5s ease-in-out;
-    -moz-transition: opacity 0.5s ease-in-out, background-color 1.5s ease-in-out, -moz-box-shadow 1.5s ease-in-out;;
-    -o-transition: opacity 0.5s ease-in-out, background-color 1.5s ease-in-out, -o-box-shadow 1.5s ease-in-out;;
+    -moz-transition: opacity 0.5s ease-in-out, background-color 1.5s ease-in-out, -moz-box-shadow 1.5s ease-in-out;
+    -o-transition: opacity 0.5s ease-in-out, background-color 1.5s ease-in-out, -o-box-shadow 1.5s ease-in-out;
 }
 .modeViewer #info:hover, .modeSlideshow #info:hover, .modeViewer #info.focused {
     opacity: 1;
@@ -205,18 +205,20 @@ a {font-weight: inherit; color: inherit; font-size: inherit; font-family: inheri
     color: black;
 
 	min-width: 150px;
+
+	/*border-left: 6px solid rgba(255,255,255,0.2);*/
 }
-.item, .selection {
-    -webkit-border-radius: 6px;
-    -moz-border-radius: 6px;
-    -o-border-radius: 6px;
+.item, .selection, .pagenav {
+    -webkit-border-radius: 8px;
+    -moz-border-radius: 8px;
+    -o-border-radius: 8px;
 }
-.item:hover {
+.item:hover, .pagenav:hover {
     background-color: rgba(0,255,0,0.3);
 }
 .selection {
 	z-index: -2;
-	background-color: #6bf;
+	background-color: rgba(120,220,255,0.6);
 
     /* animate cursor movement */
     -webkit-transition: left .1s ease-in-out, top .1s ease-in-out, width .1s ease-in-out, height .1s ease-in-out;
@@ -276,9 +278,6 @@ a {font-weight: inherit; color: inherit; font-size: inherit; font-family: inheri
 #selected .directory {color: #444;}
 #selected .filename {color: black;}
 #selected .item .alias {color: white;}
-#selected {
-	-webkit-box-shadow: 0px 0px 0px white;
-}
 #selected .itemident {
 	color: white;
 	background-color: black;
@@ -286,11 +285,45 @@ a {font-weight: inherit; color: inherit; font-size: inherit; font-family: inheri
 #selected .thumbnail.font {
 	background-color: white;
 }
+#selected.pagenav {
+    opacity: 1;
+    text-shadow: #444 0px 0px 7px;
+}
+.pagenav {
+    opacity: 0.5;
+
+    color: white;
+    font-family: sans-serif;
+	font-weight: bold;
+    padding: 0.5em;
+
+    background-color: rgba(255,255,255,0.1);
+	/*-moz-border-radius: 6px;*/
+	/*-o-border-radius: 6px;*/
+	/*-webkit-border-radius: 6px;*/
+
+    -webkit-transition: opacity 1.5s ease-in-out, -webkit-box-shadow 1.5s ease-in-out;
+    -moz-transition: opacity 1.5s ease-in-out, -moz-box-shadow 1.5s ease-in-out;
+    -o-transition: opacity 1.5s ease-in-out, -o-box-shadow 1.5s ease-in-out;
+}
+.prevpage {text-align: left; padding-left: 2em;}
+.nextpage {text-align: right; padding-right: 2em;}
 /*}}}*/
 
 /* help, options {{{*/
 .help, .options {color: white; font-family: sans; font-size: 12pt;}
-.help a {font-size: 8pt; color: #7bf; text-decoration: none;}
+.help p {text-align: left;}
+p {
+    font-style: italic;
+    font-family: serif;
+    padding: 0.2em;
+    padding-left: 4em;
+    padding-right: 4em;
+    font-size: 11pt;
+}
+.emph {color: #ff6;}
+.code {font-family: monospace;}
+.help a {color: #7bf; text-decoration: none;}
 .help a:hover {color: #ff0;}
 .help a:visited {color: #7bf;}
 .help a:visited:hover {color: #ff0;}
@@ -367,9 +400,9 @@ h3 {
 }
 .keys,
 .about {
-	border-top: 2px dashed #aaa;
+    border-top: 2px dashed rgba(255,255,255,0.1);
 }
-.logo {float: left; margin-left: 2em; margin-right: 2em;}
+.logo {float: right; margin-left: 2em; margin-right: 2em;}
 .options .which {
 	display: inline;
 	display: inline-block;
@@ -384,7 +417,7 @@ h3 {
 	padding-left: 0.1em;
 	padding-right: 0.1em;
 }
-.about .category {margin: 2em;}
+.about .category {margin: 1em;}
 .about .which {color: #8fd;}
 .desc {display: inline; font-size: 0.8em;}
 
@@ -395,20 +428,17 @@ h3 {
 }
 .option.focused {background-color: rgba(255,200,0,0.4);}
 .value {
-    margin-right: 1em;
+    margin-left: 1em;
 	-moz-border-radius: 4px;
 	-o-border-radius: 4px;
 	-webkit-border-radius: 4px;
     border:2px solid transparent;
 }
-.value:focus {
-    border:2px solid #fa0;
-}
 .buttonbox {
     width: 100%;
     text-align: right;
     margin-bottom: 20px;
-	background-color: rgba(255,255,255,0.2);
+	background-color: rgba(160,160,160,0.1);
 }
 .button {
     cursor: pointer;
