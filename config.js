@@ -92,7 +92,7 @@ var exit_keys = ["Escape","Enter","Space"];
 controls = {
 // global keys
 Any: [
-    [list_keys, "mode(modes.itemlist)", "Toggle thumbnail list"],
+    [list_keys, "mode(modes.itemlist)", "Show item list"],
     [help_keys, "mode(modes.help)", "Show help"],
     [option_keys, "mode(modes.options)", "Show options"],
     // emulate browser history
@@ -214,7 +214,7 @@ too_big: popPreview,
 image_mouse_down: "dragScroll(viewer.e)",
 font_mouse_down: editText,
 // preview mouse down
-preview_mouse_down: "dragScroll(viewer.e, viewer.preview, true)",
+preview_mouse_down: "dragScroll(viewer.e, viewer.preview_img)",
 itemlist_mouse_down: "dragScroll(itemlist.e)",
 // item cannot be displayed of file missing
 error: "",

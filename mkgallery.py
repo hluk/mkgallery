@@ -47,6 +47,8 @@ property and the thumbnails are generated afterwards.
 
 import os, sys, re, getopt, shutil, glob, locale, codecs
 
+has_python3 = sys.version[0] == '3'
+
 # Python Imaging Library (PIL)
 has_pil = True
 try:
@@ -75,20 +77,32 @@ rm_error = "ERROR: Existing gallery contains files that aren't symbolic links!\n
           "       Use -f (--force) to remove all files."
 
 # python3: change u'...' to '...'
-re_flags = re.IGNORECASE|re.UNICODE
-re_img  = re.compile(ur'\.(jpg|png|apng|gif|svg)$', re_flags)
-re_font = re.compile(ur'\.(otf|ttf)$', re_flags)
-re_vid = re.compile(ur'\.(mp4|mov|flv|ogg|mp3|wav)$', re_flags)
-re_html = re.compile(ur'\.html$', re_flags)
-re_remote = re.compile(ur'^\w+://', re_flags)
-re_fontname = re.compile(ur'[^a-z0-9_]+', re_flags)
+if has_python3:
+	re_flags = re.IGNORECASE|re.UNICODE
+	re_img  = re.compile(r'\.(jpg|png|apng|gif|svg)$', re_flags)
+	re_font = re.compile(r'\.(otf|ttf)$', re_flags)
+	re_vid = re.compile(r'\.(mp4|mov|flv|ogg|mp3|wav)$', re_flags)
+	re_html = re.compile(r'\.html$', re_flags)
+	re_remote = re.compile(r'^\w+://', re_flags)
+	re_fontname = re.compile(r'[^a-z0-9_]+', re_flags)
+else:
+	re_flags = re.IGNORECASE|re.UNICODE
+	re_img  = re.compile( unicode(r'\.(jpg|png|apng|gif|svg)$' ), re_flags)
+	re_font = re.compile( unicode(r'\.(otf|ttf)$' ), re_flags)
+	re_vid = re.compile( unicode(r'\.(mp4|mov|flv|ogg|mp3|wav)$' ), re_flags)
+	re_html = re.compile( unicode(r'\.html$' ), re_flags)
+	re_remote = re.compile( unicode(r'^\w+://' ), re_flags)
+	re_fontname = re.compile( unicode(r'[^a-z0-9_]+' ), re_flags)
 
 local = False
 page = -1
 
 def from_locale(string):#{{{
 	global Locale
-	return string.decode( Locale ).replace('\\n', '\n')
+	if has_python3:
+		return string.replace('\\n', '\n')
+	else:
+		return string.decode( Locale ).replace('\\n', '\n')
 #}}}
 
 def copy(src, dest):#{{{
@@ -117,6 +131,11 @@ usage: %s [options] [directories|filenames]
 
     For the program to be able to generate thumbnails and font names,
     the Python Imaging Library (PIL) must be installed.
+
+	Empty file or directory name (i.e. "") means that all following files
+	will be put on new item list page in gallery. This allows to break the list
+	on several pages and decrease memory and time consumption needed to
+	load items into the list.
 
 options:
     -h, --help              prints this help
@@ -194,6 +213,11 @@ def launch_browser(url):#{{{
 #}}}
 
 def parse_args(argv):#{{{
+	"""
+	parse switches and arguments
+	returns array of pages with files/directories (empty string is page break)
+		e.g. [ [item1_on_page1, item2_on_page1, ...], [item1_on_page2, ...], ... ]
+	"""
 	global title, resolution, gdir, url, d, cp, force, local, page, \
 			font_render, font_size, font_text
 
@@ -276,16 +300,21 @@ def parse_args(argv):#{{{
 		pass
 
 	# parse files
-	allfiles = [["."]]
+	allfiles = []
 	if args:
 		files = []
 		for arg in args:
 			# empty filename is page divider
 			if not arg:
-				allfiles.append(files)
-				files = []
+				if files:
+					allfiles.append(files)
+					files = []
 				continue
 			files.append(arg)
+		if files:
+			allfiles.append(files)
+	else:
+		allfiles = [["."]]
 
 	return allfiles
 #}}}
@@ -547,8 +576,8 @@ def create_thumbnail(filename, resolution, outfile):#{{{
 	im = Image.open(filename)
 
 	# better scaling quality when image is in RGB or RGBA
-	if not im.mode.startswith("RGB"):
-		im = im.convert("RGB")
+	#if not im.mode.startswith("RGB"):
+		#im = im.convert("RGB")
 
 	# scale and save
 	im.thumbnail( (resolution,resolution), Image.ANTIALIAS )

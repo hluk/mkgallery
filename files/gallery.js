@@ -147,7 +147,7 @@ init: function (ls, max_page_items)//{{{
 		if( !item ||
                 (max_page_items > 0 && (i+1)%max_page_items == 0) ||
                 (item instanceof Array && (!item.length || !item[0])) ) {
-			pg=pg+1
+			pg = pg+1;
 			continue;
 		}
 
@@ -176,7 +176,10 @@ get: function(i)//{{{
 
 page: function(i)//{{{
 {
-	return this.ls[i][1].page_;
+	if ( i>=0 && i<this.length() ) {
+		return this.ls[i][1].page_;
+	}
+	return -1;
 }//}}}
 
 };
@@ -793,7 +796,7 @@ var Viewer = function (e, preview, getConfig) {
 Viewer.prototype = {
 init: function (e, preview, getConfig)//{{{
 {
-    var t, win;
+    var t, img, win, mousedown;
 
     t = this;
     this.e = e;
@@ -809,17 +812,22 @@ init: function (e, preview, getConfig)//{{{
 
     if (preview) {
         this.preview = preview;
-        preview.mousedown( function (ev){
-                    if (ev.button === 0 && t.previewOnMouseDown) {
-                        t.previewOnMouseDown();
-                        ev.preventDefault();
-                    }
-                } );
-        win = preview.find(".window");
-        if (win.length) {
-            this.preview_win = win;
-            win.css("position","absolute");
-        }
+
+		img = this.preview_img = $('<img>');
+		img.appendTo(preview);
+
+        win = this.preview_win = $('<div>', {'class':'window'});
+		win.css("position", "absolute");
+		win.appendTo(preview);
+
+		mousedown = function (ev){
+			if (ev.button === 0 && t.previewOnMouseDown) {
+				t.previewOnMouseDown();
+				ev.preventDefault();
+			}
+		};
+        win.mousedown(mousedown);
+        img.mousedown(mousedown);
     }
 
     this.zoom_state = getConfig('zoom');
@@ -937,17 +945,13 @@ createPreview: function (filepath)//{{{
         return;
     }
 
-    if(!img) {
-        img = this.preview_img = $( document.createElement("img") );
-        img.appendTo(p);
-    }
     img.attr( "src", esc(filepath) );
     p.show();
 },//}}}
 
 updatePreview: function ()//{{{
 {
-    var img, win, imgw, imgh, ww, wh, w, h, doc;
+    var img, win, imgw, imgh, ww, wh, w, h, doc, pos;
 
     img = this.preview_img;
     if ( !img || !img.attr("src") ) {
@@ -959,6 +963,7 @@ updatePreview: function ()//{{{
     if (win) {
         imgw = img.innerWidth();
         imgh = img.innerHeight();
+		pos = img.position();
         ww = window.innerWidth;
         wh = window.innerHeight;
         w = this.view.width;
@@ -967,8 +972,8 @@ updatePreview: function ()//{{{
         win.css({
                 "height": Math.floor( h<wh ? imgh : (imgh*wh/h) ) +"px",
                 "width":  Math.floor( w<ww ? imgw : (imgw*ww/w) ) +"px",
-                "top":    Math.floor( h<wh ? "0" : imgh*window.pageYOffset/doc.scrollHeight) +"px",
-                "left":   Math.floor( w<ww ? "0" : imgw*window.pageXOffset/doc.scrollWidth) +"px"
+                "top":    pos.top + Math.floor( h<wh ? 0 : imgh*window.pageYOffset/doc.scrollHeight ) +"px",
+                "left":   pos.left + Math.floor( w<ww ? 0 : imgw*window.pageXOffset/doc.scrollWidth ) +"px"
               });
     }
 
@@ -1254,7 +1259,7 @@ newItem: function (i,props)//{{{
 
 nextPage: function()//{{{
 {
-	if (this.last === this.len) {
+	if (this.last+1 === this.len) {
 		return;
 	}
 	this.toggle();
@@ -1285,7 +1290,7 @@ appendItems: function ()//{{{
     e.css("display","none");
 
 	// find index of first item of current page
-    for(i=0; i<this.len && ls.page(i) !== page; i+=1);
+    for(i=0; ls.page(i) !== page; i+=1);
 	this.first = i;
 
 	// previous page navigation
@@ -1300,7 +1305,7 @@ appendItems: function ()//{{{
 	}
 
 	// add all items on page
-    for(; i<this.len && ls.page(i) === page; i+=1) {
+    for(; ls.page(i) === page; i+=1) {
 		item = ls.get(i);
         item = this.newItem(i+1, item);
         item.appendTo(e);
@@ -2522,36 +2527,37 @@ easeOutCubic: function (x, t, b, c, d) {
     }
 });
 
-function dragScroll (t,p)
+function dragScroll (target, preview)
 {
-    var x, y, z, w, win, start, d, dx, dy;
+    var preview_scale, from_mouseX, from_mouseY, ww2, wh2, w, start, dx, dy, dt;
 
     function continueDragScroll(e) {
-        var t, pos;
+        var t, pos, x, y;
 
         scrolling = true;
         if(e) {
-            mouseX = e.clientX;
-            mouseY = e.clientY;
+            mouseX = e.pageX;
+            mouseY = e.pageY;
+        }
+
+		x = window.pageXOffset;
+		y = window.pageYOffset;
+
+		// scroll
+        if (preview) {
+			pos = preview.offset();
+			pos2 = target.offset();
+			scroll( preview_scale*(mouseX-pos.left)+pos2.left-ww2,
+					preview_scale*(mouseY-pos.top)+pos2.top-wh2, true );
+        } else {
+            scroll(from_mouseX-mouseX, from_mouseY-mouseY);
         }
 
         t = new Date().getTime();
-		//info.updateProperty( (oldy-mouseY)/(t-start) );
-		//info.popInfo();
-		if (t-start > 100) {
-			start = t;
-			dx[d] = mouseX;
-			dy[d] = mouseY;
-			d = d?0:1;
-		}
-
-        if (p) {
-            pos = p.position();
-            scroll( z*(mouseX+window.pageXOffset-x-pos.left),
-                    z*(mouseY+window.pageYOffset-y-pos.top), true );
-        } else {
-            scroll(x-mouseX,y-mouseY,true);
-        }
+		dt = t-start;
+		start = t;
+		dx = window.pageXOffset-x;
+		dy = window.pageYOffset-y;
 
         signal("scroll");
         if (e) {
@@ -2566,9 +2572,10 @@ function dragScroll (t,p)
         w.unbind('mousemove');
         w.unbind('mouseup');
 
-        accel = getConfig('slide_scroll')/(new Date().getTime()-start);
-        vx = (dx[d]-mouseX)*accel;
-        vy = (dy[d]-mouseY)*accel;
+		//accel = getConfig('slide_scroll')/( new Date().getTime() - start );
+		accel = getConfig('slide_scroll')/dt;
+        vx = dx*accel;
+        vy = dy*accel;
 
         tt = mode() === modes.viewer ? 50 : 1000;
         $('html,body').animate({
@@ -2581,27 +2588,25 @@ function dragScroll (t,p)
     }
 
     w = $(window);
+	ww2 = w.width()/2;
+	wh2 = w.height()/2;
 
-    if (p) {
-        win = p.find(".window");
-        x = win.innerWidth()/2;
-        y = win.innerHeight()/2;
-        z = t.innerHeight()/p.innerHeight();
+    if (preview) {
+        preview_scale = target.innerHeight()/preview.innerHeight();
         continueDragScroll();
     }
     else {
-        x = window.pageXOffset + mouseX;
-        y = window.pageYOffset + mouseY;
+        from_mouseX = mouseX;
+        from_mouseY = mouseY;
     }
 
     $('html,body').stop(true);
     w.mouseup(stopDragScroll);
     w.mousemove(continueDragScroll);
 
-    start = new Date().getTime()-100;
-	d = 0;
-    dx = [mouseX,mouseX];
-    dy = [mouseY,mouseY];
+    start = new Date().getTime();
+	dx = window.pageXOffset;
+	dy = window.pageYOffset;
 }//}}}
 
 function stopDragScroll ()//{{{
@@ -2862,8 +2867,6 @@ function createOptions(e)//{{{
             input = $('<input>', {type:'text', 'class': "value", value: value});
             input.width( Math.min((value+"  ").length, 20) + 'ex');
         }
-        input.focus( function() {disableKeys(); $(this).parent().addClass('focused');} );
-        input.blur( function() {enableKeys(); $(this).parent().removeClass('focused');} );
         input.appendTo(opt);
     }
 
@@ -2878,6 +2881,11 @@ function createOptions(e)//{{{
     button = $('<input>', {type:'submit','class':'button','value':'Save'});
     button.click( function(){saveOptions(); mode(modes.options);} );
     button.appendTo(box);
+
+	// disable keys when navigation elemet focused
+	input = $('input, .button');
+	input.focus( function() {disableKeys(); $(this).parent().addClass('focused');} );
+	input.blur( function() {enableKeys(); $(this).parent().removeClass('focused');} );
 }//}}}
 
 function toggleOptions_()//{{{
@@ -2953,8 +2961,8 @@ function onLoad()//{{{
     // capture mouse position
     mouseX = mouseY = 0;
     $(document).mousemove(function (e){
-            mouseX = e.clientX;
-            mouseY = e.clientY;
+            mouseX = e.pageX;
+            mouseY = e.pageY;
             });
 
     // item list

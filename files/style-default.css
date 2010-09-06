@@ -8,6 +8,14 @@
  */
 /*@import url('http://typekit.com/css/families/a/default/all/579.css');*/
 /*@import url('http://typekit.com/css/families/a/default/all/457.css');*/
+/*@import url('http://fonts.googleapis.com/css?family=Droid+Sans+Mono');*/
+
+/* monospace */
+@import url('http://fonts.googleapis.com/css?family=Inconsolata');
+/* serif */
+@import url('http://fonts.googleapis.com/css?family=Crimson+Text');
+/* sans-serif */
+@import url('http://fonts.googleapis.com/css?family=Yanone+Kaffeesatz');
 
 body {
     margin: 0px;
@@ -15,7 +23,7 @@ body {
     /*www.tartanmaker.com www.stripegenerator.com http://squidfingers.com/patterns/*/
     background-image: url('bg3.png');
     background-repeat: repeat;
-    font-family: Gentium, Liberation Serif, Prociono, sans-serif;
+    font-family: 'Crimson Text', Gentium, 'Liberation Serif', serif;
 	overflow: hidden;
 }
 
@@ -59,23 +67,22 @@ a {font-weight: inherit; color: inherit; font-size: inherit; font-family: inheri
     opacity: 0;
 
     position: fixed;
-    bottom: 10px;
-    right: 10px;
+    bottom: 5%;
+    right: 5%;
+    width: 15%;
+    height: 80%;
 
     -webkit-transition: opacity 0.5s ease-in-out;
     -moz-transition: opacity 0.5s ease-in-out;
     -o-transition: opacity 0.5s ease-in-out;
 }
 
-.preview .window .window_border {
+.preview .window {
     border: 2px dashed red;
     background-color: rgba(255,255,255,0.2);
 
-    position: absolute;
-    top: -2px;
-    left: -2px;
-    bottom: -8px;
-    right: -7px;
+    padding-left: 4px;
+    padding-bottom: 5px;
 
     -webkit-box-shadow: 0px 0px 15px rgba(0,0,0,0.8);
     -moz-box-shadow: 0px 0px 15px rgba(0,0,0,0.8);
@@ -83,9 +90,15 @@ a {font-weight: inherit; color: inherit; font-size: inherit; font-family: inheri
 }
 
 .preview img {
-	/* preview size */
-    max-width: 200px;
-    max-height: 600px;
+    margin: 2px;
+
+    position: absolute;
+    bottom:0px;
+    right:0px;
+
+	/* maximal preview size */
+    max-width: 100%;
+    max-height: 100%;
 
     border: 2px solid black;
     -webkit-box-shadow: 0px 0px 20px rgba(0,0,0,0.6);
@@ -114,7 +127,9 @@ a {font-weight: inherit; color: inherit; font-size: inherit; font-family: inheri
 
     -webkit-transition: opacity 0.5s ease-in-out, background-color 1.5s ease-in-out, -webkit-box-shadow 1.5s ease-in-out;
     -moz-transition: opacity 0.5s ease-in-out, background-color 1.5s ease-in-out, -moz-box-shadow 1.5s ease-in-out;
-    -o-transition: opacity 0.5s ease-in-out, background-color 1.5s ease-in-out, -o-box-shadow 1.5s ease-in-out;
+    -o-transition: opacity 0.5s ease-in-out;
+    -o-transition: background-color 1.5s ease-in-out;
+    -o-transition: -o-box-shadow 1.5s ease-in-out;
 }
 .modeViewer #info:hover, .modeSlideshow #info:hover, .modeViewer #info.focused {
     opacity: 1;
@@ -147,8 +162,8 @@ a {font-weight: inherit; color: inherit; font-size: inherit; font-family: inheri
 .itemlink {float: right; text-decoration: none; z-index: 1;}
 .itemlink .directory,
 .itemlink .extension,
-.itemlink .filename {color: #9de; font-family: Consolas, Inconsolata, monospace;}
-.itemlink .alias {color: white;}
+.itemlink .filename {color: #9de; font-family: Inconsolata, Consolas, monospace;}
+.itemlink .alias_ {color: white;}
 .itemlink .filename {font-size: 0.9em; font-weight: bold;}
 .itemlink .extension {color: #8fb;}
 .itemlink .directory {font-size: 0.75em;}
@@ -253,11 +268,14 @@ a {font-weight: inherit; color: inherit; font-size: inherit; font-family: inheri
     text-align: left;
     word-wrap: break-word;
 }
-.item .alias {color: white;}
+.item .alias_ {color: white;}
 .item .path,
 .item .directory,
 .item .extension,
-.item .filename {font-family: Consolas, Inconsolata, monospace;-webkit-transition: color .5s ease-in-out, background-color .5s ease-in-out;}
+.item .filename {
+    font-family: Inconsolata, Consolas, monospace;
+    -webkit-transition: color .5s ease-in-out, background-color .5s ease-in-out;
+}
 .item .directory {font-size: 0.8em; color: #888;}
 .item .filename {font-size: 0.9em; display: inline; color: #ddd; font-weight: bold;}
 .item .extension {display: inline; margin-left: 0.5em; font-size: 0.7em; color: #fd0;}
@@ -277,7 +295,7 @@ a {font-weight: inherit; color: inherit; font-size: inherit; font-family: inheri
 #selected .extension,
 #selected .directory {color: #444;}
 #selected .filename {color: black;}
-#selected .item .alias {color: white;}
+#selected .item .alias_ {color: white;}
 #selected .itemident {
 	color: white;
 	background-color: black;
@@ -285,7 +303,7 @@ a {font-weight: inherit; color: inherit; font-size: inherit; font-family: inheri
 #selected .thumbnail.font {
 	background-color: white;
 }
-#selected.pagenav {
+#selected.pagenav, .pagenav:hover {
     opacity: 1;
     text-shadow: #444 0px 0px 7px;
 }
@@ -293,11 +311,12 @@ a {font-weight: inherit; color: inherit; font-size: inherit; font-family: inheri
     opacity: 0.5;
 
     color: white;
-    font-family: sans-serif;
+    /*font-family: sans-serif;*/
 	font-weight: bold;
     padding: 0.5em;
+    margin: 1em;
 
-    background-color: rgba(255,255,255,0.1);
+    background-color: rgba(255,255,255,0.2);
 	/*-moz-border-radius: 6px;*/
 	/*-o-border-radius: 6px;*/
 	/*-webkit-border-radius: 6px;*/
@@ -330,20 +349,20 @@ p {
 
 h1, h2, h3 {
     /*font-family: font-family-457-1, font-family-457-2, Aller Display;*/
-    font-family: sans-serif;
+    font-family: 'Yanone Kaffeesatz', sans-serif;
 }
 h1 {
-	font-size: 2em;
+	font-size: 2.5em;
     text-align: center;
 }
 h2 {
-	font-size: 1.5em;
+	font-size: 2em;
 	color: #ddd;
     float: left;
     margin: 1em;
 }
 h3 {
-	font-size: 1em;
+	font-size: 1.5em;
 	color: #bbb;
 	border-bottom: 2px solid #bbb;
 }
@@ -476,40 +495,52 @@ h3 {
 .navigation {
     position: fixed;
     z-index: 1;
-}
-#prev, #next {
-    bottom: 0px;
-}
-#next {
-    right: 0px;
-}
-#prev {
-    left: 0px;
-}
-#next, #prev, #list {
+
+    font-family: 'Yanone Kaffeesatz', sans-serif;
+	font-weight: bold;
+    font-size: 20pt;
+
     opacity: 0;
     display: block;
     color: white;
-    /*font-family: font-family-457-1, font-family-457-2, Aller Display;*/
-    font-family: sans-serif;
-	font-weight: bold;
-    font-size: 20pt;
     text-shadow: black 0px 0px 0.5em;
     cursor: pointer;
     padding: 1em;
     position: fixed;
 
 	background-color: rgba(0,0,0,0.5);
-	-moz-border-radius: 6px;
-	-o-border-radius: 6px;
-	-webkit-border-radius: 6px;
-	border: 3px solid black;
+    -webkit-box-shadow: 0px 0px 20px rgba(0,0,0,0.5);
+    -moz-box-shadow: 0px 0px 15px rgba(0,0,0,0.8);
+    -o-box-shadow: 0px 0px 15px rgba(0,0,0,0.8);
+
+	/*-moz-border-radius: 6px;*/
+	/*-o-border-radius: 6px;*/
+	/*-webkit-border-radius: 6px;*/
+	/*border: 3px solid black;*/
 
     -webkit-transition: opacity 0.3s ease-in-out;
     -moz-transition: opacity 0.3s ease-in-out;
     -o-transition: opacity 0.3s ease-in-out;
 }
-#list {top: 0px; right: 0px;}
+#prev, #next {
+    bottom: 0px;
+}
+#next {
+    right: 0px;
+    border-top-left-radius: 2em;
+	-moz-border-radius-topleft: 2em;
+}
+#prev {
+    left: 0px;
+    border-top-right-radius: 2em;
+	-moz-border-radius-topright: 2em;
+}
+#list {
+    top: 0px;
+    right: 0px;
+    border-bottom-left-radius: 2em;
+	-moz-border-radius-bottomleft: 2em;
+}
 #next:hover, #next.focused,
 #prev:hover, #prev.focused,
 #list:hover, #list.focused {
