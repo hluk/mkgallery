@@ -335,7 +335,6 @@ a {font-weight: inherit; color: inherit; font-size: inherit; font-family: inheri
 p {
     font-style: italic;
     font-family: serif;
-    padding: 0.2em;
     padding-left: 4em;
     padding-right: 4em;
     font-size: 11pt;
@@ -436,8 +435,23 @@ h3 {
 	padding-left: 0.1em;
 	padding-right: 0.1em;
 }
+.options .config {
+    margin: auto;
+    width: 70%;
+    text-align: left;
+    padding-left: 0px;
+    margin-top: 1em;
+    margin-bottom: 1em;
+}
+.options .config textarea {
+    width: 100%;
+    height: 10em;
+	-moz-border-radius: 4px;
+	-o-border-radius: 4px;
+	-webkit-border-radius: 4px;
+}
 .about .category {margin: 1em;}
-.about .which {color: #8fd;}
+.about .which {color: #ff8;}
 .desc {display: inline; font-size: 0.8em;}
 
 .option {

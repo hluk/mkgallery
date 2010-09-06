@@ -22,7 +22,6 @@
 // DEFAULT CONFIGURATION {{{
 // option: [default value,category, description]
 configs = {
-	'n': [1, "General", "Current item"],
 	'no_preview': [false, "General", "Disable item preview window"],
 	'no_list': [false, "General", "Disable item list"],
 	'no_info': [false, "General", "Disable item info popup"],
@@ -61,7 +60,9 @@ configs = {
 
     'reload_every': [0, "Debug", "Number of items to view after the gallery if refreshed"],
 	'show_keys': [false, "Debug", "Show pressed keys in info"],
-	'show_events': [false, "Debug", "Show events in info"]
+	'show_events': [false, "Debug", "Show events in info"],
+
+	'n': [1, ""]
 }//}}}
 
 // CLASSES//{{{
@@ -1798,7 +1799,7 @@ hidden: function ()//{{{
 // Global variables//{{{
 // reset user configuration
 var config = {};
-var configStrict = {};
+var config_strict = {};
 var controls = {};
 var events = {};
 var ls = {}; // gallery items
@@ -1958,7 +1959,7 @@ function getConfig (name)//{{{
     }
     default_value = default_value[0];
 
-    if ( (x = configStrict[name]) ||
+    if ( (x = config_strict[name]) ||
          (x = vars[name])    ||
          (x = config[name]) )
     {
@@ -2799,7 +2800,7 @@ function toggleHelp_()//{{{
 
 function saveOptions ()//{{{
 {
-    $('.options .option').each(
+    options.find('.option').each(
         function(){
             var t, which, value, orig_value;
             t = $(this);
@@ -2823,6 +2824,42 @@ function saveOptions ()//{{{
     location.reload();
 }//}}}
 
+function generateConfig ()//{{{
+{
+    var ee, e, content;
+
+    ee = options.children('.config');
+    e = ee.children('textarea');
+
+    content = "config = {\n";
+    options.find('.option').each(
+        function(){
+            var t, which, value;
+            t = $(this);
+
+            value = t.children('.value');
+            if ( value.attr('type') === 'checkbox' ) {
+                value = value.is(':checked');
+            } else {
+                value = value.val();
+                if ( typeof(value) === 'string' ) {
+                    // escape single quotes and backslash
+                    value = "'" + value.replace(/(\\|')/g,"\\$1") + "'";
+                }
+            }
+            which = t.children('.which').text();
+
+            content += '  ' + which + ': ' + value + ',\n';
+        } );
+    content += '};'
+
+    ee.show();
+    e.text(content);
+    e.focus();
+    e.select();
+}
+//}}}
+
 function createOptions(e)//{{{
 {
     var i, j, cats, cat, catname, conf, desc, opt, value, input, box, button;
@@ -2834,7 +2871,8 @@ function createOptions(e)//{{{
             '<span class="emph">keyword</span> used in URL or the configuration file to set the option, '+
             '<span class="emph">brief description</span> and '+
             '<span class="emph">current option value</span>.</p>'+
-            '<p>To make changes permanent edit <span class="code">config.js</span> file.</p>'
+            '<p>To make changes permanent press <span class="emph">Copy</span> button and save the text in configuration file <span class="code">config.js</span>.</p>'+
+            '<p>Any option can be locked by setting default value of <span class="code">config_strict[<span class="emph">keyword</span>]</span>.</p>'
             }).appendTo(e);
 
     cats = {};
@@ -2867,25 +2905,44 @@ function createOptions(e)//{{{
             input = $('<input>', {type:'text', 'class': "value", value: value});
             input.width( Math.min((value+"  ").length, 20) + 'ex');
         }
+
+        // don't change values in config_strict
+        if ( i in config_strict ) {
+            input.attr('disabled', 'yes');
+        }
         input.appendTo(opt);
     }
+
+    // config.js contents
+    cat = $('<p>', {'class': 'config'});
+    cat.html('Add this to your <span class="code">config.js</span>:');
+    cat.hide();
+    cat.appendTo(e);
+    input = $('<textarea>');
+	input.focus( function() {disableKeys();} );
+    input.blur( function() {enableKeys();} );
+    input.appendTo(cat);
 
     // buttons
     box = $('<div>', {'class':'buttonbox'});
     box.appendTo(e);
 
     button = $('<input>', {type:'submit','class':'button','value':'Cancel'});
-    button.click( function(){mode(modes.options);} );
+    button.click( function(){$(this).blur(); modeDrop();} );
+    button.appendTo(box);
+
+    button = $('<input>', {type:'submit','class':'button','value':'Copy'});
+    button.click( function(){$(this).blur(); generateConfig();} );
     button.appendTo(box);
 
     button = $('<input>', {type:'submit','class':'button','value':'Save'});
-    button.click( function(){saveOptions(); mode(modes.options);} );
+    button.click( function(){$(this).blur(); saveOptions();} );
     button.appendTo(box);
 
-	// disable keys when navigation elemet focused
+	// disable keys when navigation element is focused
 	input = $('input, .button');
 	input.focus( function() {disableKeys(); $(this).parent().addClass('focused');} );
-	input.blur( function() {enableKeys(); $(this).parent().removeClass('focused');} );
+    input.blur( function() {enableKeys(); $(this).parent().removeClass('focused');} );
 }//}}}
 
 function toggleOptions_()//{{{

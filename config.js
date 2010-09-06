@@ -52,7 +52,7 @@ slideshow_delay: 5000,
 slide_scroll: 200,
 }
 
-configStrict = { // -- these can't be overridden in URL
+config_strict = { // -- these can't be overridden in URL
 preload_images: 3,
 }
 //}}}
