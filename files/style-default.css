@@ -41,8 +41,8 @@ a {font-weight: inherit; color: inherit; font-size: inherit; font-family: inheri
 	z-index: 1; /* always focusable */
 	margin: auto;
 
-	width: 60%;
-	height: 100%;
+    width: 60%;
+    height: 100%;
 
 	color: black;
 	padding: 1em;
@@ -59,24 +59,26 @@ a {font-weight: inherit; color: inherit; font-size: inherit; font-family: inheri
 /*}}}*/
 
 /* preview {{{*/
-.modeViewer .preview.focused,
-.modeSlideshow .preview.focused,
-.modeViewer .preview:hover,
-.modeSlideshow .preview:hover {opacity: 1;}
 .preview {
+    /* preview is hidden by default */
     opacity: 0;
 
+    /* preview position */
     position: fixed;
-    bottom: 5%;
-    right: 5%;
-    width: 15%;
-    height: 80%;
+    bottom: 30px;
+    right: 30px;
 
     -webkit-transition: opacity 0.5s ease-in-out;
     -moz-transition: opacity 0.5s ease-in-out;
     -o-transition: opacity 0.5s ease-in-out;
 }
+/* show preview when needed */
+.modeViewer .preview.focused,
+.modeSlideshow .preview.focused,
+.modeViewer .preview:hover,
+.modeSlideshow .preview:hover {opacity: 1;}
 
+/* preview viewed area */
 .preview .window {
     border: 2px dashed red;
     background-color: rgba(255,255,255,0.2);
@@ -91,14 +93,6 @@ a {font-weight: inherit; color: inherit; font-size: inherit; font-family: inheri
 
 .preview img {
     margin: 2px;
-
-    position: absolute;
-    bottom:0px;
-    right:0px;
-
-	/* maximal preview size */
-    max-width: 100%;
-    max-height: 100%;
 
     border: 2px solid black;
     -webkit-box-shadow: 0px 0px 20px rgba(0,0,0,0.6);
@@ -155,7 +149,7 @@ a {font-weight: inherit; color: inherit; font-size: inherit; font-family: inheri
 }
 .counter_max, .counter_now {color: white;}
 .counter_now {font-weight: bold;}
-.counter_max {font-size: 0.7em; border-top: 1px solid #bbb; color: #ddd;}
+.counter_max {font-size: 0.8em; border-top: 1px solid #bbb; color: #ddd;}
 .last .counter_now {text-shadow: white 0px 0px 7px;}
 
 /* item directory, filename, alias */
@@ -340,7 +334,7 @@ p {
     font-size: 11pt;
 }
 .emph {color: #ff6;}
-.code {font-family: monospace;}
+.code {font-family: Inconsolata, Consolas, monospace;}
 .help a {color: #7bf; text-decoration: none;}
 .help a:hover {color: #ff0;}
 .help a:visited {color: #7bf;}
@@ -396,8 +390,9 @@ h3 {
 	display: inline-block;
 
 	font-weight: bold;
+    font-family: Inconsolata, Consolas, monospace;
 	text-align: right;
-	font-size: 0.6em;
+	font-size: 0.8em;
 
 	margin-right: 1em;
 	margin-top: 0.2em;
@@ -427,9 +422,8 @@ h3 {
 	color: yellow;
 
 	font-weight: bold;
-    /*font-family: DejaVu Sans Mono, Inconsolata, Consolas, monospace;*/
-    font-family: monospace;
-	font-size: 0.7em;
+    font-family: Inconsolata, Consolas, monospace;
+	font-size: 0.9em;
 
 	margin-right: 1em;
 	padding-left: 0.1em;

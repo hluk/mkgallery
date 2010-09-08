@@ -37,6 +37,8 @@ configs = {
 	'zoom_step': [0.125, "Images", "zoom multiplier"],
 	'preload_images': [2, "Images", "number of images to preload"],
     'image_on_canvas': [false, "Images", "use HTML5 canvas element to draw images"],
+    'max_preview_width': [15, "Images", "Maximal preview width in percent of window width"],
+    'max_preview_height': [80, "Images", "Maximal preview height in percent of window height"],
 	'pop_preview_delay': [1000, "Images", "Number of milliseconds the preview is visible"],
 
     'slideshow': [false, "Slideshow", "Default is slideshow mode"],
@@ -277,11 +279,10 @@ show: function ()//{{{
         e.load( function () {
             view.parent.onUpdateStatus(null,"msg");
 
-            view.orig_width = this.width ? this.width : this.naturalWidth;
-            view.orig_height = this.height ? this.height : this.naturalHeight;
+            view.orig_width = view.width = this.width ? this.width : this.naturalWidth;
+            view.orig_height = view.height = this.height ? this.height : this.naturalHeight;
 
-            view.parent.zoom();
-            view.parent.onLoad();
+            view.onLoad();
         } );
     }
     e.attr( "src", esc(this.path) );
@@ -349,6 +350,12 @@ zoom: function (z)//{{{
 /** events */
 /**
  * \fn thumbnailOnLoad()
+ * \brief event is triggered after view is loaded
+ */
+onLoad: function (){},
+
+/**
+ * \fn thumbnailOnLoad()
  * \brief event is triggered after thumbnail is loaded
  * \param error true if error occured
  */
@@ -408,16 +415,15 @@ show: function ()//{{{
 
         view.parent.onUpdateStatus(null,"msg");
 
-        view.orig_width = this.videoWidth;
-        view.orig_height = this.videoHeight;
+        view.orig_width  = view.width = this.videoWidth;
+        view.orig_height = view.height = this.videoHeight;
 		view.duration = this.duration/60;
 		s = Math.floor(this.duration);
 		m = Math.floor(s/60);
 		s = ""+(s-m*60);
 		view.duration = m+":"+(s.length === 1 ? "0" : "")+s;
 
-		view.parent.zoom();
-        view.parent.onLoad();
+        view.onLoad();
     } );
     e.error( function () {
         view.parent.onUpdateStatus( "Unsupported format!", "error" );
@@ -530,6 +536,11 @@ seek: function (how) {//{{{
 /** events */
 /**
  * \fn thumbnailOnLoad()
+ * \brief event is triggered after view is loaded
+ */
+onLoad: function (){},
+/**
+ * \fn thumbnailOnLoad()
  * \brief event is triggered after thumbnail is loaded
  */
 thumbnailOnLoad: function () {}
@@ -588,9 +599,8 @@ show: function ()//{{{
     } );
 
     e.appendTo(this.parent.e);
-    this.parent.zoom();
 
-    this.parent.onLoad();
+    this.onLoad();
 },//}}}
 
 remove: function ()//{{{
@@ -675,6 +685,11 @@ updateHeight: function ()//{{{
 /** events */
 /**
  * \fn thumbnailOnLoad()
+ * \brief event is triggered after view is loaded
+ */
+onLoad: function (){},
+/**
+ * \fn thumbnailOnLoad()
  * \brief event is triggered after thumbnail is loaded
  */
 thumbnailOnLoad: function (){}
@@ -711,18 +726,22 @@ show: function ()//{{{
 
     p.onUpdateStatus("loading", "msg");
 
-    e = this.e = $('<iframe>', {'class': 'htmlview'});
-    e.attr( "src", esc(this.path) );
+    e = this.e = $('<iframe>', {
+      'class': 'htmlview',
+      'seamless': 'yes',
+      //'scrolling': 'no',
+      'src': esc(this.path)
+    });
 
     e.appendTo(p.e);
 
 	e.load( function () {
 		p.onUpdateStatus(null, "msg");
 
-		view.orig_width = this.width ? this.width : this.naturalWidth;
-		view.orig_height = this.height ? this.height : this.naturalHeight;
+		view.orig_width = view.width = this.width ? this.width : this.naturalWidth;
+		view.orig_height = view.height = this.height ? this.height : this.naturalHeight;
 
-		view.parent.onLoad();
+		view.onLoad();
 	} );
 },//}}}
 
@@ -753,6 +772,11 @@ zoom: function (how)//{{{
 },//}}}
 
 /** events */
+/**
+ * \fn thumbnailOnLoad()
+ * \brief event is triggered after view is loaded
+ */
+onLoad: function (){},
 /**
  * \fn thumbnailOnLoad()
  * \brief event is triggered after thumbnail is loaded
@@ -818,7 +842,7 @@ init: function (e, preview, getConfig)//{{{
 		img.appendTo(preview);
 
         win = this.preview_win = $('<div>', {'class':'window'});
-		win.css("position", "absolute");
+        win.css("position", "absolute");
 		win.appendTo(preview);
 
 		mousedown = function (ev){
@@ -928,7 +952,7 @@ zoom: function (how)//{{{
 
 createPreview: function (filepath)//{{{
 {
-    var p, img;
+    var p, img, w, h, maxw, maxh;
 
     p = this.preview;
     if (!p) {
@@ -946,6 +970,22 @@ createPreview: function (filepath)//{{{
         return;
     }
 
+    // preview size
+    maxw = Math.floor( getConfig('max_preview_width') * window.innerWidth / 100 );
+    maxh = Math.floor( getConfig('max_preview_height') * window.innerHeight / 100 );
+    w = this.view.width;
+    h = this.view.height;
+    if (w>maxw) {
+        h *= maxw/w;
+        w = maxw;
+    }
+    if (h>maxh) {
+        w *= maxh/h;
+        h = maxh;
+    }
+
+    img.attr( "width", w );
+    img.attr( "height", h );
     img.attr( "src", esc(filepath) );
     p.show();
 },//}}}
@@ -964,17 +1004,19 @@ updatePreview: function ()//{{{
     if (win) {
         imgw = img.innerWidth();
         imgh = img.innerHeight();
-		pos = img.position();
+        pos = img.position();
         ww = window.innerWidth;
         wh = window.innerHeight;
         w = this.view.width;
         h = this.view.height;
-        doc = document.documentElement;
+
+        z = img.innerHeight()/h;
+
         win.css({
-                "height": Math.floor( h<wh ? imgh : (imgh*wh/h) ) +"px",
-                "width":  Math.floor( w<ww ? imgw : (imgw*ww/w) ) +"px",
-                "top":    pos.top + Math.floor( h<wh ? 0 : imgh*window.pageYOffset/doc.scrollHeight ) +"px",
-                "left":   pos.left + Math.floor( w<ww ? 0 : imgw*window.pageXOffset/doc.scrollWidth ) +"px"
+                "height": Math.floor( h<wh ? imgh : z*wh ) +"px",
+                "width":  Math.floor( w<ww ? imgw : z*ww ) +"px",
+                "top":    pos.top + z*window.pageYOffset +"px",
+                "left":   pos.left + z*window.pageXOffset +"px"
               });
     }
 
@@ -1025,7 +1067,7 @@ center: function ()//{{{
 
 show: function (filepath)//{{{
 {
-    var v;
+    var v, t;
 
     if (this.view) {
         this.view.remove();
@@ -1033,8 +1075,14 @@ show: function (filepath)//{{{
 
     v = this.view = this.viewFactory.newView(filepath);
     if ( v ) {
+        t = this;
+        v.onLoad = function()
+        {
+            t.createPreview(filepath);
+            t.zoom();
+            t.onLoad();
+        };
         v.show();
-        this.createPreview(filepath);
     }
     else if (this.onError) {
         this.onError("Unknown format: \""+filepath+"\"");
@@ -2177,6 +2225,8 @@ function scroll (x,y,absolute)//{{{
 
         return true;
     }
+
+    return false;
 }//}}}
 
 function scrollDown(how)//{{{
@@ -2481,8 +2531,6 @@ function addKeys (newkeys, desc, fn, keymode)//{{{
     k = newkeys instanceof Array ? newkeys : [newkeys];
     tomod = function (x) {return x[0];};
     for (i in k) {
-        if (!k[i])
-            alert(desc);
 		modifiers = k[i].toUpperCase().split("-");
 		key = modifiers.pop();
 
@@ -2519,7 +2567,7 @@ jQuery.extend( jQuery.easing,
 easeOutCubic: function (x, t, b, c, d) {
         // refresh preview every 30ms
         if ( t>tt ) {
-            tt = t+25;
+            tt = t+30;
             if ( mode() === modes.viewer ) {
                 viewer.updatePreview();
             }
@@ -2573,16 +2621,17 @@ function dragScroll (target, preview)
         w.unbind('mousemove');
         w.unbind('mouseup');
 
-		//accel = getConfig('slide_scroll')/( new Date().getTime() - start );
-		accel = getConfig('slide_scroll')/dt;
-        vx = dx*accel;
-        vy = dy*accel;
+        if (dt>0) {
+            accel = getConfig('slide_scroll')/dt;
+            vx = dx*accel;
+            vy = dy*accel;
 
-        tt = mode() === modes.viewer ? 50 : 1000;
-        $('html,body').animate({
-            scrollLeft: window.pageXOffset+vx+"px",
-            scrollTop: window.pageYOffset+vy+"px"
-            }, 1000, "easeOutCubic");
+            tt = mode() === modes.viewer ? 50 : 1000;
+            $('html,body').animate({
+                scrollLeft: window.pageXOffset+vx+"px",
+                scrollTop: window.pageYOffset+vy+"px"
+                }, 1000, "easeOutCubic");
+        }
 
         signal("drag_scroll_end");
         e.preventDefault();
@@ -2606,6 +2655,7 @@ function dragScroll (target, preview)
     w.mousemove(continueDragScroll);
 
     start = new Date().getTime();
+    dt = 0;
 	dx = window.pageXOffset;
 	dy = window.pageYOffset;
 }//}}}
@@ -2815,7 +2865,6 @@ function saveOptions ()//{{{
 
             orig_value = getConfig(which);
             vars[which] = value;
-            //alert(which+' : '+value+' : '+getConfig(which)+'; changed? '+ (orig_value !== getConfig(which)));
             if ( orig_value === getConfig(which) ) {
                 delete vars[which];
             }
