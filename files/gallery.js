@@ -21,13 +21,14 @@
 "use strict";
 // DEFAULT CONFIGURATION {{{
 // option: [default value,category, description]
-configs = {
+var configs = {
 	'no_preview': [false, "General", "Disable item preview window"],
 	'no_list': [false, "General", "Disable item list"],
 	'no_info': [false, "General", "Disable item info popup"],
 	'title_fmt': ['%{title}: %{now}/%{max} "%{filename}"' ,"General", "Title format (keywords: title, filename, now, max, remaining)"],
 	'pop_info_delay': [4000, "General", "Number of milliseconds the info is visible"],
 	'slide_scroll': [100, "General", "Slide scroll amount"],
+    'shuffle': [false, "General", "Randomly shuffle gallery items"],
 
 	'font_size': [16, "Font", "font size"],
 	'font_thumbnail_text': ['+-1234567890,<br/>abcdefghijklmnopqrstuvwxyz,<br/>ABCDEFGHIJKLMNOPQRSTUVWXYZ', "Font", "Thumbnail HTML contents"],
@@ -140,11 +141,11 @@ var Items = function (ls, max_page_items) { this.init(ls, max_page_items); };
 Items.prototype = {
 init: function (ls, max_page_items)//{{{
 {
-	var items, i, len, pg;
+	var items, item, i, len, pg;
 
 	items = [];
 	for(i=0, len=0, pg=1; i<ls.length; i+=1) {
-		item = ls[i]
+		item = ls[i];
 
 		// empty filename means page break
 		if( !item ||
@@ -183,6 +184,21 @@ page: function(i)//{{{
 		return this.ls[i][1].page_;
 	}
 	return -1;
+},//}}}
+
+shuffle: function ()//{{{
+{
+    var tmp, ls, i, j;
+
+    i = this.length();
+    ls = this.ls;
+    while(i>0) {
+        j = Math.floor( Math.random() * i );
+        i -= 1;
+        tmp = ls[j];
+        ls[j] = ls[i];
+        ls[i] = tmp;
+    }
 }//}}}
 
 };
@@ -393,7 +409,7 @@ show: function ()//{{{
 
     p.onUpdateStatus("loading","msg");
 
-	e = this.e = $( document.createElement("video") );
+	e = this.e = $('<video>');
 	e.html("Your browser does not support the video tag.");
     e.attr("controls","controls");
     e.css("display","block");
@@ -407,7 +423,7 @@ show: function ()//{{{
 		e.attr("loop","loop");
     }
 	if ( p.getConfig('autonext') ) {
-		e.bind( "ended", function () {this.parent.next();} );
+		e.bind( "ended", function () {p.onNext();} );
     }
 
     e.bind('canplay', function () {
@@ -987,12 +1003,11 @@ createPreview: function (filepath)//{{{
     img.attr( "width", w );
     img.attr( "height", h );
     img.attr( "src", esc(filepath) );
-    p.show();
 },//}}}
 
 updatePreview: function ()//{{{
 {
-    var img, win, imgw, imgh, ww, wh, w, h, doc, pos;
+    var img, win, imgw, imgh, ww, wh, w, h, z, doc, pos;
 
     img = this.preview_img;
     if ( !img || !img.attr("src") ) {
@@ -1009,7 +1024,6 @@ updatePreview: function ()//{{{
         wh = window.innerHeight;
         w = this.view.width;
         h = this.view.height;
-
         z = img.innerHeight()/h;
 
         win.css({
@@ -2064,7 +2078,7 @@ function signal (sgn)//{{{
     }
 }//}}}
 
-function updateInfo(itemname, n, props) //{{{
+function updateInfo (itemname, n, props) //{{{
 {
     if(!info) {
         return;
@@ -2285,7 +2299,6 @@ function go (i)//{{{
 	props = item[1];
 
     viewer.show(itemname);
-    scroll(0,0,true);
 
     updateInfo(itemname, n, props);
 
@@ -2857,7 +2870,7 @@ function saveOptions ()//{{{
 
             value = t.children('.value');
             if ( value.attr('type') === 'checkbox' ) {
-                value = value.is(':checked');
+                value = value.is(':checked')?1:0;
             } else {
                 value = value.val();
             }
@@ -3059,6 +3072,9 @@ function onLoad()//{{{
 
 	// change ls from array to object
 	ls = new Items( ls, getConfig('max_page_items') );
+    if ( getConfig('shuffle') ) {
+        ls.shuffle();
+    }
 
     // viewer on nth item
     n = getPage( getConfig('n') );
