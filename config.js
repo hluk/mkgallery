@@ -135,6 +135,8 @@ Viewer: [
     ["/", "zoom('fit')", "Zoom to fit"],
     [".", "zoom('fill')", "Zoom to fill"],
     ["p", "mode(mode.slideshow)", "Slideshow"],
+    ["r", "rotate(90)", "Rotate item 90 degrees clockwise"],
+    ["e", "rotate(-90)", "Rotate item 90 degrees counter-clockwise"],
 ],
 
 "Item List": [

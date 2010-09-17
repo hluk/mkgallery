@@ -17,13 +17,13 @@ Supported file types (and extensions) are:
 Function create_gallery() returns list of items. The list format is:
 	{
 		"item": # this represents the item in gallery (i.e. "items/img.png")
-			{ # all keys here are optional
+			{ # all keys are jQuery selectors and are optional
 				# use another name (e.g. font name)
-				"alias_": "item alias",
+				".alias": "item alias",
 				# path to the original file
-				"link_": "link to original filename",
+				".link": "link to original filename",
 				# thumbnail size (see description below)
-				"thumbnail_size_": [width, height]
+				".thumbnail_size": [width, height]
 			}
 		...
 	}
@@ -32,20 +32,20 @@ Function write_items() saves the list in JavaScript format:
 var ls = [
 	[ "item",
 		{
-			"alias_": "item alias",
-			"link_": "link to original filename",
-			"thumbnail_size_": [width, height],
+			".alias": "item alias",
+			".link": "link to original filename",
+			".thumbnail_size": [width, height],
 		}
 	],
 	...
 ]
 
 Creating thumbnails can take a long time to complete therefore if user wants to
-view the gallery, the list of items is saved before without "thumbnail_size_"
+view the gallery, the list of items is saved before without ".thumbnail_size"
 property and the thumbnails are generated afterwards.
 """
 
-import os, sys, re, getopt, shutil, glob, locale, codecs
+import os, sys, re, shutil, glob, getopt, locale, codecs
 
 has_python3 = sys.version[0] == '3'
 
@@ -85,17 +85,20 @@ if has_python3:
 	re_html = re.compile(r'\.html$', re_flags)
 	re_remote = re.compile(r'^\w+://', re_flags)
 	re_fontname = re.compile(r'[^a-z0-9_]+', re_flags)
+	re_tag = re.compile(r'^\$\(<.*\)$', re_flags)
 else:
 	re_flags = re.IGNORECASE|re.UNICODE
-	re_img  = re.compile( unicode(r'\.(jpg|png|apng|gif|svg)$' ), re_flags)
-	re_font = re.compile( unicode(r'\.(otf|ttf)$' ), re_flags)
-	re_vid = re.compile( unicode(r'\.(mp4|mov|flv|ogg|mp3|wav)$' ), re_flags)
-	re_html = re.compile( unicode(r'\.html$' ), re_flags)
-	re_remote = re.compile( unicode(r'^\w+://' ), re_flags)
-	re_fontname = re.compile( unicode(r'[^a-z0-9_]+' ), re_flags)
+	re_img  = re.compile( unicode(r'\.(jpg|png|apng|gif|svg)$' ), re_flags )
+	re_font = re.compile( unicode(r'\.(otf|ttf)$' ), re_flags )
+	re_vid = re.compile( unicode(r'\.(mp4|mov|flv|ogg|mp3|wav)$' ), re_flags )
+	re_html = re.compile( unicode(r'\.html$' ), re_flags )
+	re_remote = re.compile( unicode(r'^\w+://' ), re_flags )
+	re_fontname = re.compile( unicode(r'[^a-z0-9_]+' ), re_flags )
+	re_tag = re.compile( unicode(r'^\$\(<.*\)$'), re_flags )
 
 local = False
 page = -1
+title_page = False
 
 def from_locale(string):#{{{
 	global Locale
@@ -121,7 +124,7 @@ except:
 
 def usage():#{{{
 	global title, resolution, gdir, url, d
-	print ( """\
+	print( """\
 usage: %s [options] [directories|filenames]
 
     Creates HTML gallery containing images and fonts recursively
@@ -159,6 +162,7 @@ options:
                             (default: 0 (unlimited))
                             NOTE: Use empty item filename (i.e. "") to break
                             page in specific place.
+    -T, --title-page        create title page
 
     -r 0, --resolution=0    don't generate thumbnails
     -u "", --url=""         don't launch web browser
@@ -219,12 +223,15 @@ def parse_args(argv):#{{{
 		e.g. [ [item1_on_page1, item2_on_page1, ...], [item1_on_page2, ...], ... ]
 	"""
 	global title, resolution, gdir, url, d, cp, force, local, page, \
-			font_render, font_size, font_text
+			font_render, font_size, font_text, title_page
+
+	allfiles = []
 
 	try:
-		opts, args = getopt.getopt(argv, "ht:r:d:u:cflx:p:",
+		opts, args = getopt.gnu_getopt(argv, "ht:r:d:u:cflx:p:T",
 				["help", "title=", "resolution=", "directory=", "url=",
-					"template=", "copy", "force", "local", "render=", "page="])
+					"template=", "copy", "force", "local", "render=", "page=",
+					"title-page"])
 	except getopt.GetoptError:
 		usage()
 		sys.exit(2)
@@ -272,6 +279,8 @@ def parse_args(argv):#{{{
 			except:
 				print("ERROR: Page must be a single number!")
 				sys.exit(1)
+		elif opt in ("-T", "--title-page"):
+			title_page = True
 
 	# no PIL: warnings, errors
 	if not has_pil:
@@ -300,7 +309,6 @@ def parse_args(argv):#{{{
 		pass
 
 	# parse files
-	allfiles = []
 	if args:
 		files = []
 		for arg in args:
@@ -447,23 +455,21 @@ def renderFont(fontfile, size, text, outfile):#{{{
 #}}}
 
 def is_local(filename):#{{{
-	global re_remote
+	global re_remote, re_tag
 
-	return re_remote.search(filename) == None
+	return re_remote.search(filename) == None and re_tag.search(filename) == None
 #}}}
 
-def find_items(files):#{{{
+def find_items(ff):#{{{
 	""" return unfiltered list of items from specified directories """
 	global gdir
 
 	abs_gdir = os.path.abspath(gdir)
 
-	# find items in "files" directory
-	for ff in files:
-		# return remote file name
-		if not is_local(ff):
-			yield ff
-			continue
+	# return remote file name
+	if not is_local(ff):
+		yield ff
+	else:
 		# recursively look for other files
 		for f in walk(ff):
 			abs_f = os.path.abspath(f)
@@ -483,14 +489,17 @@ class Type:
 	FONT  = 2
 	VIDEO = 3
 	HTML = 4
+	TAG = 5
 
 def item_type(f):
-	global re_img, re_font, re_vid
+	global re_img, re_font, re_vid, re_tag
+
 	types = {
 		Type.IMAGE: re_img,
 		Type.FONT:  re_font,
 		Type.VIDEO: re_vid,
-		Type.HTML:  re_html
+		Type.HTML:  re_html,
+		Type.TAG:   re_tag
 	}
 
 	for t, re in types.items():
@@ -500,7 +509,7 @@ def item_type(f):
 	return Type.UNKNOWN
 #}}}
 
-def gallery_items(files):#{{{
+def gallery_items(files, allitems):#{{{
 	"""
 	finds all usable items in specified files/directories (argument),
 	copy items to "items/" (if --local not set),
@@ -508,27 +517,27 @@ def gallery_items(files):#{{{
 	"""
 	global re_img, re_font, re_vid, gdir
 
-	items = {}
 	imgdir = gdir+S+"items"
 	# find items in input files/directories
-	for f in find_items(files):
-		# filetype (image, font, audio/video)
-		t = item_type(f)
+	for ff in files:
+		items = {}
+		for f in find_items(ff):
+			# filetype (image, font, audio/video)
+			t = item_type(f)
 
-		if t>0:
-			# file is local and not viewed locally
-			if not local and is_local(f):
-				destdir = dirname(f)
-				basename = os.path.basename(f)
-				fdir = imgdir +S+ destdir
-				if not os.path.isdir(fdir):
-					os.makedirs(fdir)
-				cp( os.path.abspath(f), fdir +S+ basename )
-				f = "items" +S+ (destdir and destdir+S or "") + os.path.basename(f)
+			if t>0:
+				# file is local and not viewed locally
+				if not local and is_local(f):
+					destdir = dirname(f)
+					basename = os.path.basename(f)
+					fdir = imgdir +S+ destdir
+					if not os.path.isdir(fdir):
+						os.makedirs(fdir)
+					cp( os.path.abspath(f), fdir +S+ basename )
+					f = "items" +S+ (destdir and destdir+S or "") + os.path.basename(f)
 
-			items[f] = {}
-
-	return items
+				items[f] = {}
+		add_sorted(items, allitems)
 #}}}
 
 def create_fontfaces(items):#{{{
@@ -553,9 +562,9 @@ def create_fontfaces(items):#{{{
 
 		props = font[1]
 		if alias:
-			props['alias_'] = alias
+			props['.alias'] = alias
 		if link:
-			props['link_'] = to_url(link)
+			props['.link'] = to_url(link)
 
 		# show progress bar
 		i=i+1
@@ -612,7 +621,7 @@ def create_thumbnails(items):#{{{
 		props = img[1]
 		w = h = 0
 		try:
-			if 'link' in props:
+			if '.link' in props:
 				# use rendered image in '<gallery>/items/<filename>.png'
 				infile = gdir +S+ f.replace(':','_')
 				if local:
@@ -627,7 +636,7 @@ def create_thumbnails(items):#{{{
 				outfile = thumbdir +S+ to_url(f).replace(':','_')
 
 			w,h = create_thumbnail(infile, resolution, outfile)
-			props['thumbnail_size_'] = [w,h]
+			props['.thumbnail_size'] = [w,h]
 		except Exception as e:
 			print("ERROR: "+str(e)+" (file: \""+f+"\")")
 
@@ -671,13 +680,9 @@ def write_items(items):#{{{
 	itemfile.close()
 #}}}
 
-def sort_items(items, allitems):#{{{
+def add_sorted(items, allitems):#{{{
 	""" create pages of sorted items """
 	global page
-
-	# page divider
-	if allitems:
-		allitems.append([""])
 
 	i = 0
 	# maximal number of items per page
@@ -692,7 +697,7 @@ def sort_items(items, allitems):#{{{
 #}}}
 
 def main(argv):#{{{
-	global title, resolution, gdir, url, d, force, page
+	global title, resolution, gdir, url, d, force, page, title_page
 
 	# arguments
 	allfiles = parse_args(argv)
@@ -703,8 +708,10 @@ def main(argv):#{{{
 	# sorted items with page dividers
 	allitems = []
 	for files in allfiles:
-		items = gallery_items(files)
-		sort_items(items, allitems)
+		# page divider
+		if allitems:
+			allitems.append([""])
+		items = gallery_items(files, allitems)
 
 	# no usable items found
 	if not allitems:
@@ -713,6 +720,41 @@ def main(argv):#{{{
 
 	# write font faces to CSS file
 	create_fontfaces(allitems)
+
+	# create title page
+	if title_page:
+		line = '<div id="title_page">'
+
+		# FIXME: replace single quotes
+		line = line + '<div class="title">' + title + '</div>'
+
+		# date
+		from datetime import date
+		line = line + '<div class="date">' + date.today().isoformat() + '</div>'
+
+		# number of items
+		count = {}
+		cls = {
+				Type.IMAGE:'images',
+				Type.FONT: 'fonts',
+				Type.VIDEO:'videos',
+				Type.HTML: 'html',
+				'pages': 'pages',
+				'items': 'items'
+				}
+		for item in allitems:
+			if item[0]:
+				t = item_type(item[0])
+				if t in cls:
+					count['items'] = count.get('items',0)+1
+					count[t] = count.get(t,0)+1
+			else:
+				cls['pages'] = count.get('pages',0)+1
+		for t in count:
+			line = line + '<div class="stat '+cls[t]+'_total">' + str(count[t]) + '</div>'
+
+		# prepend title page to item list
+		allitems.insert( 0, ["$("+line+"</div>)",{'.alias':'Title page'}] )
 
 	# open browser?
 	if url:

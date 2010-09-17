@@ -81,6 +81,13 @@ function esc (str) {//{{{
 function createPathElements(dir_e,filename_e,ext_e,path) {//{{{
     var m, dir, filename;
 
+    if ( path.search(/^\$\(/) > -1 ) {
+        dir_e.hide();
+        filename_e.hide();
+        ext_e.hide();
+        return;
+    }
+
     m = path.lastIndexOf("/");
     if ( m === -1 ) {
         m  = path.lastIndexOf("\\");
@@ -105,11 +112,13 @@ function createPathElements(dir_e,filename_e,ext_e,path) {//{{{
     // filename
     if (filename_e.length) {
         filename_e.html( filename.substring(0,m) );
+        filename_e.show();
     }
 
     // extension
     if (ext_e.length) {
         ext_e.html( filename.substring(m+1,filename.length) );
+        ext_e.show();
     }
 }//}}}
 
@@ -574,7 +583,7 @@ init: function (itempath, parent)//{{{
     this.path = itempath;
     this.parent = parent;
     this.zoom_factor = 1;
-    this.font = this.path.replace(/[^a-zA-Z0-9_]+/g,"_");
+    this.font = this.path.replace(/[^a-zA-Z0-9_]+/g,'_');
 	this.width = this.height = 0;
 },//}}}
 
@@ -801,6 +810,101 @@ thumbnailOnLoad: function (){}
 };
 //}}}
 
+//! \class TagView
+//! \implements ItemView
+//{{{
+var TagView = function (tag, parent) { this.init(tag, parent); };
+
+TagView.prototype = {
+init: function (tag, parent)//{{{
+{
+    var e, m, props, i, tagname;
+
+    // parse tagname and properties
+    // format: $([.#]tagname)(['prop',val])*
+    m = tag.match(/^\$\((<[^)]*)\)\s*$/);
+    if (!m) {
+        this.error = true;
+        return;
+    }
+
+    // tag name
+    e = this.e = $(m[1]);
+    if (!e.length) {
+        this.error = true;
+        return;
+    }
+
+    this.parent = parent;
+},//}}}
+
+type: function ()//{{{
+{
+    return "tag";
+},//}}}
+
+show: function ()//{{{
+{
+    var e, props, p, ee, view, added;
+
+    e = this.e;
+    props = this.props;
+    p = this.parent;
+
+    p.onUpdateStatus("loading", "msg");
+
+    e.appendTo(p.e);
+
+    e.show();
+
+    this.orig_width = e.width();
+    this.orig_height = e.height();
+
+    p.onUpdateStatus(null, "msg");
+
+    this.onLoad();
+},//}}}
+
+remove: function ()//{{{
+{
+    var e, props;
+
+    e = this.e;
+    if (e) {
+        e.remove();
+    }
+},//}}}
+
+thumbnail: function ()//{{{
+{
+    var thumb = this.thumb;
+
+    if ( !thumb ) {
+        thumb = this.thumb = $('<div>', {'class': 'thumbnail ' + this.type()});
+        this.thumbnailOnLoad();
+    }
+
+    return thumb;
+},//}}}
+
+zoom: function (how)//{{{
+{
+},//}}}
+
+/** events */
+/**
+ * \fn thumbnailOnLoad()
+ * \brief event is triggered after view is loaded
+ */
+onLoad: function (){},
+/**
+ * \fn thumbnailOnLoad()
+ * \brief event is triggered after thumbnail is loaded
+ */
+thumbnailOnLoad: function (){}
+};
+//}}}
+
 //! \class ViewFactory
 //{{{
 var ViewFactory = function (parent) {
@@ -813,17 +917,22 @@ init: function (parent) {//{{{
 },//}}}
 
 newView: function (filepath) {//{{{
+     var view;
+
     if (filepath.search(/\.(png|jpg|gif|svg)$/i) > -1) {
-        return new ImageView(filepath, this.parent);
+        view = new ImageView(filepath, this.parent);
     } else if (filepath.search(/\.(ttf|otf)$/i) > -1) {
-        return new FontView(filepath, this.parent);
+        view = new FontView(filepath, this.parent);
     } else if (filepath.search(/\.(mp4|mov|flv|ogg|mp3|wav)$/i) > -1) {
-        return new VideoView(filepath, this.parent);
+        view = new VideoView(filepath, this.parent);
     } else if (filepath.search(/\.html$/i) > -1) {
-        return new HTMLView(filepath, this.parent);
+        view = new HTMLView(filepath, this.parent);
+    } else if (filepath.search(/^\$\(<.*\)$/) > -1) {
+        view = new TagView(filepath, this.parent);
     } else {
-        return null;
+        view = {error:true};
     }
+    return view.error ? null : view;
 }//}}}
 };
 //}}}
@@ -1092,6 +1201,7 @@ show: function (filepath)//{{{
         t = this;
         v.onLoad = function()
         {
+            scrollTo(0,0);
             t.createPreview(filepath);
             t.zoom();
             t.onLoad();
@@ -1160,7 +1270,8 @@ init: function (elem, ls, getConfig)//{{{
 
     // itemlist element
     if (!elem) {
-        return null;
+        this.error = true;
+        return;
     }
     this.e = elem;
 
@@ -1195,7 +1306,8 @@ init: function (elem, ls, getConfig)//{{{
             this.e_thumb = e;
         }
     } else {
-        return null;
+        this.error = true;
+        return;
     }
 
     this.ls = ls;
@@ -1256,11 +1368,11 @@ newItem: function (i,props)//{{{
 
 	// get item filename, user tags, width, height
 	tags = props[1];
-	itemname = tags['link_'];
+	itemname = tags['.link'];
 	if ( !itemname ) {
 		itemname = props[0];
 	}
-	size = tags['thumbnail_size_'];
+	size = tags['.thumbnail_size'];
 	if (size) {
 		w = size[0];
 		h = size[1];
@@ -1293,7 +1405,7 @@ newItem: function (i,props)//{{{
 
     // user tags
     for (key in tags) {
-        e = item.find("."+key);
+        e = item.find(key);
         if (e.length) {
             e.html(tags[key]);
         }
@@ -1796,13 +1908,13 @@ updateProperty: function (status_msg, class_name)//{{{
 {
     var cls, e;
 
-    // treat 'link' property as href value
-    if ( class_name === 'link' ) {
+    // treat '.link' property as href value
+    if ( class_name === '.link' ) {
         this.href = status_msg;
     }
 
-    cls = class_name ? class_name : "msg";
-    e = this.e.find( "." + cls );
+    cls = class_name ? class_name : '.msg';
+    e = this.e.find(cls);
     if(e.length) {
         if( status_msg !== null ) {
             e.html(status_msg);
@@ -1826,6 +1938,17 @@ name: function ()//{{{
 updateInfo: function (href,i,len,properties)//{{{
 {
     this.href = href;
+
+    // don't show info when item type is "tag"
+    if (href.search(/^\$\(/) > -1) {
+        this.e.hide();
+        this.e.removeClass("focused");
+        this.disabled = true;
+    } else {
+        this.e.show();
+        this.disabled = false;
+    }
+
     this.n = i;
     this.len = len;
 	this.counter_max.html( len );
@@ -1839,6 +1962,10 @@ updateInfo: function (href,i,len,properties)//{{{
 
 popInfo: function ()//{{{
 {
+    if (this.disabled) {
+        return;
+    }
+
     if (this.info_t) {
         window.clearTimeout(this.info_t);
     }
@@ -2098,9 +2225,14 @@ function updateTitle ()//{{{
     t = t.replace( /%\{remaining\}/g, ls.length()-n );
     t = t.replace( /%\{max\}/g, ls.length() );
 
-    // document title
+    // filename/alias
 	item = ls.get(n-1);
-	filename = item[0];
+    if (item[1]) {
+        filename = item[1]['.alias'];
+    }
+    if (!filename) {
+        filename = item[0];
+    }
     t = t.replace( /%\{filename\}/g, filename );
     document.title = t;
 }//}}}
@@ -2427,6 +2559,47 @@ function popPreview ()//{{{
     return true;
 }//}}}
 
+function rotate (degrees, absolute) {//{{{
+    var i, rotate_styles, rotate_style, deg, style, newstyle;
+
+    if (!viewer) {
+        return;
+    }
+
+    rotate_styles = ['-webkit','-moz','-o'];
+    for (i in rotate_styles) {
+        rotate_style = rotate_styles[i]+'-transform';
+        style = viewer.e.css(rotate_style);
+        if (!style) {
+            continue;
+        }
+
+        m = style.match(/rotate\(([0-9.\-]+)deg\)/);
+
+        // new rotation
+        if (absolute) {
+            deg = degrees;
+        } else {
+            // parse degrees
+            deg = m ? parseFloat(m[1]) : 0;
+            deg = (deg+degrees) % 360;
+        }
+
+        newstyle = 'rotate(' + deg + 'deg)';
+        if (m) {
+            // replace original rotation
+            style = style.replace(/rotate\(([0-9.\-]+)deg\)/, newstyle);
+        } else if (style != "none") {
+            // if tranform style contains other transformations then append rotation
+            style = style + ' ' + newstyle;
+        } else {
+            style = newstyle;
+        }
+
+        viewer.e.css(rotate_style, style);
+        break;
+    }
+}//}}}
 //}}}
 
 // INTERACTION//{{{

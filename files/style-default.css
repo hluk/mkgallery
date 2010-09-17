@@ -15,19 +15,43 @@
 /* serif */
 @import url('http://fonts.googleapis.com/css?family=Crimson+Text');
 /* sans-serif */
+@import url('http://fonts.googleapis.com/css?family=Molengo');
 @import url('http://fonts.googleapis.com/css?family=Yanone+Kaffeesatz');
 
 body {
-    margin: 0px;
-    background-color: #222;
+    margin: 0;
     /*www.tartanmaker.com www.stripegenerator.com http://squidfingers.com/patterns/*/
-    background-image: url('bg3.png');
-    background-repeat: repeat;
+    background: #222 url('bg3.png') repeat;
     font-family: 'Crimson Text', Gentium, 'Liberation Serif', serif;
 	overflow: hidden;
 }
 
 a {font-weight: inherit; color: inherit; font-size: inherit; font-family: inherit;}
+
+/* title page {{{*/
+#title_page {
+	font-size: 48px;
+	text-align: center;
+	margin: auto;
+	margin-top: 2em;
+	color: white;
+}
+#title_page .date {
+	font-size: 0.5em;
+}
+#title_page .stat {
+	display: inline;
+    font-style: italic;
+	margin: 1em;
+	font-size: 0.4em;
+}
+.stat.images_total:before {content: "images: ";}
+.stat.fonts_total:before {content: "fonts: ";}
+.stat.videos_total:before {content: "videos: ";}
+.stat.html_total:before {content: "html: ";}
+.stat.pages_total:before {content: "pages: ";}
+.stat.items_total:before {content: "total: ";}
+/*}}}*/
 
 /* viewer {{{*/
 /* viewer visible only in Viewer mode */
@@ -46,7 +70,7 @@ a {font-weight: inherit; color: inherit; font-size: inherit; font-family: inheri
 
 	color: black;
 	padding: 1em;
-	border-width: 0px;
+	border-width: 0;
 	background-color: white;
 	-moz-border-radius: 0.5em;
 	-o-border-radius: 0.5em;
@@ -86,18 +110,18 @@ a {font-weight: inherit; color: inherit; font-size: inherit; font-family: inheri
     padding-left: 4px;
     padding-bottom: 5px;
 
-    -webkit-box-shadow: 0px 0px 15px rgba(0,0,0,0.8);
-    -moz-box-shadow: 0px 0px 15px rgba(0,0,0,0.8);
-    -o-box-shadow: 0px 0px 15px rgba(0,0,0,0.8);
+    -webkit-box-shadow: 0 0 15px rgba(0,0,0,0.8);
+    -moz-box-shadow: 0 0 15px rgba(0,0,0,0.8);
+    -o-box-shadow: 0 0 15px rgba(0,0,0,0.8);
 }
 
 .preview img {
     margin: 2px;
 
     border: 2px solid black;
-    -webkit-box-shadow: 0px 0px 20px rgba(0,0,0,0.6);
-    -moz-box-shadow: 0px 0px 20px rgba(0,0,0,0.6);
-    -o-box-shadow: 0px 0px 20px rgba(0,0,0,0.6);
+    -webkit-box-shadow: 0 0 20px rgba(0,0,0,0.6);
+    -moz-box-shadow: 0 0 20px rgba(0,0,0,0.6);
+    -o-box-shadow: 0 0 20px rgba(0,0,0,0.6);
 }
 /*}}}*/
 
@@ -130,9 +154,9 @@ a {font-weight: inherit; color: inherit; font-size: inherit; font-family: inheri
 }
 .modeViewer #info:hover, .modeSlideshow #info:hover {
     background-color: rgba(0,100,200,0.4);
-    -webkit-box-shadow: 0px 0px 20px #7bf;
-    -moz-box-shadow: 0px 0px 20px #7bf;
-    -o-box-shadow: 0px 0px 20px #7bf;
+    -webkit-box-shadow: 0 0 20px #7bf;
+    -moz-box-shadow: 0 0 20px #7bf;
+    -o-box-shadow: 0 0 20px #7bf;
 }
 
 /* progress circle */
@@ -144,20 +168,20 @@ a {font-weight: inherit; color: inherit; font-size: inherit; font-family: inheri
 	margin: 10px; /* same as progress.margin*/
 	margin-top: 0.8em;
     position: relative;
-    top:0;
-    left:0;
+    top: 0;
+    left: 0;
 }
 .counter_max, .counter_now {color: white;}
 .counter_now {font-weight: bold;}
 .counter_max {font-size: 0.8em; border-top: 1px solid #bbb; color: #ddd;}
-.last .counter_now {text-shadow: white 0px 0px 7px;}
+.last .counter_now {text-shadow: white 0 0 7px;}
 
 /* item directory, filename, alias */
 .itemlink {float: right; text-decoration: none; z-index: 1;}
 .itemlink .directory,
 .itemlink .extension,
 .itemlink .filename {color: #9de; font-family: Inconsolata, Consolas, monospace;}
-.itemlink .alias_ {color: white;}
+.itemlink .alias {color: white;}
 .itemlink .filename {font-size: 0.9em; font-weight: bold;}
 .itemlink .extension {color: #8fb;}
 .itemlink .directory {font-size: 0.75em;}
@@ -187,9 +211,9 @@ a {font-weight: inherit; color: inherit; font-size: inherit; font-family: inheri
 #itemlist {
 	display: none;
     position: absolute;
-    top: 0px;
-    left: 0px;
-    right: 0px;
+    top: 0;
+    left: 0;
+    right: 0;
     background-image: url('bg2.png');
     padding:10px;
     z-index: 2;
@@ -206,7 +230,7 @@ a {font-weight: inherit; color: inherit; font-size: inherit; font-family: inheri
 
     vertical-align: middle;
     padding: 4px;
-    padding-top: 0px;
+    padding-top: 0;
     margin-top: 2px;
     margin-left: 2px;
     cursor: pointer;
@@ -261,7 +285,7 @@ a {font-weight: inherit; color: inherit; font-size: inherit; font-family: inheri
     text-align: left;
     word-wrap: break-word;
 }
-.item .alias_ {color: white;}
+.item .alias {color: white;}
 .item .path,
 .item .directory,
 .item .extension,
@@ -288,7 +312,7 @@ a {font-weight: inherit; color: inherit; font-size: inherit; font-family: inheri
 #selected .extension,
 #selected .directory {color: #444;}
 #selected .filename {color: black;}
-#selected .item .alias_ {color: white;}
+#selected .item .alias {color: white;}
 #selected .itemident {
 	color: white;
 	background-color: black;
@@ -298,21 +322,17 @@ a {font-weight: inherit; color: inherit; font-size: inherit; font-family: inheri
 }
 #selected.pagenav, .pagenav:hover {
     opacity: 1;
-    text-shadow: #444 0px 0px 7px;
+    text-shadow: #444 0 0 7px;
 }
 .pagenav {
     opacity: 0.5;
 
     color: white;
-    /*font-family: sans-serif;*/
 	font-weight: bold;
     padding: 0.5em;
     margin: 1em;
 
     background-color: rgba(255,255,255,0.2);
-	/*-moz-border-radius: 6px;*/
-	/*-o-border-radius: 6px;*/
-	/*-webkit-border-radius: 6px;*/
 
     -webkit-transition: opacity 1.5s ease-in-out, -webkit-box-shadow 1.5s ease-in-out;
     -moz-transition: opacity 1.5s ease-in-out, -moz-box-shadow 1.5s ease-in-out;
@@ -323,7 +343,11 @@ a {font-weight: inherit; color: inherit; font-size: inherit; font-family: inheri
 /*}}}*/
 
 /* help, options {{{*/
-.help, .options {color: white; font-family: sans; font-size: 12pt;}
+.help, .options {
+	color: white;
+    font-family: 'Molengo', sans-serif;
+	font-size: 14pt;
+}
 .help p {text-align: left;}
 p {
     font-style: italic;
@@ -364,8 +388,8 @@ h3 {
 	z-index: 3; /* on top */
 
 	position: absolute;
-	top: 0px;
-	left: 0px;
+	top: 0;
+	left: 0;
 	width: 80%;
 	margin: 10%;
 	margin-top: 2%;
@@ -391,12 +415,11 @@ h3 {
 	font-weight: bold;
     font-family: Inconsolata, Consolas, monospace;
 	text-align: right;
-	font-size: 0.8em;
+	font-size: 0.7em;
 
 	margin-right: 1em;
 	margin-top: 0.2em;
-	padding-left: 0.1em;
-	padding-right: 0.1em;
+	padding: 0 0.1em;
 	width: 12ex;
 	text-align: center;
 
@@ -414,7 +437,7 @@ h3 {
 .about {
     border-top: 2px dashed rgba(255,255,255,0.1);
 }
-.logo {float: right; margin-left: 2em; margin-right: 2em;}
+.logo {float: right; margin: 1em 2em;}
 .options .which {
 	display: inline;
 	display: inline-block;
@@ -425,16 +448,14 @@ h3 {
 	font-size: 0.9em;
 
 	margin-right: 1em;
-	padding-left: 0.1em;
-	padding-right: 0.1em;
+	padding: 0 0.1em;
 }
 .options .config {
     margin: auto;
     width: 70%;
     text-align: left;
-    padding-left: 0px;
-    margin-top: 1em;
-    margin-bottom: 1em;
+    padding-left: 0;
+    margin: 1em 0;
 }
 .options .config textarea {
     width: 100%;
@@ -509,14 +530,14 @@ h3 {
 
     opacity: 0;
     color: white;
-    text-shadow: black 0px 0px 0.5em;
+    text-shadow: black 0 0 0.5em;
     cursor: pointer;
 	padding: 1em;
 
 	background-color: rgba(0,0,0,0.5);
-    -webkit-box-shadow: 0px 0px 20px rgba(0,0,0,0.5);
-    -moz-box-shadow: 0px 0px 15px rgba(0,0,0,0.8);
-    -o-box-shadow: 0px 0px 15px rgba(0,0,0,0.8);
+    -webkit-box-shadow: 0 0 20px rgba(0,0,0,0.5);
+    -moz-box-shadow: 0 0 15px rgba(0,0,0,0.8);
+    -o-box-shadow: 0 0 15px rgba(0,0,0,0.8);
 
 	/*-moz-border-radius: 6px;*/
 	/*-o-border-radius: 6px;*/
@@ -529,21 +550,21 @@ h3 {
 }
 
 #prev, #next {
-	bottom: 0px;
+	bottom: 0;
 }
 #next {
-	right: 0px;
+	right: 0;
 	border-top-left-radius: 2em;
 	-moz-border-radius-topleft: 2em;
 }
 #prev {
-	left: 0px;
+	left: 0;
 	border-top-right-radius: 2em;
 	-moz-border-radius-topright: 2em;
 }
 #list {
-	top: 0px;
-	right: 0px;
+	top: 0;
+	right: 0;
 	border-bottom-left-radius: 2em;
 	-moz-border-radius-bottomleft: 2em;
 }
