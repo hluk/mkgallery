@@ -99,6 +99,7 @@ else:
 local = False
 page = -1
 title_page = False
+empty = False
 
 def from_locale(string):#{{{
 	global Locale
@@ -163,6 +164,7 @@ options:
                             NOTE: Use empty item filename (i.e. "") to break
                             page in specific place.
     -T, --title-page        create title page
+    -e, --empty             create empty gallery
 
     -r 0, --resolution=0    don't generate thumbnails
     -u "", --url=""         don't launch web browser
@@ -223,15 +225,15 @@ def parse_args(argv):#{{{
 		e.g. [ [item1_on_page1, item2_on_page1, ...], [item1_on_page2, ...], ... ]
 	"""
 	global title, resolution, gdir, url, d, cp, force, local, page, \
-			font_render, font_size, font_text, title_page
+			font_render, font_size, font_text, title_page, empty
 
 	allfiles = []
 
 	try:
-		opts, args = getopt.gnu_getopt(argv, "ht:r:d:u:cflx:p:T",
+		opts, args = getopt.gnu_getopt(argv, "ht:r:d:u:cflx:p:Te",
 				["help", "title=", "resolution=", "directory=", "url=",
 					"template=", "copy", "force", "local", "render=", "page=",
-					"title-page"])
+					"title-page", "empty"])
 	except getopt.GetoptError:
 		usage()
 		sys.exit(2)
@@ -281,6 +283,8 @@ def parse_args(argv):#{{{
 				sys.exit(1)
 		elif opt in ("-T", "--title-page"):
 			title_page = True
+		elif opt in ("-e", "--empty"):
+			empty = True
 
 	# no PIL: warnings, errors
 	if not has_pil:
@@ -309,7 +313,9 @@ def parse_args(argv):#{{{
 		pass
 
 	# parse files
-	if args:
+	if empty:
+		allfiles = []
+	elif args:
 		files = []
 		for arg in args:
 			# empty filename is page divider
@@ -714,7 +720,7 @@ def main(argv):#{{{
 		items = gallery_items(files, allitems)
 
 	# no usable items found
-	if not allitems:
+	if not empty and not allitems:
 		print("No items in gallery!")
 		exit(1)
 

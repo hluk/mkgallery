@@ -23,7 +23,7 @@ body {
     /*www.tartanmaker.com www.stripegenerator.com http://squidfingers.com/patterns/*/
     background: #222 url('bg3.png') repeat;
     font-family: 'Crimson Text', Gentium, 'Liberation Serif', serif;
-	overflow: hidden;
+    overflow: hidden;
 }
 
 a {font-weight: inherit; color: inherit; font-size: inherit; font-family: inherit;}
