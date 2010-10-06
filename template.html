@@ -4,13 +4,6 @@
         <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
         <meta charset="utf-8">
 
-        <!-- www.phpied.com/conditional-comments-block-downloads/ -->
-        <!--[if IE]><![endif]-->
-
-        <!-- Always force latest IE rendering engine (even in intranet) & Chrome Frame
-        Remove this if you use the .htaccess -->
-        <!--[if IE]><meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1"><![endif]-->
-
 		<link rel="shortcut icon" href="files/favicon.png">
 
 		<!-- CSS with font-faces -->
@@ -23,12 +16,13 @@
 		<!-- printer-friendly CSS version -->
 		<link rel="stylesheet" type="text/css" href="files/style-print.css" media="print" />
 
+
         <!-- jQuery -->
         <!--<script type="text/javascript" src="http://code.jquery.com/jquery-1.4.2.min.js"></script>-->
-        <script type="text/javascript" src="files/jquery-1.4.2.min.js"></script>
+        <script src="files/jquery-1.4.2.min.js"></script>
 
 		<!-- core script -->
-		<script type="text/javascript" src="files/gallery.js"></script>
+		<script src="files/gallery.js"></script>
 
 		<!-- gallery title and list of items:
 		var title = "gallery title";
@@ -40,10 +34,10 @@
 			...
 		];
 		-->
-		<script type="text/javascript" src="items.js"></script>
+		<script src="items.js"></script>
 
 		<!-- user configuration (can be overriden in URL hash) -->
-        <script type="text/javascript" src="config.js"></script>
+        <script src="config.js"></script>
 	</head>
 
 	<!--
@@ -64,7 +58,7 @@
                 <!-- <div class="counter_remain"></div> --><!-- remaining number of items -->
 			</div>
 
-			<a class="itemlink"><!-- item hyperlink -->
+			<div class="itemlink"><!-- item hyperlink -->
 				<div class="alias"></div><!-- item alias -->
 				<div class="filename"></div><!-- item filename (without directory and extension) -->
 				<div class="extension"></div><!-- item filename extension -->
@@ -78,11 +72,11 @@
                     <span class="fontsize"></span><!-- font size -->
                     <span class="duration"></span><!-- duration -->
                     <span class="zoom"></span><!-- zoom level in percent -->
-                    <span class="speed"></span><!-- speed factor -->
+                    <span class="speed"></mgspan><!-- speed factor -->
                     <span class="error"></span><!-- error message -->
                     <span class="msg"></span><!-- general message -->
                 </div>
-			</a>
+			</div>
 		</div>
 
 
@@ -111,7 +105,7 @@
 
 			<div class="pagenav nextpage">Next Page &rarr;</div><!-- next page -->
 
-			<div class="navigation" id="list" onclick="modeDrop()">Hide List&uarr;</div>
+			<div class="nav hide" onclick="modeDrop()">Hide List&uarr;</div>
 		</div>
 
 
@@ -119,25 +113,28 @@
 			<h1>Help</h1>
 
             <h2>About</h2>
-            <div class="logo"><img width=128 height=128 src="files/logo.png"><img></div>
+            <div class="logo"><img width=128 height=128 src="files/logo.png"></img></div>
 			<div class="about"></div><!-- about application -->
 
             <h2>Keyboard Controls</h2>
 			<div class="keys"></div><!-- shortcuts -->
+
+			<div class="nav hide" onclick="modeDrop()">Hide Help&uarr;</div>
 		</div>
 
 
         <div class="options"><!-- options window -->
         <h1>Options</h1>
+        <div class="nav hide" onclick="modeDrop()">Hide Options&uarr;</div>
         </div>
 
 
-		<div class="navigation_container">
-			<div class="navigation" id="prev" onclick="prev()">&larr; PREV</div>
-			<div class="navigation" id="next" onclick="next()">NEXT &rarr;</div>
-			<div class="navigation" id="list" onclick="mode(modes.itemlist)">List &darr;</div>
-			<div class="navigation" id="help" onclick="mode(modes.help)">Help &darr;</div>
-			<div class="navigation" id="options" onclick="mode(modes.options)">Options &darr;</div>
-		</div>
+        <div class="nav" id="prev" onclick="prev()">&larr; PREV</div>
+        <div class="nav" id="next" onclick="next()">NEXT &rarr;</div>
+        <div class="nav" id="menu">
+            <div class="menuitem" id="list" onclick="mode(modes.itemlist)">List</div>
+            <div class="menuitem" id="help" onclick="mode(modes.help)">Help</div>
+            <div class="menuitem" id="options" onclick="mode(modes.options)">Options</div>
+        </div>
 	</body>
 </html>

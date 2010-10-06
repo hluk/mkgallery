@@ -19,7 +19,21 @@
 /*global $, jQuery, window, document, navigator, location, history, escape, alert, Image*/
 
 "use strict";
-var log = window.console.log.bind(window.console);
+Function.prototype.bind = function(thisObj, var_args) {
+  var self = this;
+  var staticArgs = Array.prototype.splice.call(arguments, 1, arguments.length);
+
+  return function() {
+    var args = staticArgs.concat();
+    for (var i = 0; i < arguments.length; i++) {
+      args.push(arguments[i]);
+    }
+    return self.apply(thisObj, args);
+  };
+}
+if ( window.console ) {
+    var log = window.console.log.bind(window.console);
+}
 
 // DEFAULT CONFIGURATION {{{
 // option: [default value,category, description]
@@ -75,6 +89,9 @@ var configs = {
 // drag scrolling
 var scrolling = false;
 
+// user storage
+var storage;
+
 function esc (str) {//{{{
 	// escape hash and question mark in filenames
 	// (jQuery won't escape them)
@@ -84,7 +101,7 @@ function esc (str) {//{{{
 function createPathElements(dir_e, filename_e, ext_e, path) {//{{{
     var m, dir, filename;
 
-    if( path.search(/^data:[a-z]/) > -1 ) {
+    if( path.search(/^data:[a-z]+\/[a-z]+;/) > -1 ) {
         filename_e.hide();
         dir_e.hide();
         ext_e.hide();
@@ -193,10 +210,19 @@ length: function()//{{{
 
 get: function(i)//{{{
 {
+    var res, key;
+
     if ( i < this.length() ) {
-        return this.ls[i];
+        res = this.ls[i];
+        if ( storage && res[0].search(/^data:[a-z]+\/[a-z]+;/) === 0 ) {
+            // get data URL from localStorage
+            key = res[0].split(';:');
+            return [storage[key[1]], res[1]];
+        } else {
+            return res;
+        }
     } else {
-        return ['',{}];
+        return ['', {}];
     }
 },//}}}
 
@@ -227,6 +253,7 @@ add: function (url, props)//{{{
 {
     var p = props ? props : {};
     p.page_ = this.pages;
+
     this.ls.push( [url, p] );
 }//}}}
 
@@ -936,7 +963,7 @@ init: function (parent) {//{{{
 newView: function (filepath) {//{{{
      var view;
 
-    if (filepath.search(/\.(png|jpg|gif|svg)$|^data:image\/[a-z]+;base64,/i) > -1) {
+    if (filepath.search(/\.(png|jpg|gif|svg)$|^data:image\/[a-z]+;/i) > -1) {
         view = new ImageView(filepath, this.parent);
     } else if (filepath.search(/\.(ttf|otf)$/i) > -1) {
         view = new FontView(filepath, this.parent);
@@ -1865,7 +1892,7 @@ updateProgress: function ()//{{{
 
     ctx = this.progress.getContext("2d");
     pi = 3.1415;
-    angle = 2*pi*this.n/this.len;
+    angle = this.len ? 2*pi*this.n/this.len : 0;
     x = r+blur/2;
     y = r+blur/2;
 
@@ -1908,9 +1935,13 @@ updateProgress: function ()//{{{
 
 updateItemTitle: function ()//{{{
 {
-	var link = this.itemlink;
+	var link, url;
+
+    link = this.itemlink;
+    url = esc(this.href)
     if (link.length) {
-        link.attr( "href", esc(this.href) );
+        link.attr( "href", url );
+        link.click( function() {location.href = url; document.reload()} );
     }
 
     createPathElements(this.dir_e, this.filename_e, this.ext_e, this.href);
@@ -2333,7 +2364,8 @@ function preloadImages()//{{{
             }
 
             // create image
-            im = $('<img>', {src:filename});
+            im = new Image();
+            im.src = filename;
 
             // since we access the disk (read the image) we can also
             // change the url - browser saves history
@@ -2443,6 +2475,7 @@ function go (i)//{{{
         if (r) {
             if (count_n > 0 && r && count_n%r === 0 && mode() !== modes.slideshow) {
                 count_n = 0;
+                vars.n = newn;
                 updateUrl();
                 location.reload();
                 return;
@@ -2467,9 +2500,8 @@ function go (i)//{{{
 	itemname = item[0];
 	props = item[1];
 
-    viewer.show(itemname);
-
     updateInfo(itemname, n, props);
+    viewer.show(itemname);
 
     updateTitle();
 	updateUrl(1000);
@@ -3267,28 +3299,90 @@ function toggleSlideshow_()//{{{
 }//}}}
 
 function fileDropped (e) {//{{{
-    var files, file, i;
+    function saveFile (i, files) {
+        var reader;
 
-    files = e.dataTransfer.files;
+        if (i >= files.length) {
+            return;
+        }
 
-    for (i = 0; file = files[i]; i++) {
-        var reader = new FileReader();
+        reader = new FileReader();
 
         // Closure to capture the file information.
-        reader.onloadend = (function(file) {
+        reader.onloadend = (function(i, files) {
             return function(e) {
-                ls.add(e.target.result, { '.link': file.name });
+                var key;
+
+                log('Adding item "'+files[i].name+'" to gallery.');
+                // save item to localStorage
+                try {
+                    if (storage) {
+                        // key has three parts separated by ';:':
+                        //   data:file/type (e.g. 'data:image/jpeg')
+                        //   item id -- localStorage[id] contains item data URL
+                        //   filename
+                        key = ls.length();
+                        storage[key] = e.target.result;
+
+                        key = e.target.result.match(/^[^;]*/)[0] + ';:' +
+                               key + ';:' + files[i].name;
+
+                        if (!storage.items) {
+                            storage.items = key;
+                        } else {
+                            // newline is item separator
+                            storage.items += "\n"+key;
+                        }
+
+                        log('Item "'+files[i].name+'" added to localStorage.');
+                    }
+                } catch (e) {
+                    if (e.name === "QUOTA_EXCEEDED_ERR") {
+                        if ( confirm('No free local storage space of this gallery.\n'+
+                                     'Do you want to remove all items from gallery to free space?') ) {
+                            storage.clear();
+                        }
+                    } else {
+                        alert(e.message);
+                    }
+                }
+
+                // add file to list
+                ls.add(key ? key : e.target.result, {'.link': files[i].name});
+                // refresh
                 go();
+                // next file
+                saveFile(++i, files);
             };
-        })(file);
+        })(i, files);
 
         // Read in the image file as a data URL.
-        reader.readAsDataURL(file);
+        reader.readAsDataURL(files[i]);
     }
+
+    saveFile(0, e.dataTransfer.files);
 
     e.stopPropagation();
     e.preventDefault();
     return false;
+}//}}}
+
+function restoreItems () {//{{{
+    var items, item, key;
+
+    items = storage.items;
+    if (!items) {
+        return;
+    }
+
+    items = items.split('\n');
+    for (item in items) {
+        key = items[item];
+        if (key) {
+            log("Restoring gallery item \""+key+'"');
+            ls.add( key, {'.link': key.split(';:')[2]} );
+        }
+    }
 }//}}}
 
 function onLoad()//{{{
@@ -3307,8 +3401,15 @@ function onLoad()//{{{
 
 	// change ls from array to object
 	ls = new Items( ls, getConfig('max_page_items') );
+
+    // user storage
+    if (localStorage) {
+        storage = localStorage;
+        restoreItems();
+    }
+
     if ( getConfig('shuffle') ) {
-        ls.shuffle();
+        ls.shuffle(); // shuffle items
     }
 
     // viewer on nth item
@@ -3366,13 +3467,15 @@ function onLoad()//{{{
     }
 
     // drop files
+    // FIXME: browser throws QUOTA_EXCEEDED_ERR when all localStorage space
+    //        allocated for web page is used
     if ( getConfig('allow_drop') ) {
         $(window).bind('dragenter dragover', function (e) {
             e.stopPropagation();
             e.preventDefault();
             return false;
         });
-        window.addEventListener('drop', fileDropped);
+        window.addEventListener('drop', fileDropped, false);
     }
 }//}}}
 
