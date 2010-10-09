@@ -1157,7 +1157,18 @@ createPreview: function (filepath)//{{{
 
     img.attr( "width", w );
     img.attr( "height", h );
-    img.attr( "src", esc(filepath) );
+    if (filepath) {
+        img.attr( "src", esc(filepath) );
+    }
+},//}}}
+
+resize: function()//{{{
+{
+    if( typeof(this.zoom_state) === "string" ) {
+        this.zoom();
+    }
+    this.createPreview();
+    this.updatePreview();
 },//}}}
 
 updatePreview: function ()//{{{
@@ -3275,7 +3286,7 @@ function toggleOptions_()//{{{
 function onResize()//{{{
 {
     if (viewer) {
-        viewer.zoom();
+        viewer.resize();
     }
     if (itemlist) {
         itemlist.resize();
