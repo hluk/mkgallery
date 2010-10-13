@@ -150,23 +150,19 @@ function createPathElements(dir_e, filename_e, ext_e, path) {//{{{
 }//}}}
 
 // disable/enable keyboard shortcuts//{{{
-var saved_keydown, saved_keypress;
+var keysdisabled = false;
+var onescapekeysdisabled;
 
-function disableKeys ()
+function disableKeys (onescape)
 {
-    saved_keydown = window.onkeydown;
-    saved_keypress = window.onkeypress;
-    window.onkeypress = window.onkeydown = null;
+    keysdisabled = true;
+    onescapekeysdisabled = onescape;
 }
 
 function enableKeys ()
 {
-    if (!saved_keydown) {
-        return
-    }
-    window.onkeydown = saved_keydown;
-    window.onkeypress = saved_keypress;
-    saved_keypress = saved_keydown = null;
+    keysdisabled = false;
+    onescapekeysdisabled = null;
 }
 //}}}
 
@@ -654,15 +650,10 @@ show: function ()//{{{
     // disable keyboard navigation when textarea focused
     view = this;
     e.focus( function () {
-        disableKeys();
-        window.onkeydown = function (ev) {
-            if (ev.keyCode === 27) {
-                view.e.blur();
-            }
-        };
+        disableKeys( e.blur.bind(e) );
     } );
     e.blur( function () {
-        this.parent.onFontTextChange(this.value);
+        view.parent.onFontTextChange(this.value);
         enableKeys();
         view.updateHeight();
     } );
@@ -2758,6 +2749,13 @@ function keyPress (e)//{{{
         popInfo();
     }
 
+    if (keysdisabled) {
+        if ( keyname === "ESCAPE" && onescapekeysdisabled ) {
+            onescapekeysdisabled();
+        }
+        return;
+    }
+
     // try keys in this mode or modes.any
     trymode_stack = [mode(), modes.any];
     for (i in trymode_stack) {
@@ -3129,6 +3127,7 @@ function saveOptions ()//{{{
             }
             which = t.children('.which').text();
 
+            delete vars[which];
             orig_value = getConfig(which);
             vars[which] = value;
             if ( orig_value === getConfig(which) ) {
@@ -3228,14 +3227,18 @@ function createOptions(e)//{{{
         input.appendTo(opt);
     }
 
+    // clicking on option selects input text or toggles checkbox
+    $('.option').click( function() {
+        input = $(this).children('input');
+        input.focus();
+    } );
+
     // config.js contents
     cat = $('<p>', {'class': 'config'});
     cat.html('Add this to your <span class="code">config.js</span>:');
     cat.hide();
     cat.appendTo(e);
     input = $('<textarea>');
-	input.focus( disableKeys );
-    input.blur( enableKeys );
     input.appendTo(cat);
 
     // buttons
@@ -3256,8 +3259,14 @@ function createOptions(e)//{{{
 
 	// disable keys when navigation element is focused
 	input = $('input, .button');
-	input.focus( function() {disableKeys(); $(this).parent().addClass('focused');} );
-    input.blur( function() {enableKeys(); $(this).parent().removeClass('focused');} );
+    input.focus( function() {
+        disableKeys( this.blur.bind(this) );
+        $(this).parent().addClass('focused');
+    } );
+    input.blur( function() {
+        enableKeys();
+        $(this).parent().removeClass('focused');
+    } );
 }//}}}
 
 function toggleOptions_()//{{{

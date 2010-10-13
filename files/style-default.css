@@ -387,6 +387,7 @@ h3 {
 	font-size: 1.5em;
 	color: #bbb;
 	border-bottom: 2px solid #bbb;
+    margin-bottom: 0.5em;
 }
 
 .help, .options {
@@ -474,6 +475,9 @@ h3 {
 .about .which {color: #ff8;}
 .desc {display: inline; font-size: 0.8em;}
 
+.option:nth-child(even){
+    background-color:rgba(255,255,255,0.15);
+}
 .option {
 	-moz-border-radius: 4px;
 	-o-border-radius: 4px;

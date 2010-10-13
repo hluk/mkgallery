@@ -168,6 +168,7 @@ Help: [
 
 Options: [
     [option_keys.concat(exit_keys), modeDrop],
+    ["Enter", saveOptions, "Save options"],
     // disable item list and help
     [list_keys, ""],
     [help_keys, ""],
