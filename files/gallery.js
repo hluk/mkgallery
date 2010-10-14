@@ -3258,7 +3258,7 @@ function createOptions(e)//{{{
     button.appendTo(box);
 
 	// disable keys when navigation element is focused
-	input = $('input, .button');
+	input = $('textarea, input, .button');
     input.focus( function() {
         disableKeys( this.blur.bind(this) );
         $(this).parent().addClass('focused');

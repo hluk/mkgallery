@@ -458,18 +458,14 @@ h3 {
 	padding: 0 0.1em;
 }
 .options .config {
-    margin: auto;
     width: 70%;
     text-align: left;
     padding-left: 0;
-    margin: 1em 0;
+    margin: 2em auto;
 }
 .options .config textarea {
     width: 100%;
     height: 10em;
-	-moz-border-radius: 4px;
-	-o-border-radius: 4px;
-	-webkit-border-radius: 4px;
 }
 .about .category {margin: 1em;}
 .about .which {color: #ff8;}

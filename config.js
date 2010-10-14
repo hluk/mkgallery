@@ -36,7 +36,7 @@ image_on_canvas: false,
 
 // reload every nth items (0: don't reload)
 // -- memory leaks workaround
-reload_every: 20,
+reload_every: 0,
 
 // show key combinations pressed
 show_keys: false,
