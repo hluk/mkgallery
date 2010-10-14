@@ -36,49 +36,50 @@ if ( window.console ) {
 }
 
 // DEFAULT CONFIGURATION {{{
-// option: [default value,category, description]
+// option: [default value, category, description]
+// character after underscore in description is keyboard shortcut
 var configs = {
     'allow_drop': [true, "General", "Allow drag-n-drop new files to gallery"],
-	'no_preview': [false, "General", "Disable item preview window"],
-	'no_list': [false, "General", "Disable item list"],
-	'no_info': [false, "General", "Disable item info popup"],
-	'title_fmt': ['%{title}: %{now}/%{max} "%{filename}"' ,"General", "Title format (keywords: title, filename, now, max, remaining)"],
-	'pop_info_delay': [4000, "General", "Number of milliseconds the info is visible"],
-	'slide_scroll': [100, "General", "Slide scroll amount"],
-    'shuffle': [false, "General", "Randomly shuffle gallery items"],
+	'no_preview': [false, "General", "Disable item _preview window"],
+	'no_list': [false, "General", "Disable item _list"],
+	'no_info': [false, "General", "Disable item _info"],
+	'title_fmt': ['%{title}: %{now}/%{max} "%{filename}"' ,"General", "_Title format (keywords: title, filename, now, max, remaining)"],
+	'pop_info_delay': [4000, "General", "Info pop up _delay (in milliseconds)"],
+	'slide_scroll': [100, "General", "Slide scroll _amount"],
+    'shuffle': [false, "General", "Randomly _shuffle gallery items"],
 
-	'font_size': [16, "Font", "font size"],
-	'font_thumbnail_text': ['+-1234567890,<br/>abcdefghijklmnopqrstuvwxyz,<br/>ABCDEFGHIJKLMNOPQRSTUVWXYZ', "Font", "Thumbnail HTML contents"],
-	'font_test': ['+-1234567890, abcdefghijklmnopqrstuvwxyz, ABCDEFGHIJKLMNOPQRSTUVWXYZ, ?!.#$\\/"\''],
+	'font_size': [16, "Font", "_font size"],
+	'font_thumbnail_text': ['+-1234567890,<br/>abcdefghijklmnopqrstuvwxyz,<br/>ABCDEFGHIJKLMNOPQRSTUVWXYZ', "Font", "Font t_humbnail text (HTML)"],
+	'font_test': ['+-1234567890, abcdefghijklmnopqrstuvwxyz, ABCDEFGHIJKLMNOPQRSTUVWXYZ, ?!.#$\\/"\'', "Font", "Te_xt for fonts"],
 
-	'zoom': ['1', "Images", "Default zoom level"],
-	'zoom_step': [0.125, "Images", "zoom multiplier"],
-	'preload_images': [2, "Images", "number of images to preload"],
-    'image_on_canvas': [false, "Images", "use HTML5 canvas element to draw images"],
-    'max_preview_width': [15, "Images", "Maximal preview width in percent of window width"],
-    'max_preview_height': [80, "Images", "Maximal preview height in percent of window height"],
-	'pop_preview_delay': [1000, "Images", "Number of milliseconds the preview is visible"],
+	'zoom': ['1', "Images", "Default _zoom level"],
+	'zoom_step': [0.125, "Images", "Z_oom multiplier"],
+	'preload_images': [2, "Images", "Number of images to pr_eload"],
+    'image_on_canvas': [false, "Images", "Use HTML5 _canvas element to draw images"],
+    'max_preview_width': [15, "Images", "Maximal preview _width in percent of window width"],
+    'max_preview_height': [80, "Images", "Maximal preview _height in percent of window height"],
+	'pop_preview_delay': [1000, "Images", "Preview pop up delay (in milliseconds)"],
 
-    'slideshow': [false, "Slideshow", "Default is slideshow mode"],
+    'slideshow': [false, "Slideshow", "Slideshow mode"],
 	'slideshow_delay': [8000, "Slideshow", "Slideshow delay"],
 
-	'progress_fg': ["rgba(255,200,0,0.8)", "Progress bar", "foreground color"],
-	'progress_bg': ["rgba(200,200,200,0.4)", "Progress bar", "background color"],
-	'progress_radius': [22, "Progress bar", "Radius"],
-	'progress_width': [8, "Progress bar", "Circle stroke width (background)"],
-	'progress_inner_width': [8, "Progress bar", "Circle stroke width (foreground)"],
-	'progress_shadow': [10, "Progress bar", "Shadow size"],
-	'progress_blur': [10, "Progress bar", "Blur amount"],
+	'progress_fg': ["rgba(255,200,0,0.8)", "Progress bar appearance", "foreground color"],
+	'progress_bg': ["rgba(200,200,200,0.4)", "Progress bar appearance", "background color"],
+	'progress_radius': [22, "Progress bar appearance", "Radius"],
+	'progress_width': [8, "Progress bar appearance", "Circle stroke width (background)"],
+	'progress_inner_width': [8, "Progress bar appearance", "Circle stroke width (foreground)"],
+	'progress_shadow': [10, "Progress bar appearance", "Shadow size"],
+	'progress_blur': [10, "Progress bar appearance", "Blur amount"],
 
 	'thumbnail_max_width': [300, "Thumbnail", "Maximum width"],
     'use_svg_thumbnails': [false, "Thumbnail", "Use original vector image as thumbnail (can be slow)"],
     'max_page_items': [0, "Thumbnail", "Maximum number of items on page"],
 
-	'autoplay': [false, "Audio/Video", "Play audio/video when viewed"],
-	'autonext': [false, "Audio/Video", "Go to next item whed playback ends"],
-	'loop': [false, "Audio/Video", "Replay when playback ends"],
+	'autoplay': [false, "Audio/Video", "Pla_y audio/video when viewed"],
+	'autonext': [false, "Audio/Video", "Go to _next item whed playback ends"],
+	'loop': [false, "Audio/Video", "_Replay when playback ends"],
 
-    'reload_every': [0, "Debug", "Number of items to view after the gallery if refreshed"],
+    'reload_every': [0, "Debug", "N_umber of items to view after the gallery if refreshed"],
 	'show_keys': [false, "Debug", "Show pressed keys in info"],
 	'show_events': [false, "Debug", "Show events in info"],
 
@@ -3176,7 +3177,7 @@ function generateConfig ()//{{{
 
 function createOptions(e)//{{{
 {
-    var i, j, cats, cat, catname, conf, desc, opt, value, input, box, button;
+    var i, j, cats, cat, catname, conf, desc, key, opt, value, input, box, button;
 
     // information
     $("<div>", {'class': 'information',
@@ -3212,13 +3213,33 @@ function createOptions(e)//{{{
 
         value = getConfig(i);
         $('<div>', {'class': "which", text: i}).appendTo(opt);
-        $('<div>', {'class': "desc", text: conf[2]}).appendTo(opt);
+
+        // input: text edit OR checkbox
         if ( typeof(value) === "boolean" ) {
-            input = $('<input>', {type:'checkbox', 'class': "value", checked: value?"yes":""});
+            input = $('<input>', {type:'checkbox', 'class': "value", checked: value});
         } else {
             input = $('<input>', {type:'text', 'class': "value", value: value});
             input.width( Math.min((value+"  ").length, 20) + 'ex');
         }
+
+        // description - replace &x with underlined character and assign x key
+        desc = conf[2];
+        j = desc.indexOf('_');
+        if (j !== -1 && j+1 < desc.length) {
+            key = desc[j+1];
+            desc = desc.substr(0,j) +
+                '<span class="keyhint">'+key+'</span>' +
+                desc.substr(j+2);
+            // map key to input
+            addKeys(key, null, (function(){
+                if ( this.attr('disabled') ) {
+                    return;
+                }
+                this.focus();
+                this.attr('checked', !this.attr('checked'));
+            }).bind(input), modes.options);
+        }
+        $('<div>', {'class': "desc", html: desc}).appendTo(opt);
 
         // don't change values in config_strict
         if ( i in config_strict ) {
