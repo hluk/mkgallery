@@ -3218,7 +3218,13 @@ function createOptions(e)//{{{
         if ( typeof(value) === "boolean" ) {
             input = $('<input>', {type:'checkbox', 'class': "value", checked: value});
         } else {
-            input = $('<input>', {type:'text', 'class': "value", value: value});
+            // use textarea when the text has more than 40 characters
+            if( typeof(value) === "string" && value.length > 40  ) {
+                input = $('<textarea>');
+            } else {
+                input = $('<input>');
+            }
+            input.attr({type:'text', 'class': "value", value: value});
             input.width( Math.min((value+"  ").length, 20) + 'ex');
         }
 

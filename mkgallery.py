@@ -97,7 +97,7 @@ else:
 	re_tag = re.compile( unicode(r'^\$\(<.*\)$'), re_flags )
 
 local = False
-page = -1
+page = 0
 title_page = False
 empty = False
 
@@ -128,46 +128,48 @@ def usage():#{{{
 	print( """\
 usage: %s [options] [directories|filenames]
 
-    Creates HTML gallery containing images and fonts recursively
-    found in given directories and files or in the current directory.
+  Creates HTML gallery containing images and fonts recursively
+  found in given directories and files or in the current directory.
 
-    The gallery is automatically viewed with default web browsser.
+  The gallery is automatically viewed with default web browsser.
 
-    For the program to be able to generate thumbnails and font names,
-    the Python Imaging Library (PIL) must be installed.
+  For the program to be able to generate thumbnails and font names,
+  the Python Imaging Library (PIL) must be installed.
 
-	Empty file or directory name (i.e. "") means that all following files
-	will be put on new item list page in gallery. This allows to break the list
-	on several pages and decrease memory and time consumption needed to
-	load items into the list.
+  Empty file or directory name (i.e. "") means that all following files
+  will be put on new item list page in gallery. This allows to break the list
+  on several pages and decrease memory and time consumption needed to
+  load items into the list.
 
 options:
-    -h, --help              prints this help
-    -t, --title=<title>     gallery title
-                              (default: '%s')
-    -d, --directory=<dir>   path to gallery (%%s is replaced by <title>)
-                              (default: '%s')
-    --template=<dir>        path to template html and support files
-                              (default: '%s')
-    -u, --url=<url>         url location for web browser (%%s is replaced by <title>)
-                              (default: '%s')
-    -r, --resolution=<res>  resolution for thumbnails in pixels
-                              (default: %s)
-    -c, --copy              copy files instead of creating symbolic links
-    -f, --force             overwrites existing gallery
-    -l, --local             don't copy or create links to gallery items,
-                            browse items locally, i.e. protocol is "file://"
-    -x, --render=<size>,<text>
-                            render fonts instead using them directly
-    -p, --page              maximal number of items on one page
+  -h, --help              prints this help
+  -t, --title=<title>     gallery title
+                            (default: '%s')
+  -d, --directory=<dir>   path to gallery (%%s is replaced by <title>)
+                            (default: '%s')
+  --template=<dir>        path to template html and support files
+                            (default: '%s')
+  -u, --url=<url>         url location for web browser (%%s is replaced by <title>)
+                            (default: '%s')
+  -r, --resolution=<res>  resolution for thumbnails in pixels
+                            (default: %s)
+  -c, --copy              copy files instead of creating symbolic links
+  -f, --force             overwrites existing gallery
+  -l, --local             don't copy or create links to gallery items,
+                          browse items locally, i.e. protocol is "file://"
+  -x, --render=<size>,<text>
+                          render fonts instead using them directly
+  -p, --page              maximal number of items on one page
+                          (if the argument is a negative number then each
+                          directory/filename will be on separate page)
                             (default: 0 (unlimited))
-                            NOTE: Use empty item filename (i.e. "") to break
-                            page in specific place.
-    -T, --title-page        create title page
-    -e, --empty             create empty gallery
+                          NOTE: Use empty filename (i.e. "") to break
+                          page in specific place.
+  -T, --title-page        create title page
+  -e, --empty             create empty gallery
 
-    -r 0, --resolution=0    don't generate thumbnails
-    -u "", --url=""         don't launch web browser
+  -r 0, --resolution=0    don't generate thumbnails
+  -u "", --url=""         don't launch web browser
 """ % (sys.argv[0], title, gdir, d, url, resolution) )
 #}}}
 
@@ -276,8 +278,6 @@ def parse_args(argv):#{{{
 		elif opt in ("-p", "--page"):
 			try:
 				page = int(arg)
-				if page<0:
-					page = 0
 			except:
 				print("ERROR: Page must be a single number!")
 				sys.exit(1)
@@ -319,12 +319,12 @@ def parse_args(argv):#{{{
 		files = []
 		for arg in args:
 			# empty filename is page divider
-			if not arg:
+			if not arg or page < 0:
 				if files:
 					allfiles.append(files)
 					files = []
-				continue
-			files.append(arg)
+			if arg:
+				files.append(arg)
 		if files:
 			allfiles.append(files)
 	else:
