@@ -190,7 +190,7 @@ init: function (ls, max_page_items)//{{{
 		}
 
 		// insert item
-		if (!item instanceof Array) {
+		if ( !(item instanceof Array) ) {
 			item = [item,{}];
 		} else if (item.length < 2) {
 			item.push({});
@@ -2747,6 +2747,7 @@ function keyPress (e)//{{{
 
 	if ( getConfig('show_keys') ) {
 		info.updateProperty("key: " + keyname + " ("+keycode+")");
+        log(e);
         popInfo();
     }
 
@@ -2820,7 +2821,7 @@ function addKeys (newkeys, desc, fn, keymode)//{{{
 }//}}}
 
 function onMouseWheel (e) {//{{{
-    var delta = e.detail ? -e.detail*4 : e.wheelDelta/10;
+    var delta = e.detail ? -e.detail*4 : e.wheelDelta/4;
     scroll(0,-delta);
     e.preventDefault();
 }//}}}

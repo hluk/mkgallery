@@ -105,10 +105,10 @@ Viewer: [
     // scroll right OR video seek OR
     // view next item in gallery (if current item fits horizontally to window)
     [["Right","d"],
-     "scrollRight() || videoSeek(5) || (viewer.width() <= window.innerWidth && next())",
+     "scrollRight() || videoSeek(5) || (viewer.width() <= window.innerWidth+24 && next())",
      "Faster playback/Move window right/Next gallery item"],
     [["Left","a"],
-     "scrollLeft() || videoSeek(-5) || (viewer.width() <= window.innerWidth && prev())",
+     "scrollLeft() || videoSeek(-5) || (viewer.width() <= window.innerWidth+24 && prev())",
      "Slower playback/Move window left/Previous gallery item"],
     // scrollup if not at top or show info
     [["KP8","8","Up","w"], "window.pageYOffset ? scrollUp() : popInfo()", "Move window up"],

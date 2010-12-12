@@ -1,0 +1,13 @@
+[ ] Use Sass style sheet (SCSS, http://sass-lang.com)
+[ ] Update gallery option
+    * add items and thumbnails
+    * insert js comment in items.js:
+        ls [
+        ...
+        ]; /* !END OF LIST! */
+[ ] Page propetries (page name_) -- i.e. item ["", {prop: value, ...}]
+[ ] Add key and events configuration to config mode
+[ ] Filter/search items: filename, directory, extention, tags
+[ ] Use more of jQuery
+[ ] Script parameter: noaudio, novideo
+
