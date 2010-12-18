@@ -16,9 +16,8 @@
 /* sans-serif */
 @import url('http://fonts.googleapis.com/css?family=Molengo');
 @import url('http://fonts.googleapis.com/css?family=Yanone+Kaffeesatz');
-/* definitions {{{ */
-/* www.tartanmaker.com www.stripegenerator.com http://squidfingers.com/patterns/ */
 /*font-family-457-1, font-family-457-2, Aller Display;*/
+/* www.tartanmaker.com www.stripegenerator.com http://squidfingers.com/patterns/ */
 /* helper functions {{{ */
 body {
   margin: 0;
@@ -109,9 +108,9 @@ a {
   position: fixed;
   bottom: 30px;
   right: 30px;
-  transition: opacity 0.5s ease-in-out;
-  -webkit-transition: opacity 0.5s ease-in-out;
-  -moz-transition: opacity 0.5s ease-in-out; }
+  transition: opacity .5s ease-in-out;
+  -webkit-transition: opacity .5s ease-in-out;
+  -moz-transition: opacity .5s ease-in-out; }
 
 /* show preview when needed */
 .modeViewer .preview.focused,
@@ -149,27 +148,24 @@ a {
   left: 1em;
   text-shadow: black 1px 1px 1px;
   color: white;
-  background-color: rgba(0, 0, 0, 0.4);
-  border: 2px solid rgba(0, 0, 0, 0.5);
+  background-color: rgba(0, 0, 0, 0.5);
   padding-right: 1.5em;
+  box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
+  -webkit-box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
+  -moz-box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
+  -o-box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
   border-radius: 50px;
   -moz-border-radius: 50px;
   -webkit-border-radius: 50px;
-  transition: opacity 0.5s ease-in-out;
-  -webkit-transition: opacity 0.5s ease-in-out;
-  -moz-transition: opacity 0.5s ease-in-out;
-  transition: background-color 1.5s ease-in-out;
-  -webkit-transition: background-color 1.5s ease-in-out;
-  -moz-transition: background-color 1.5s ease-in-out;
-  transition: box-shadow 1.5s ease-in-out;
-  -webkit-transition: -webkit- box-shadow 1.5s ease-in-out;
-  -moz-transition: -moz- box-shadow 1.5s ease-in-out; }
+  transition: box-shadow 1.5s ease-in-out, opacity 0.5s ease-in-out, background-color 1.5s ease-in-out;
+  -webkit-transition: -webkit-box-shadow 1.5s ease-in-out, opacity 0.5s ease-in-out, background-color 1.5s ease-in-out;
+  -moz-transition: -moz-box-shadow 1.5s ease-in-out, opacity 0.5s ease-in-out, background-color 1.5s ease-in-out; }
 
 .modeViewer #info:hover, .modeSlideshow #info:hover, .modeViewer #info.focused {
   opacity: 1; }
 
 .modeViewer #info:hover, .modeSlideshow #info:hover {
-  background-color: rgba(0, 100, 200, 0.4);
+  background-color: rgba(0, 100, 200, 0.6);
   box-shadow: 0 0 20px #77bbff;
   -webkit-box-shadow: 0 0 20px #77bbff;
   -moz-box-shadow: 0 0 20px #77bbff;
@@ -208,34 +204,8 @@ a {
 .itemlink {
   float: right;
   z-index: 1;
-  cursor: pointer; }
-
-.itemlink .directory,
-.itemlink .extension,
-.itemlink .filename {
-  color: #9de;
-  font-family: Inconsolata, Consolas, monospace; }
-
-.itemlink .alias {
-  color: white; }
-
-.itemlink .filename {
-  font-size: 0.9em;
-  font-weight: bold; }
-
-.itemlink .extension {
-  color: #8fb; }
-
-.itemlink .directory {
-  font-size: 0.75em; }
-
-.itemlink .extension {
-  display: inline;
-  font-size: 0.8em;
-  margin-left: 0.5em; }
-
-.itemlink .filename {
-  display: inline; }
+  cursor: pointer;
+  margin-top: 0.2em; }
 
 /* messages, resolution, zoom, font-size, media duration */
 .status {
@@ -276,7 +246,7 @@ a {
   top: 0;
   left: 0;
   right: 0;
-  background-image: url("bg2.png");
+  background: #222222 url("bg2.png");
   padding: 10px;
   z-index: 2;
   min-height: 100%; }
@@ -296,8 +266,7 @@ a {
   margin-left: 2px;
   cursor: pointer;
   color: black;
-  min-width: 150px;
-  /*border-left: 6px solid rgba(255,255,255,0.2);*/ }
+  min-width: 150px; }
 
 .item, .selection, .pagenav {
   border-radius: 8px;
@@ -305,24 +274,15 @@ a {
   -webkit-border-radius: 8px; }
 
 .item:hover, .pagenav:hover {
-  background-color: rgba(0, 255, 0, 0.3); }
+  background-color: rgba(0, 100, 200, 0.6); }
 
 .selection {
   z-index: -2;
-  background-color: rgba(120, 220, 255, 0.6);
+  background-color: rgba(100, 160, 200, 0.6);
   /* animate cursor movement */
-  transition: left 0.1s ease-in-out;
-  -webkit-transition: left 0.1s ease-in-out;
-  -moz-transition: left 0.1s ease-in-out;
-  transition: top 0.1s ease-in-out;
-  -webkit-transition: top 0.1s ease-in-out;
-  -moz-transition: top 0.1s ease-in-out;
-  transition: width 0.1s ease-in-out;
-  -webkit-transition: width 0.1s ease-in-out;
-  -moz-transition: width 0.1s ease-in-out;
-  transition: height 0.1s ease-in-out;
-  -webkit-transition: height 0.1s ease-in-out;
-  -moz-transition: height 0.1s ease-in-out; }
+  transition: left .1s ease-in-out, top .1s ease-in-out, width .1s ease-in-out, height .1s ease-in-out;
+  -webkit-transition: left .1s ease-in-out, top .1s ease-in-out, width .1s ease-in-out, height .1s ease-in-out;
+  -moz-transition: left .1s ease-in-out, top .1s ease-in-out, width .1s ease-in-out, height .1s ease-in-out; }
 
 .itemident {
   float: left;
@@ -334,17 +294,14 @@ a {
   margin-bottom: 0em;
   padding: 0.3em;
   color: black;
-  background-color: white;
+  background-color: gray;
   min-width: 1.2em;
   border-radius: 50px;
   -moz-border-radius: 50px;
   -webkit-border-radius: 50px;
-  transition: color 0.5s ease-in-out;
-  -webkit-transition: color 0.5s ease-in-out;
-  -moz-transition: color 0.5s ease-in-out;
-  transition: background-color 0.5s ease-in-out;
-  -webkit-transition: background-color 0.5s ease-in-out;
-  -moz-transition: background-color 0.5s ease-in-out; }
+  transition: color 2s ease-out, background-color 2s ease-out;
+  -webkit-transition: color 2s ease-out, background-color 2s ease-out;
+  -moz-transition: color 2s ease-out, background-color 2s ease-out; }
 
 .thumbnail_width {
   margin: 0.5em;
@@ -352,36 +309,35 @@ a {
   text-align: left;
   word-wrap: break-word; }
 
-.item .alias {
-  color: white; }
-
-.item .path,
-.item .directory,
-.item .extension,
-.item .filename {
+.alias,
+.path,
+.directory,
+.extension,
+.filename,
+.thumbnail {
   font-family: Inconsolata, Consolas, monospace;
-  transition: color 0.5s ease-in-out;
-  -webkit-transition: color 0.5s ease-in-out;
-  -moz-transition: color 0.5s ease-in-out;
-  transition: background-color 0.5s ease-in-out;
-  -webkit-transition: background-color 0.5s ease-in-out;
-  -moz-transition: background-color 0.5s ease-in-out; }
+  transition: color 2s ease-out, background-color 2s ease-out;
+  -webkit-transition: color 2s ease-out, background-color 2s ease-out;
+  -moz-transition: color 2s ease-out, background-color 2s ease-out; }
 
-.item .directory {
+.alias {
+  color: #bfbfbf; }
+
+.directory {
   font-size: 0.8em;
-  color: #888; }
+  color: #bfbfbf; }
 
-.item .filename {
+.filename {
   font-size: 0.9em;
   display: inline;
-  color: #ddd;
+  color: #bfbfbf;
   font-weight: bold; }
 
-.item .extension {
+.extension {
   display: inline;
   margin-left: 0.5em;
   font-size: 0.7em;
-  color: #fd0; }
+  color: #bfa500; }
 
 .thumbnail {
   margin: auto;
@@ -390,24 +346,28 @@ a {
 
 .thumbnail.font {
   border: 1px solid black;
-  background-color: #ddd;
+  color: black;
+  background-color: #bfbfbf;
   padding: 0.5em; }
 
-#selected .extension,
-#selected .directory {
-  color: #444; }
+#selected .extension, .itemlink .extension, .item:hover .extension {
+  color: #ffdd00; }
 
-#selected .filename {
-  color: black; }
+#selected .directory, .itemlink .directory, .item:hover .directory {
+  color: #e5e5ff; }
 
-#selected .item .alias {
+#selected .filename, .itemlink .filename, .item:hover .filename {
   color: white; }
 
-#selected .itemident {
-  color: white;
-  background-color: black; }
+#selected .alias, .itemlink .alias, .item:hover .alias {
+  color: white; }
 
-#selected .thumbnail.font {
+#selected .itemident, .itemlink .itemident, .item:hover .itemident {
+  color: black;
+  background-color: white; }
+
+#selected .thumbnail.font, .item:hover .thumbnail.font {
+  color: black;
   background-color: white; }
 
 #selected.pagenav, .pagenav:hover {
@@ -421,12 +381,9 @@ a {
   padding: 0.5em;
   margin: 1em;
   background-color: rgba(255, 255, 255, 0.2);
-  transition: opacity 1.5s ease-in-out;
-  -webkit-transition: opacity 1.5s ease-in-out;
-  -moz-transition: opacity 1.5s ease-in-out;
-  transition: box-shadow 1.5s ease-in-out;
-  -webkit-transition: -webkit- box-shadow 1.5s ease-in-out;
-  -moz-transition: -moz- box-shadow 1.5s ease-in-out; }
+  transition: box-shadow 1.5s ease-in-out, opacity 1.5s ease-in-out;
+  -webkit-transition: -webkit-box-shadow 1.5s ease-in-out, opacity 1.5s ease-in-out;
+  -moz-transition: -moz-box-shadow 1.5s ease-in-out, opacity 1.5s ease-in-out; }
 
 .prevpage {
   text-align: left;
@@ -659,13 +616,15 @@ h3 {
 #next {
   right: 0;
   border-top-left-radius: 2em;
-  -moz-border-radius-top-left: 2em;
-  -webkit-border-radius-top-left: 2em; }
+  -moz-border-radius-topleft: 2em;
+  -webkit-border-radius-topleft: 2em; }
 
 #prev {
   left: 0;
   border-top-right-radius: 2em;
-  -moz-border-radius-topright: 2em; }
+  border-top-right-radius: 2em;
+  -moz-border-radius-topright: 2em;
+  -webkit-border-radius-topright: 2em; }
 
 #menu {
   display: none; }
@@ -678,7 +637,9 @@ h3 {
   top: 0;
   right: 0;
   border-bottom-left-radius: 2em;
-  -moz-border-radius-bottomleft: 2em; }
+  border-bottom-left-radius: 2em;
+  -moz-border-radius-bottomleft: 2em;
+  -webkit-border-radius-bottomleft: 2em; }
 
 .menuitem:hover {
   color: yellow; }

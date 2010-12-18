@@ -281,8 +281,17 @@ add: function (url, props)//{{{
  * \param how "fit" (fit to window), "fill" (fill window), float (zoom factor), other (do nothing)
  * \return current zoom factor
  *
+ * EVENTS
+ *
  * \fn onZoomChange()
  * \brief event
+ *
+ * \fn thumbnailOnLoad()
+ * \brief event is triggered after view is loaded
+ *
+ * \fn thumbnailOnLoad()
+ * \brief event is triggered after thumbnail is loaded
+ * \param error true if error occured
  */
 //}}}
 
@@ -415,18 +424,8 @@ zoom: function (z)//{{{
     return this.width/this.w;
 },//}}}
 
-/** events */
-/**
- * \fn thumbnailOnLoad()
- * \brief event is triggered after view is loaded
- */
+/* events */
 onLoad: function (){},
-
-/**
- * \fn thumbnailOnLoad()
- * \brief event is triggered after thumbnail is loaded
- * \param error true if error occured
- */
 thumbnailOnLoad: function (error){}
 };
 //}}}
@@ -599,17 +598,9 @@ seek: function (how) {//{{{
     this.e[0].currentTime += how;
 },//}}}
 
-/** events */
-/**
- * \fn thumbnailOnLoad()
- * \brief event is triggered after view is loaded
- */
+/* events */
 onLoad: function (){},
-/**
- * \fn thumbnailOnLoad()
- * \brief event is triggered after thumbnail is loaded
- */
-thumbnailOnLoad: function () {}
+thumbnailOnLoad: function (error){}
 };
 //}}}
 
@@ -743,17 +734,9 @@ updateHeight: function ()//{{{
         },10);
 },//}}}
 
-/** events */
-/**
- * \fn thumbnailOnLoad()
- * \brief event is triggered after view is loaded
- */
+/* events */
 onLoad: function (){},
-/**
- * \fn thumbnailOnLoad()
- * \brief event is triggered after thumbnail is loaded
- */
-thumbnailOnLoad: function (){}
+thumbnailOnLoad: function (error){}
 };
 //}}}
 
@@ -832,17 +815,9 @@ zoom: function (how)//{{{
 {
 },//}}}
 
-/** events */
-/**
- * \fn thumbnailOnLoad()
- * \brief event is triggered after view is loaded
- */
+/* events */
 onLoad: function (){},
-/**
- * \fn thumbnailOnLoad()
- * \brief event is triggered after thumbnail is loaded
- */
-thumbnailOnLoad: function (){}
+thumbnailOnLoad: function (error){}
 };
 //}}}
 
@@ -927,17 +902,9 @@ zoom: function (how)//{{{
 {
 },//}}}
 
-/** events */
-/**
- * \fn thumbnailOnLoad()
- * \brief event is triggered after view is loaded
- */
+/* events */
 onLoad: function (){},
-/**
- * \fn thumbnailOnLoad()
- * \brief event is triggered after thumbnail is loaded
- */
-thumbnailOnLoad: function (){}
+thumbnailOnLoad: function (error){}
 };
 //}}}
 
@@ -1271,6 +1238,59 @@ height: function ()//{{{
     return this.view ? this.view.height : 0;
 },//}}}
 
+scroll: function (x,y,absolute)//{{{
+{
+    var oldx, oldy, newx, newy;
+
+    stopDragScroll();
+
+    oldx = window.pageXOffset;
+    oldy = window.pageYOffset;
+
+    // scroll
+	if (absolute) {
+		window.scrollTo(x,y);
+    } else {
+		window.scrollBy(x,y);
+    }
+
+    newx = window.pageXOffset;
+    newy = window.pageYOffset;
+
+    if ( newx === oldx && newy === oldy ) {
+        return false;
+    } else {
+        if ( viewer ) {
+            viewer.updatePreview();
+        }
+        signal("scroll");
+    }
+
+    if ( newy !== oldy ) {
+        if (newy === 0) {
+            signal("top");
+        }
+        if (newy+window.innerHeight >= document.documentElement.scrollHeight) {
+            signal("bottom");
+        }
+
+        return true;
+    }
+
+    if ( newx !== oldx ) {
+        if (newx === 0) {
+            signal("leftmost");
+        }
+        if (newx+window.innerWidth >= document.documentElement.scrollWidth) {
+            signal("rightmost");
+        }
+
+        return true;
+    }
+
+    return false;
+},//}}}
+
 /** events */
 /** \fn onUpdateStatus(msg,class_name)
  * \brief event is triggered after changing status of view/viewer
@@ -1410,7 +1430,6 @@ addThumbnail: function (i)//{{{
 newItem: function (i,props)//{{{
 {
     var e, item, itemname, tags, size, w, h, key, t;
-    item = this.template;
 
     // image identification
     e = this.e_ident;
@@ -1453,7 +1472,7 @@ newItem: function (i,props)//{{{
     }
 
     // clone item
-    item = item.clone();
+    item = this.template.clone();
 
     // user tags
     for (key in tags) {
@@ -2391,56 +2410,9 @@ function toggleList_()//{{{
 
 function scroll (x,y,absolute)//{{{
 {
-    var oldx, oldy, newx, newy;
-
-    stopDragScroll();
-
-    oldx = window.pageXOffset;
-    oldy = window.pageYOffset;
-
-    // scroll
-	if (absolute) {
-		window.scrollTo(x,y);
-    } else {
-		window.scrollBy(x,y);
-    }
-
-    newx = window.pageXOffset;
-    newy = window.pageYOffset;
-
-    if ( newx === oldx && newy === oldy ) {
-        return false;
-    } else {
-        if ( viewer ) {
-            viewer.updatePreview();
-        }
-        signal("scroll");
-    }
-
-    if ( newy !== oldy ) {
-        if (newy === 0) {
-            signal("top");
-        }
-        if (newy+window.innerHeight >= document.documentElement.scrollHeight) {
-            signal("bottom");
-        }
-
-        return true;
-    }
-
-    if ( newx !== oldx ) {
-        if (newx === 0) {
-            signal("leftmost");
-        }
-        if (newx+window.innerWidth >= document.documentElement.scrollWidth) {
-            signal("rightmost");
-        }
-
-        return true;
-    }
-
-    return false;
+    return viewer ? viewer.scroll(x, y, absolute) : false;
 }//}}}
+
 
 function scrollDown(how)//{{{
 {

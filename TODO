@@ -1,3 +1,5 @@
+[ ] Viewport - vertical, horizontal, single, table (variable lines, columns)
+[ ] Can --allow-file-access-from-files in Chrome/Chromium solve permissions
 [ ] Use Sass style sheet (SCSS, http://sass-lang.com)
 [ ] Update gallery option
     * add items and thumbnails

@@ -111,7 +111,7 @@ Viewer: [
      "scrollLeft() || videoSeek(-5) || (viewer.width() <= window.innerWidth+24 && prev())",
      "Slower playback/Move window left/Previous gallery item"],
     // scrollup if not at top or show info
-    [["KP8","8","Up","w"], "window.pageYOffset ? scrollUp() : popInfo()", "Move window up"],
+    [["KP8","8","Up","w"], "scrollUp() || popInfo()", "Move window up"],
     [["KP2","2","Down","s"], scrollDown, "Move window down"],
     ["PageUp", "scrollUp(window.innerHeight*9/10) || prev()"],
     ["PageDown", "scrollDown(window.innerHeight*9/10) || next()"],

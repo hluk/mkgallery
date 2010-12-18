@@ -18,44 +18,82 @@
 @import url('http://fonts.googleapis.com/css?family=Molengo');
 @import url('http://fonts.googleapis.com/css?family=Yanone+Kaffeesatz');
 
-/* definitions {{{ */
-$bg: #222 url('bg3.png') repeat; /* www.tartanmaker.com www.stripegenerator.com http://squidfingers.com/patterns/ */
-$fg_color: white;
-$bg_color: black;
-$view_fg_color: black;
-$view_bg_color: white;
-
 $font: 'Crimson Text', Gentium, 'Liberation Serif', serif;
 $font_mono: Inconsolata, Consolas, monospace;
 $font_text: serif;
 $font_header: 'Yanone Kaffeesatz', sans-serif; /*font-family-457-1, font-family-457-2, Aller Display;*/
 $font_navigation: 'Yanone Kaffeesatz', sans-serif;
 $font_help: 'Molengo', sans-serif;
+
+// colors
+$view_background: #222 url('bg3.png') repeat; /* www.tartanmaker.com www.stripegenerator.com http://squidfingers.com/patterns/ */
+$list_background: #222 url('bg2.png');
+$fg: white;
+$bg: black;
+$view_fg: black;
+$view_bg: white;
+
+$widget_fg: white;
+$widget_bg: rgba(0,0,0,0.5);
+// hover
+$widget_hover_bg: rgba(0,100,200,0.6);
+$widget_hover_fg: white;
+// selected
+$widget_selected_bg: rgba(100,160,200,0.6);
+$widget_selected_fg: black;
+
+$factor: 0.75;
+
+$alias_selected_fg: $fg;
+$alias_fg: $alias_selected_fg*$factor;
+
+$extension_selected_fg: #fd0;
+$extension_fg: $extension_selected_fg*$factor;
+
+$directory_selected_fg: $fg*0.9+blue;
+$directory_fg: $fg*$factor;
+
+$filename_selected_fg: $fg;
+$filename_fg: $filename_selected_fg*$factor;
+
+$id_fg: black;
+$id_bg: gray;
+$id_selected_fg: black;
+$id_selected_bg: white;
+
+$thumbnail_selected_fg: black;
+$thumbnail_fg: $thumbnail_selected_fg*$factor;
+$thumbnail_selected_bg: white;
+$thumbnail_bg: $thumbnail_selected_bg*$factor;
 // }}}
 
 /* helper functions {{{ */
-@mixin rounded($radius: 10px, $side: 0) {
-    @if $side == 0 {
+@mixin rounded($radius: 10px, $side1: 0, $side2: 0) {
+    @if $side1 == 0 {
         border-radius: $radius;
         -moz-border-radius: $radius;
         -webkit-border-radius: $radius;
+    } @else if $side2 == 0 {
+        border-#{$side1}-radius: $radius;
+        -moz-border-radius-#{$side1}: $radius;
+        -webkit-border-radius-#{$side1}: $radius;
     } @else {
-        border-#{$side}-radius: $radius;
-        -moz-border-radius-#{$side}: $radius;
-        -webkit-border-radius-#{$side}: $radius;
+        border-#{$side1}-#{$side2}-radius: $radius;
+        -moz-border-radius-#{$side1}#{$side2}: $radius;
+        -webkit-border-radius-#{$side1}#{$side2}: $radius;
     }
 }
 
 @mixin transitions($transition) {
-    transition: $transition;
-    -webkit-transition: $transition;
-    -moz-transition: $transition;
+    transition: unquote($transition);
+    -webkit-transition: unquote($transition);
+    -moz-transition: unquote($transition);
 }
 
 @mixin transitionsx($transition) {
-    transition: $transition;
-    -webkit-transition: -webkit-$transition;
-    -moz-transition: -moz-$transition;
+    transition: unquote($transition);
+    -webkit-transition: -webkit-#{unquote($transition)};
+    -moz-transition: -moz-#{unquote($transition)};
 }
 
 @mixin box-shadow($shadow) {
@@ -68,7 +106,7 @@ $font_help: 'Molengo', sans-serif;
 
 body {
     margin: 0;
-    background: $bg;
+    background: $view_background;
     font-family: $font;
     overflow: hidden; /* no scrollbars */
 }
@@ -81,7 +119,7 @@ a {font-weight: inherit; color: inherit; font-size: inherit; font-family: inheri
 	text-align: center;
 	margin: auto;
 	margin-top: 2em;
-	color: $fg_color;
+	color: $fg;
 }
 #title_page .date {
 	font-size: 0.5em;
@@ -115,10 +153,10 @@ a {font-weight: inherit; color: inherit; font-size: inherit; font-family: inheri
     width: 60%;
     height: 100%;
 
-	color: $view_fg_color;
+	color: $view_fg;
 	padding: 1em;
 	border-width: 0;
-	background-color: $view_bg_color;
+	background-color: $view_bg;
 	overflow: hidden;
     @include rounded(0.5em);
 
@@ -137,7 +175,7 @@ a {font-weight: inherit; color: inherit; font-size: inherit; font-family: inheri
     bottom: 30px;
     right: 30px;
 
-    @include transitions(opacity 0.5s ease-in-out);
+    @include transitions("opacity .5s ease-in-out");
 }
 /* show preview when needed */
 .modeViewer .preview.focused,
@@ -175,21 +213,20 @@ a {font-weight: inherit; color: inherit; font-size: inherit; font-family: inheri
 
     text-shadow: black 1px 1px 1px;
 
-    color: white;
-    background-color: rgba(0,0,0,0.4);
-    border: 2px solid rgba(0,0,0,0.5);
+    color: $widget_fg;
+    background-color: $widget_bg;
+    //border: 2px solid rgba(0,0,0,0.5);
     padding-right: 1.5em;
-    @include rounded(50px);
 
-    @include transitions(opacity 0.5s ease-in-out);
-    @include transitions(background-color 1.5s ease-in-out);
-    @include transitionsx(box-shadow 1.5s ease-in-out);
+    @include box-shadow(0 0 20px rgba(0,0,0,0.5));
+    @include rounded(50px);
+    @include transitionsx("box-shadow 1.5s ease-in-out, opacity 0.5s ease-in-out, background-color 1.5s ease-in-out");
 }
 .modeViewer #info:hover, .modeSlideshow #info:hover, .modeViewer #info.focused {
     opacity: 1;
 }
 .modeViewer #info:hover, .modeSlideshow #info:hover {
-    background-color: rgba(0,100,200,0.4);
+    background-color: $widget_hover_bg;
     @include box-shadow(0 0 20px #7bf);
 }
 
@@ -215,20 +252,8 @@ a {font-weight: inherit; color: inherit; font-size: inherit; font-family: inheri
     float: right;
     z-index: 1;
     cursor: pointer;
+    margin-top: 0.2em;
 }
-.itemlink .directory,
-.itemlink .extension,
-.itemlink .filename {color: #9de; font-family: $font_mono;}
-.itemlink .alias {color: white;}
-.itemlink .filename {font-size: 0.9em; font-weight: bold;}
-.itemlink .extension {color: #8fb;}
-.itemlink .directory {font-size: 0.75em;}
-.itemlink .extension {
-    display: inline;
-    font-size: 0.8em;
-    margin-left: 0.5em;
-}
-.itemlink .filename {display: inline;}
 
 /* messages, resolution, zoom, font-size, media duration */
 .status {
@@ -253,7 +278,7 @@ a {font-weight: inherit; color: inherit; font-size: inherit; font-family: inheri
     top: 0;
     left: 0;
     right: 0;
-    background-image: url('bg2.png');
+    background: $list_background;
     padding:10px;
     z-index: 2;
     min-height: 100%;
@@ -276,24 +301,19 @@ a {font-weight: inherit; color: inherit; font-size: inherit; font-family: inheri
     color: black;
 
 	min-width: 150px;
-
-	/*border-left: 6px solid rgba(255,255,255,0.2);*/
 }
 .item, .selection, .pagenav {
     @include rounded(8px);
 }
 .item:hover, .pagenav:hover {
-    background-color: rgba(0,255,0,0.3);
+    background-color: $widget_hover_bg;
 }
 .selection {
 	z-index: -2;
-	background-color: rgba(120,220,255,0.6);
+	background-color: $widget_selected_bg;
 
     /* animate cursor movement */
-    @include transitions(left .1s ease-in-out);
-    @include transitions(top .1s ease-in-out);
-    @include transitions(width .1s ease-in-out);
-    @include transitions(height .1s ease-in-out);
+    @include transitions("left .1s ease-in-out, top .1s ease-in-out, width .1s ease-in-out, height .1s ease-in-out");
 }
 
 .itemident {
@@ -308,14 +328,12 @@ a {font-weight: inherit; color: inherit; font-size: inherit; font-family: inheri
     margin-bottom: 0em;
     padding: 0.3em;
 
-    color: black;
-    background-color: white;
+    color: $id_fg;
+    background-color: $id_bg;
     min-width: 1.2em;
 
     @include rounded(50px);
-
-    @include transitions(color .5s ease-in-out);
-    @include transitions(background-color .5s ease-in-out);
+    @include transitions("color 2s ease-out, background-color 2s ease-out");
 }
 
 .thumbnail_width {
@@ -324,19 +342,19 @@ a {font-weight: inherit; color: inherit; font-size: inherit; font-family: inheri
     text-align: left;
     word-wrap: break-word;
 }
-.item .alias {color: white;}
-.item .path,
-.item .directory,
-.item .extension,
-.item .filename {
+.alias,
+.path,
+.directory,
+.extension,
+.filename,
+.thumbnail {
     font-family: $font_mono;
-
-    @include transitions(color .5s ease-in-out);
-    @include transitions(background-color .5s ease-in-out);
+    @include transitions("color 2s ease-out, background-color 2s ease-out");
 }
-.item .directory {font-size: 0.8em; color: #888;}
-.item .filename {font-size: 0.9em; display: inline; color: #ddd; font-weight: bold;}
-.item .extension {display: inline; margin-left: 0.5em; font-size: 0.7em; color: #fd0;}
+.alias {color: $alias_fg;}
+.directory {font-size: 0.8em; color: $directory_fg;}
+.filename {font-size: 0.9em; display: inline; color: $filename_fg; font-weight: bold;}
+.extension {display: inline; margin-left: 0.5em; font-size: 0.7em; color: $extension_fg;}
 
 .thumbnail {
 	margin: auto;
@@ -346,20 +364,22 @@ a {font-weight: inherit; color: inherit; font-size: inherit; font-family: inheri
 .thumbnail.image {}
 .thumbnail.font {
     border: 1px solid black;
-    background-color: #ddd;
+    color: $thumbnail_fg;
+    background-color: $thumbnail_bg;
     padding: 0.5em;
 }
 
-#selected .extension,
-#selected .directory {color: #444;}
-#selected .filename {color: black;}
-#selected .item .alias {color: white;}
-#selected .itemident {
-	color: white;
-	background-color: black;
+#selected .extension, .itemlink .extension, .item:hover .extension {color: $extension_selected_fg}
+#selected .directory, .itemlink .directory, .item:hover .directory {color: $directory_selected_fg}
+#selected .filename, .itemlink .filename, .item:hover .filename {color: $filename_selected_fg}
+#selected .alias, .itemlink .alias, .item:hover .alias {color: $alias_selected_fg}
+#selected .itemident, .itemlink .itemident, .item:hover .itemident {
+    color: $id_selected_fg;
+    background-color: $id_selected_bg;
 }
-#selected .thumbnail.font {
-	background-color: white;
+#selected .thumbnail.font, .item:hover .thumbnail.font {
+	color: $thumbnail_selected_fg;
+	background-color: $thumbnail_selected_bg;
 }
 #selected.pagenav, .pagenav:hover {
     opacity: 1;
@@ -375,8 +395,7 @@ a {font-weight: inherit; color: inherit; font-size: inherit; font-family: inheri
 
     background-color: rgba(255,255,255,0.2);
 
-    @include transitions(opacity 1.5s ease-in-out);
-    @include transitionsx(box-shadow 1.5s ease-in-out);
+    @include transitionsx("box-shadow 1.5s ease-in-out, opacity 1.5s ease-in-out");
 }
 .prevpage {text-align: left; padding-left: 2em;}
 .nextpage {text-align: right; padding-right: 2em;}
@@ -566,7 +585,7 @@ h3 {
 
 	background-color: rgba(0,0,0,0.5);
     @include box-shadow(0 0 20px rgba(0,0,0,0.5));
-    @include transitions(opacity 0.3s ease-in-out);
+    @include transitions("opacity 0.3s ease-in-out");
 }
 .nav:hover {
 	opacity: 1;
@@ -577,12 +596,12 @@ h3 {
 }
 #next {
 	right: 0;
-    @include rounded(2em, top-left);
+    @include rounded(2em, top, left);
 }
 #prev {
 	left: 0;
 	border-top-right-radius: 2em;
-	-moz-border-radius-topright: 2em;
+    @include rounded(2em, top, right);
 }
 #menu {display: none;}
 .modeViewer #menu, .modeSlideshow #menu {display: block;}
@@ -591,7 +610,7 @@ h3 {
     top: 0;
     right: 0;
     border-bottom-left-radius: 2em;
-    -moz-border-radius-bottomleft: 2em;
+    @include rounded(2em, bottom, left);
 }
 .menuitem:hover {
     color: yellow;
