@@ -13,6 +13,8 @@ Supported file types (and extensions) are:
 	* images (jpg, png, apng, gif, svg),
 	* fonts (otf, ttf),
 	* audio/movies (mp4, mov, flv, ogg, mp3, wav).
+	* HTML
+	* PDF - only with pdf2svg, http://www.cityinthesky.co.uk/pdf2svg.html
 
 Function create_gallery() returns list of items. The list format is:
 	{
@@ -45,7 +47,7 @@ view the gallery, the list of items is saved before without ".thumbnail_size"
 property and the thumbnails are generated afterwards.
 """
 
-import os, sys, re, shutil, glob, getopt, locale, codecs
+import os, sys, re, shutil, glob, getopt, locale, codecs, subprocess
 
 has_python3 = sys.version[0] == '3'
 
@@ -86,6 +88,7 @@ if has_python3:
 	re_remote = re.compile(r'^\w+://', re_flags)
 	re_fontname = re.compile(r'[^a-z0-9_]+', re_flags)
 	re_tag = re.compile(r'^\$\(<.*\)$', re_flags)
+	re_pdf = re.compile(r'\.pdf$', re_flags)
 else:
 	re_flags = re.IGNORECASE|re.UNICODE
 	re_img  = re.compile( unicode(r'\.(jpg|png|apng|gif|svg)$' ), re_flags )
@@ -95,6 +98,7 @@ else:
 	re_remote = re.compile( unicode(r'^\w+://' ), re_flags )
 	re_fontname = re.compile( unicode(r'[^a-z0-9_]+' ), re_flags )
 	re_tag = re.compile( unicode(r'^\$\(<.*\)$'), re_flags )
+	re_pdf = re.compile( unicode(r'\.pdf$' ), re_flags )
 
 local = False
 page = 0
@@ -460,6 +464,31 @@ def renderFont(fontfile, size, text, outfile):#{{{
 	im.save(outfile, "PNG")
 #}}}
 
+def renderPDF(pdffile):#{{{
+	sys.stdout.write("Generating pages for \"" + pdffile + "\" ... ")
+	sys.stdout.flush()
+
+	outdir = pdffile + "_pages"
+	itemdir = gdir +S+ "items"
+	os.makedirs(itemdir +S+ outdir)
+
+	pages = []
+	outfile = outdir +S+ "%04d.svg"
+	try:
+		res = subprocess.call(["pdf2svg", pdffile, itemdir +S+ outfile, "all"])
+		if res == 0:
+			pages.append(outfile)
+			print("DONE")
+			pages = [outdir +S+ f for f in os.listdir(itemdir +S+ outdir)]
+		else:
+			print("ERROR")
+			exit(1)
+	except:
+		print("NOT CONVERTED\nNOTE: To convert PDF pages to SVG pdf2svg application must be installed (more info at: http://www.cityinthesky.co.uk/pdf2svg.html).")
+
+	return pages;
+#}}}
+
 def is_local(filename):#{{{
 	global re_remote, re_tag
 
@@ -495,7 +524,8 @@ class Type:
 	FONT  = 2
 	VIDEO = 3
 	HTML = 4
-	TAG = 5
+	PDF = 5
+	TAG = 6
 
 def item_type(f):
 	global re_img, re_font, re_vid, re_tag
@@ -505,6 +535,7 @@ def item_type(f):
 		Type.FONT:  re_font,
 		Type.VIDEO: re_vid,
 		Type.HTML:  re_html,
+		Type.PDF:   re_pdf,
 		Type.TAG:   re_tag
 	}
 
@@ -532,6 +563,12 @@ def gallery_items(files, allitems):#{{{
 			t = item_type(f)
 
 			if t>0:
+				# TODO: fetch remote PDF before rendering
+				if t == Type.PDF:
+					for page in renderPDF(f):
+						items["items" +S+ page] = {'.link':f}
+					continue
+
 				# file is local and not viewed locally
 				if not local and is_local(f):
 					destdir = dirname(f)
