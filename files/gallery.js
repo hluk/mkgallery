@@ -1241,12 +1241,14 @@ show: function (filepath)//{{{
 
 width: function ()//{{{
 {
-    return this.view ? this.view.width : 0;
+    var v = this.view;
+    return (v && v.width) ? v.width : 0;
 },//}}}
 
 height: function ()//{{{
 {
-    return this.view ? this.view.height : 0;
+    var v = this.view;
+    return (v && v.height) ? v.height : 0;
 },//}}}
 
 scroll: function (x,y,absolute)//{{{
@@ -2960,34 +2962,30 @@ init: function (parent)//{{{
     tabs.appendTo(parent);
 
     this.pages = $();
-
-    this.layout(true);
 },//}}}
 
-layout: function (horizontal)//{{{
+next: function()//{{{
 {
-    var t = this;
+    var current, e, tabs;
+    tabs = this.tabs.children(".tab");
+    current = tabs.filter(".current");
+    e = current.next(".tab");
+    if (!e.length) {
+        e = tabs.first();
+    };
+    e.click();
+},//}}}
 
-    addKeys( horizontal ? "Right" : "Down", null, function() {
-        var current, e, tabs;
-        tabs = t.tabs.children(".tab");
-        current = tabs.filter(".current");
-        e = current.next(".tab");
-        if (!e.length) {
-            e = tabs.first();
-        };
-        e.click();
-    }, modes.any, true );
-    addKeys( horizontal ? "Left" : "Up", null, function() {
-        var current, e, tabs;
-        tabs = t.tabs.children(".tab");
-        current = tabs.filter(".current");
-        e = current.prev(".tab");
-        if (!e.length) {
-            e = tabs.last();
-        };
-        e.click();
-    }, modes.any, true );
+prev: function()//{{{
+{
+    var current, e, tabs;
+    tabs = this.tabs.children(".tab");
+    current = tabs.filter(".current");
+    e = current.prev(".tab");
+    if (!e.length) {
+        e = tabs.last();
+    };
+    e.click();
 },//}}}
 
 append: function (tabname, page)//{{{
@@ -3020,6 +3018,24 @@ append: function (tabname, page)//{{{
     return tab;
 }//}}}
 
+};
+//}}}
+
+//! \class Dialog
+//{{{
+var Dialog = function (e) { this.init(e); };
+
+Dialog.prototype = {
+init: function (e)//{{{
+{
+    this.e = e;
+    e.addClass("dialog");
+
+    // close button
+    $("<div>", {'class':'close', 'html':'&#8855', 'tabindex':0}).css('cursor','pointer').click(modeDrop).appendTo(e);
+
+    this.pages = $();
+},//}}}
 };
 //}}}
 //}}}
@@ -3192,6 +3208,7 @@ function toggleHelp_()//{{{
         if (!help.length) {
             return false;
         }
+        help = new Dialog(help).e;
         createHelp(help);
     }
 
@@ -3262,7 +3279,7 @@ function generateConfig ()//{{{
         } );
     content += '};'
 
-    ee.show();
+    ee.slideDown();
     e.text(content);
     e.focus();
     e.select();
@@ -3273,17 +3290,10 @@ function createOptions(e)//{{{
 {
     var i, j, cats, cat, tabs, tab, catname, conf, desc, key, opt, value, input, box, button;
 
-    // information
-    $("<div>", {'class': 'information',
-            html:
-            '<p>Each entry contains '+
-            '<span class="emph">brief description</span>, '+
-            '<span class="emph">current option value</span> and '+
-            '<span class="emph">keyword</span> used in URL or the configuration file to set the option.</p>'+
-            '<p>To make changes permanent press <span class="emph">Copy</span> button and save the text in configuration file <span class="code">config.js</span>.</p>'
-            }).appendTo(e);
-
     tabs = new Tabs(e);
+    // horizontal movement
+    addKeys( "Right", null, tabs.next.bind(tabs), modes.any, true );
+    addKeys( "Left", null, tabs.prev.bind(tabs), modes.any, true );
 
     cats = {};
     for (i in configs) {
@@ -3353,26 +3363,40 @@ function createOptions(e)//{{{
     // config.js contents
     cat = $('<p>', {'class': 'config'});
     cat.html('Add this to your <span class="code">config.js</span>:');
-    cat.hide();
-    cat.appendTo(e);
+    cat.hide().appendTo(e);
     input = $('<textarea>');
     input.appendTo(cat);
+
+    // information
+    desc = $("<div>", {'class': 'information',
+        html:
+        '<p>Each entry contains '+
+        '<span class="emph">brief description</span>, '+
+        '<span class="emph">current option value</span> and '+
+        '<span class="emph">keyword</span> used in URL or the configuration file to set the option.</p>'+
+        '<p>To make changes permanent press <span class="emph">Copy</span> button and save the text in configuration file <span class="code">config.js</span>.</p>'
+    }).hide().appendTo(e);
 
     // buttons
     box = $('<div>', {'class':'buttonbox'});
     box.appendTo(e);
 
-    button = createLabel("_Cancel", $('<input>', {type:'submit','class':'button','value':'Cancel'}));
+    button = createLabel("_H", $('<input>', {type:'submit','class':'button','value':'Help'}));
+    button.addClass("button");
+    button.click( function(){desc.is(":visible") && desc.slideUp() || desc.slideDown()} );
+    button.appendTo(box);
+
+    button = createLabel("_C", $('<input>', {type:'submit','class':'button','value':'Cancel'}));
     button.addClass("button");
     button.click( function(){$(this).blur(); modeDrop();} );
     button.appendTo(box);
 
-    button = createLabel("Co_py", $('<input>', {type:'submit','class':'button','value':'Copy'}));
+    button = createLabel("_p", $('<input>', {type:'submit','class':'button','value':'Copy'}));
     button.addClass("button");
     button.click( function(){$(this).blur(); generateConfig();} );
     button.appendTo(box);
 
-    button = createLabel("_Save", $('<input>', {type:'submit','class':'button','value':'Save'}));
+    button = createLabel("_S", $('<input>', {type:'submit','class':'button','value':'Save'}));
     button.addClass("button");
     button.click( function(){$(this).blur(); saveOptions();} );
     button.appendTo(box);
@@ -3397,6 +3421,7 @@ function toggleOptions_()//{{{
         if (!options.length) {
             return false;
         }
+        options = new Dialog(options).e;
         createOptions(options);
     }
 
