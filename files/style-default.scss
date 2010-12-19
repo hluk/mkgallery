@@ -409,11 +409,11 @@ a {font-weight: inherit; color: inherit; font-size: inherit; font-family: inheri
 }
 .help p {text-align: left;}
 p {
-    font-style: italic;
     font-family: $font_text;
     padding-left: 4em;
     padding-right: 4em;
     font-size: 11pt;
+    margin-top: 0px;
 }
 .emph {color: #ff6;}
 .code {font-family: $font_mono;}
@@ -458,6 +458,18 @@ h3 {
 
     text-align: center;
 }
+.tab {
+    display: inline;
+    padding: 0.1em;
+    margin: 5px;
+    color: gray;
+}
+.tab.current {
+    color: white;
+    background-color: transparentize(white, 0.8);
+    @include rounded(0.4em, top, left);
+    @include rounded(0.4em, top, right);
+}
 .help.focused, .options.focused {display: block;}
 .category {
 	text-align: left;
@@ -472,7 +484,6 @@ h3 {
 
 	font-weight: bold;
     font-family: $font_mono;
-	text-align: right;
 	font-size: 0.7em;
 
 	margin-right: 1em;
@@ -495,16 +506,16 @@ h3 {
 }
 .logo {float: right; margin: 1em 2em;}
 .options .which {
-	display: inline;
-	display: inline-block;
-	color: yellow;
+    display: inline;
+    float:right;
+	color: gray;
 
-	font-weight: bold;
     font-family: $font_mono;
-	font-size: 0.9em;
+	font-size: 0.75em;
+	text-align: right;
 
-	margin-right: 1em;
-	padding: 0 0.1em;
+    margin-left: 1em;
+    padding: 0 0.1em;
 }
 .options .config {
     width: 70%;
@@ -543,7 +554,7 @@ h3 {
 
 	display: inline;
 
-	font-weight: bold;
+    font-size: 0.8em;
 	text-align: right;
 
 	margin: 1em;
@@ -589,6 +600,10 @@ h3 {
 }
 .nav:hover {
 	opacity: 1;
+}
+
+.modeOptions .nav, .modeHelp .nav {
+    display: none;
 }
 
 #prev, #next {

@@ -39,50 +39,50 @@ if ( window.console ) {
 // option: [default value, category, description]
 // character after underscore in description is keyboard shortcut
 var configs = {
-    'allow_drop': [true, "General", "Allow drag-n-drop new files to gallery"],
-	'no_preview': [false, "General", "Disable item _preview window"],
-	'no_list': [false, "General", "Disable item _list"],
-	'no_info': [false, "General", "Disable item _info"],
-	'title_fmt': ['%{title}: %{now}/%{max} "%{filename}"' ,"General", "_Title format (keywords: title, filename, now, max, remaining)"],
-	'pop_info_delay': [4000, "General", "Info pop up _delay (in milliseconds)"],
-	'slide_scroll': [100, "General", "Slide scroll _amount"],
-    'shuffle': [false, "General", "Randomly _shuffle gallery items"],
-    'transparency': ["", "General", "Color for transparency"],
+    'allow_drop': [true, "_General", "Allow drag-n-drop new files to gallery"],
+	'no_preview': [false, "_General", "Disable item _preview window"],
+	'no_list': [false, "_General", "Disable item _list"],
+	'no_info': [false, "_General", "Disable item _info"],
+	'title_fmt': ['%{title}: %{now}/%{max} "%{filename}"' ,"_General", "_Title format (keywords: title, filename, now, max, remaining)"],
+	'pop_info_delay': [4000, "_General", "Info pop up _delay (in milliseconds)"],
+	'slide_scroll': [100, "_General", "Slide scroll _amount"],
+    'shuffle': [false, "_General", "Randomly _shuffle gallery items"],
+    'transparency': ["", "_General", "Color for transparency"],
 
-	'font_size': [16, "Font", "_font size"],
-	'font_thumbnail_text': ['+-1234567890,<br/>abcdefghijklmnopqrstuvwxyz,<br/>ABCDEFGHIJKLMNOPQRSTUVWXYZ', "Font", "Font t_humbnail text (HTML)"],
-	'font_test': ['+-1234567890, abcdefghijklmnopqrstuvwxyz, ABCDEFGHIJKLMNOPQRSTUVWXYZ, ?!.#$\\/"\'', "Font", "Te_xt for fonts"],
+	'font_size': [16, "_Font", "font _size"],
+	'font_thumbnail_text': ['+-1234567890,<br/>abcdefghijklmnopqrstuvwxyz,<br/>ABCDEFGHIJKLMNOPQRSTUVWXYZ', "_Font", "Font t_humbnail text (HTML)"],
+	'font_test': ['+-1234567890, abcdefghijklmnopqrstuvwxyz, ABCDEFGHIJKLMNOPQRSTUVWXYZ, ?!.#$\\/"\'', "_Font", "Te_xt for fonts"],
 
-	'zoom': ['1', "Images", "Default _zoom level"],
-	'zoom_step': [0.125, "Images", "Z_oom multiplier"],
-	'preload_images': [2, "Images", "Number of images to pr_eload"],
-    'image_on_canvas': [false, "Images", "Use HTML5 _canvas element to draw images"],
-    'max_preview_width': [15, "Images", "Maximal preview _width in percent of window width"],
-    'max_preview_height': [80, "Images", "Maximal preview _height in percent of window height"],
-	'pop_preview_delay': [1000, "Images", "Preview pop up delay (in milliseconds)"],
+	'zoom': ['1', "_Images", "Default _zoom level"],
+	'zoom_step': [0.125, "_Images", "Z_oom multiplier"],
+	'preload_images': [2, "_Images", "Number of images to pr_eload"],
+    'image_on_canvas': [false, "_Images", "Use HTML5 _canvas element to draw images"],
+    'max_preview_width': [15, "_Images", "Maximal preview _width in percent of window width"],
+    'max_preview_height': [80, "_Images", "Maximal preview _height in percent of window height"],
+	'pop_preview_delay': [1000, "_Images", "Preview pop up delay (in milliseconds)"],
 
-    'slideshow': [false, "Slideshow", "Slideshow mode"],
-	'slideshow_delay': [8000, "Slideshow", "Slideshow delay"],
+    'slideshow': [false, "_Slideshow", "Slideshow mode"],
+	'slideshow_delay': [8000, "_Slideshow", "Slideshow delay"],
 
-	'progress_fg': ["rgba(255,200,0,0.8)", "Progress bar appearance", "foreground color"],
-	'progress_bg': ["rgba(200,200,200,0.4)", "Progress bar appearance", "background color"],
-	'progress_radius': [22, "Progress bar appearance", "Radius"],
-	'progress_width': [8, "Progress bar appearance", "Circle stroke width (background)"],
-	'progress_inner_width': [8, "Progress bar appearance", "Circle stroke width (foreground)"],
-	'progress_shadow': [10, "Progress bar appearance", "Shadow size"],
-	'progress_blur': [10, "Progress bar appearance", "Blur amount"],
+	'progress_fg': ["rgba(255,200,0,0.8)", "_Progress bar appearance", "foreground color"],
+	'progress_bg': ["rgba(200,200,200,0.4)", "_Progress bar appearance", "background color"],
+	'progress_radius': [22, "_Progress bar appearance", "Radius"],
+	'progress_width': [8, "_Progress bar appearance", "Circle stroke width (background)"],
+	'progress_inner_width': [8, "_Progress bar appearance", "Circle stroke width (foreground)"],
+	'progress_shadow': [10, "_Progress bar appearance", "Shadow size"],
+	'progress_blur': [10, "_Progress bar appearance", "Blur amount"],
 
-	'thumbnail_max_width': [300, "Thumbnail", "Maximum width"],
-    'use_svg_thumbnails': [false, "Thumbnail", "Use original vector image as thumbnail (can be slow)"],
-    'max_page_items': [0, "Thumbnail", "Maximum number of items on page"],
+	'thumbnail_max_width': [300, "_Thumbnail", "Maximum width"],
+    'use_svg_thumbnails': [false, "_Thumbnail", "Use original vector image as thumbnail (can be slow)"],
+    'max_page_items': [0, "_Thumbnail", "Maximum number of items on page"],
 
-	'autoplay': [false, "Audio/Video", "Pla_y audio/video when viewed"],
-	'autonext': [false, "Audio/Video", "Go to _next item whed playback ends"],
-	'loop': [false, "Audio/Video", "_Replay when playback ends"],
+	'autoplay': [false, "_Audio/Video", "Pla_y audio/video when viewed"],
+	'autonext': [false, "_Audio/Video", "Go to _next item whed playback ends"],
+	'loop': [false, "_Audio/Video", "_Replay when playback ends"],
 
-    'reload_every': [0, "Debug", "N_umber of items to view after the gallery if refreshed"],
-	'show_keys': [false, "Debug", "Show pressed keys in info"],
-	'show_events': [false, "Debug", "Show events in info"],
+    'reload_every': [0, "_Debug", "N_umber of items to view after the gallery if refreshed"],
+	'show_keys': [false, "_Debug", "Show pressed keys in info"],
+	'show_events': [false, "_Debug", "Show events in info"],
 
 	'n': [1, ""]
 }//}}}
@@ -2764,7 +2764,7 @@ function keyPress (e)//{{{
     }
 }//}}}
 
-function addKeys (newkeys, desc, fn, keymode)//{{{
+function addKeys (newkeys, desc, fn, keymode, append)//{{{
 {
     var ekeys, k, tomod, i, modifiers, key, modekeydesc;
 
@@ -2787,6 +2787,11 @@ function addKeys (newkeys, desc, fn, keymode)//{{{
 		// sort modifiers
 		modifiers = modifiers.map(tomod).sort();
 		key = modifiers.length ? modifiers.join("-")+"-"+key : key;
+        if (append && ekeys[key]) {
+            fn = (function(oldfn, newfn) {
+                return function() {return oldfn() || newfn()}
+            })(ekeys[key], fn);
+        }
         ekeys[key] = fn;
 	}
 
@@ -2916,6 +2921,109 @@ function stopDragScroll ()//{{{
 }//}}}
 //}}}
 
+// GUI{{{
+function createLabel(text, e)//{{{
+{
+    var i;
+
+    if (!e) {
+        e = $('<div>');
+    }
+    e.addClass("label");
+
+    // replace &x with underlined character and assign x key
+    i = text.indexOf('_');
+    if (i !== -1 && i+1 < text.length) {
+        key = text[i+1];
+        text = text.substr(0,i) +
+            '<span class="keyhint">'+key+'</span>' +
+            text.substr(i+2);
+        addKeys( key, null, function() { return e.is(":visible") && e.click() }, modes.options, true );
+    }
+
+    e.html(text);
+
+    return e;
+}//}}}
+
+//! \class Tabs
+//{{{
+var Tabs = function (parent) { this.init(parent); };
+
+Tabs.prototype = {
+init: function (parent)//{{{
+{
+    var tabs;
+
+    this.parent = parent;
+    this.tabs = tabs = $("<div>", {'class': 'tabs', 'tabindex':0});
+    tabs.appendTo(parent);
+
+    this.pages = $();
+
+    this.layout(true);
+},//}}}
+
+layout: function (horizontal)//{{{
+{
+    var t = this;
+
+    addKeys( horizontal ? "Right" : "Down", null, function() {
+        var current, e, tabs;
+        tabs = t.tabs.children(".tab");
+        current = tabs.filter(".current");
+        e = current.next(".tab");
+        if (!e.length) {
+            e = tabs.first();
+        };
+        e.click();
+    }, modes.any, true );
+    addKeys( horizontal ? "Left" : "Up", null, function() {
+        var current, e, tabs;
+        tabs = t.tabs.children(".tab");
+        current = tabs.filter(".current");
+        e = current.prev(".tab");
+        if (!e.length) {
+            e = tabs.last();
+        };
+        e.click();
+    }, modes.any, true );
+},//}}}
+
+append: function (tabname, page)//{{{
+{
+    var t, tab;
+
+    tab = createLabel(tabname);
+    tab.addClass("tab");
+    tab.appendTo(this.tabs);
+
+    page.hide();
+    this.pages = this.pages.add(page);
+
+    t = this;
+    tab.click( function(){
+        var i, to_show, tabs;
+        tabs = t.tabs.children(".tab");
+        to_show = !page.is(":visible");
+
+        tabs.removeClass("current");
+        t.pages.hide();
+
+        if (to_show) {
+            page.show();
+            tab.addClass("current");
+        }
+    } );
+    this.tabs.children(".tab").first().click();
+
+    return tab;
+}//}}}
+
+};
+//}}}
+//}}}
+
 function viewerOnLoad()//{{{
 {
     if ( mode() === modes.slideshow ) {
@@ -2984,11 +3092,12 @@ function createNavigation ()//{{{
     var m, i, k, km;
 
     // keyboard
-    if ( userAgent() === userAgents.webkit ) {
-        window.onkeydown = keyPress;
-    } else {
-        window.onkeypress = keyPress;
-    }
+    //if ( userAgent() === userAgents.webkit ) {
+        //window.onkeydown = keyPress;
+    //} else {
+        //window.onkeypress = keyPress;
+    //}
+    $(window).keydown(keyPress);
 
     // mouse
     window.onmousewheel = document.onmousewheel = onMouseWheel;
@@ -3162,18 +3271,19 @@ function generateConfig ()//{{{
 
 function createOptions(e)//{{{
 {
-    var i, j, cats, cat, catname, conf, desc, key, opt, value, input, box, button;
+    var i, j, cats, cat, tabs, tab, catname, conf, desc, key, opt, value, input, box, button;
 
     // information
     $("<div>", {'class': 'information',
             html:
             '<p>Each entry contains '+
-            '<span class="emph">keyword</span> used in URL or the configuration file to set the option, '+
-            '<span class="emph">brief description</span> and '+
-            '<span class="emph">current option value</span>.</p>'+
-            '<p>To make changes permanent press <span class="emph">Copy</span> button and save the text in configuration file <span class="code">config.js</span>.</p>'+
-            '<p>Any option can be locked by setting default value of <span class="code">config_strict[<span class="emph">keyword</span>]</span>.</p>'
+            '<span class="emph">brief description</span>, '+
+            '<span class="emph">current option value</span> and '+
+            '<span class="emph">keyword</span> used in URL or the configuration file to set the option.</p>'+
+            '<p>To make changes permanent press <span class="emph">Copy</span> button and save the text in configuration file <span class="code">config.js</span>.</p>'
             }).appendTo(e);
+
+    tabs = new Tabs(e);
 
     cats = {};
     for (i in configs) {
@@ -3188,8 +3298,9 @@ function createOptions(e)//{{{
 
         if( !cats[catname] ) {
             cats[catname] = cat = $("<div>", {'class': "category"});
-            $('<h3>',{text: catname}).appendTo(cat);
             cat.appendTo(e);
+            cat.hide();
+            tabs.append(catname, cat);
         }
         cat = cats[catname];
 
@@ -3197,7 +3308,6 @@ function createOptions(e)//{{{
         opt.appendTo(cat);
 
         value = getConfig(i);
-        $('<div>', {'class': "which", text: i}).appendTo(opt);
 
         // input: text edit OR checkbox
         if ( typeof(value) === "boolean" ) {
@@ -3209,34 +3319,29 @@ function createOptions(e)//{{{
             } else {
                 input = $('<input>');
             }
-            input.attr({type:'text', 'class': "value", value: value});
+            input.attr({'class': "value", 'value': value});
             input.width( Math.min((value+"  ").length, 20) + 'ex');
         }
 
-        // description - replace &x with underlined character and assign x key
-        desc = conf[2];
-        j = desc.indexOf('_');
-        if (j !== -1 && j+1 < desc.length) {
-            key = desc[j+1];
-            desc = desc.substr(0,j) +
-                '<span class="keyhint">'+key+'</span>' +
-                desc.substr(j+2);
-            // map key to input
-            addKeys(key, null, (function(){
+        // description
+        desc = createLabel(conf[2]);
+        desc.addClass("desc");
+        desc.click( (function(){
                 if ( this.attr('disabled') ) {
                     return;
                 }
                 this.focus();
                 this.attr('checked', !this.attr('checked'));
-            }).bind(input), modes.options);
-        }
-        $('<div>', {'class': "desc", html: desc}).appendTo(opt);
+            }).bind(input) );
+        desc.appendTo(opt);
 
         // don't change values in config_strict
         if ( i in config_strict ) {
             input.attr('disabled', 'yes');
         }
         input.appendTo(opt);
+
+        $('<div>', {'class': "which", text: i}).appendTo(opt);
     }
 
     // clicking on option selects input text or toggles checkbox
@@ -3257,15 +3362,18 @@ function createOptions(e)//{{{
     box = $('<div>', {'class':'buttonbox'});
     box.appendTo(e);
 
-    button = $('<input>', {type:'submit','class':'button','value':'Cancel'});
+    button = createLabel("_Cancel", $('<input>', {type:'submit','class':'button','value':'Cancel'}));
+    button.addClass("button");
     button.click( function(){$(this).blur(); modeDrop();} );
     button.appendTo(box);
 
-    button = $('<input>', {type:'submit','class':'button','value':'Copy'});
+    button = createLabel("Co_py", $('<input>', {type:'submit','class':'button','value':'Copy'}));
+    button.addClass("button");
     button.click( function(){$(this).blur(); generateConfig();} );
     button.appendTo(box);
 
-    button = $('<input>', {type:'submit','class':'button','value':'Save'});
+    button = createLabel("_Save", $('<input>', {type:'submit','class':'button','value':'Save'}));
+    button.addClass("button");
     button.click( function(){$(this).blur(); saveOptions();} );
     button.appendTo(box);
 

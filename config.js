@@ -53,7 +53,7 @@ slide_scroll: 200,
 }
 
 config_strict = { // -- these can't be overridden in URL
-preload_images: 3,
+//preload_images: 3,
 }
 //}}}
 
@@ -98,7 +98,12 @@ Any: [
     // emulate browser history
     [["Alt-Left"], back, "Go back in history"],
     [["Alt-Right"], forward, "Go forward in history"],
-    ["o", "info && popInfo(); popPreview()", "Show info"]
+    ["o", "info && popInfo(); popPreview()", "Show info"],
+    // scroll
+    [["KP8","8","Up","w"], scrollUp],
+    [["KP2","2","Down","s"], scrollDown],
+    [["KP6","6","Right","d"], scrollRight],
+    [["KP4","4","Left","a"], scrollLeft]
 ],
 
 Viewer: [
@@ -158,12 +163,7 @@ Help: [
     [help_keys.concat(exit_keys), modeDrop],
     // disable item list and options
     [list_keys, ""],
-    [option_keys, ""],
-    // scroll help
-    [["KP8","8","Up","w"], scrollUp],
-    [["KP2","2","Down","s"], scrollDown],
-    [["KP6","6","Right","d"], scrollRight],
-    [["KP4","4","Left","a"], scrollLeft],
+    [option_keys, ""]
 ],
 
 Options: [
@@ -171,12 +171,7 @@ Options: [
     ["Enter", saveOptions, "Save options"],
     // disable item list and help
     [list_keys, ""],
-    [help_keys, ""],
-    // scroll help
-    [["KP8","8","Up","w"], scrollUp],
-    [["KP2","2","Down","s"], scrollDown],
-    [["KP6","6","Right","d"], scrollRight],
-    [["KP4","4","Left","a"], scrollLeft],
+    [help_keys, ""]
 ],
 
 Slideshow: [

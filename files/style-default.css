@@ -404,11 +404,11 @@ a {
   text-align: left; }
 
 p {
-  font-style: italic;
   font-family: serif;
   padding-left: 4em;
   padding-right: 4em;
-  font-size: 11pt; }
+  font-size: 11pt;
+  margin-top: 0px; }
 
 .emph {
   color: #ff6; }
@@ -464,6 +464,22 @@ h3 {
   -webkit-border-radius: 20px;
   text-align: center; }
 
+.tab {
+  display: inline;
+  padding: 0.1em;
+  margin: 5px;
+  color: gray; }
+
+.tab.current {
+  color: white;
+  background-color: rgba(255, 255, 255, 0.2);
+  border-top-left-radius: 0.4em;
+  -moz-border-radius-topleft: 0.4em;
+  -webkit-border-radius-topleft: 0.4em;
+  border-top-right-radius: 0.4em;
+  -moz-border-radius-topright: 0.4em;
+  -webkit-border-radius-topright: 0.4em; }
+
 .help.focused, .options.focused {
   display: block; }
 
@@ -480,7 +496,6 @@ h3 {
   display: inline-block;
   font-weight: bold;
   font-family: Inconsolata, Consolas, monospace;
-  text-align: right;
   font-size: 0.7em;
   margin-right: 1em;
   margin-top: 0.2em;
@@ -507,12 +522,12 @@ h3 {
 
 .options .which {
   display: inline;
-  display: inline-block;
-  color: yellow;
-  font-weight: bold;
+  float: right;
+  color: gray;
   font-family: Inconsolata, Consolas, monospace;
-  font-size: 0.9em;
-  margin-right: 1em;
+  font-size: 0.75em;
+  text-align: right;
+  margin-left: 1em;
   padding: 0 0.1em; }
 
 .options .config {
@@ -562,7 +577,7 @@ h3 {
 .button {
   cursor: pointer;
   display: inline;
-  font-weight: bold;
+  font-size: 0.8em;
   text-align: right;
   margin: 1em;
   padding-left: 1em;
@@ -609,6 +624,9 @@ h3 {
 
 .nav:hover {
   opacity: 1; }
+
+.modeOptions .nav, .modeHelp .nav {
+  display: none; }
 
 #prev, #next {
   bottom: 0; }
