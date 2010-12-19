@@ -47,6 +47,7 @@ var configs = {
 	'pop_info_delay': [4000, "General", "Info pop up _delay (in milliseconds)"],
 	'slide_scroll': [100, "General", "Slide scroll _amount"],
     'shuffle': [false, "General", "Randomly _shuffle gallery items"],
+    'transparency': ["", "General", "Color for transparency"],
 
 	'font_size': [16, "Font", "_font size"],
 	'font_thumbnail_text': ['+-1234567890,<br/>abcdefghijklmnopqrstuvwxyz,<br/>ABCDEFGHIJKLMNOPQRSTUVWXYZ', "Font", "Font t_humbnail text (HTML)"],
@@ -988,6 +989,8 @@ init: function (e, preview, getConfig)//{{{
     this.getConfig = getConfig;
 
     this.viewFactory = new ViewFactory(this);
+
+    this.transparency = getConfig('transparency');
 },//}}}
 
 zoom: function (how)//{{{
@@ -1119,6 +1122,10 @@ createPreview: function (filepath)//{{{
     if (filepath) {
         img.attr( "src", esc(filepath) );
     }
+
+    if (this.transparency) {
+        img.css("background-color", this.transparency);
+    }
 },//}}}
 
 resize: function()//{{{
@@ -1220,6 +1227,10 @@ show: function (filepath)//{{{
             t.createPreview(filepath);
             t.zoom();
             t.onLoad();
+
+            if (t.transparency) {
+                v.e.css("background-color", t.transparency);
+            }
         };
         v.show();
     }
@@ -1963,7 +1974,8 @@ updateItemTitle: function ()//{{{
     url = esc(this.href)
     if (link.length) {
         link.attr( "href", url );
-        link.click( function() {location.href = url; document.reload()} );
+        link.unbind('click');
+        link.click( function() { window.open(url, url) } );
     }
 
     createPathElements(this.dir_e, this.filename_e, this.ext_e, this.href);
