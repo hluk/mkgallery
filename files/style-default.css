@@ -253,7 +253,7 @@ a {
   opacity: 1; }
 
 /* preview viewed area */
-.preview .window {
+.preview .preview_window {
   border: 2px dashed red;
   background-color: rgba(255, 255, 255, 0.2);
   padding-left: 4px;

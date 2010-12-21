@@ -953,7 +953,7 @@ setPreview: function(preview)//{{{
 		img = this.preview_img = $('<img>');
 		img.appendTo(preview);
 
-        win = this.preview_win = $('<div>', {'class':'window'});
+        win = this.preview_win = $('<div>', {'class':"preview_window"});
         win.css("position", "absolute");
 		win.appendTo(preview);
 
