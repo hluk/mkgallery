@@ -86,7 +86,7 @@ config_strict = { // -- these can't be overridden in URL
  *
  */
 var list_keys = ["KP5","5","l"];
-var help_keys = ["S-?","?","h"];
+var help_keys = ["S-?","?","h","F1"];
 var option_keys = ["c", "S-p"];
 var exit_keys = ["Escape","Enter","Space"];
 controls = {
@@ -168,7 +168,7 @@ Help: [
 
 Options: [
     [option_keys.concat(exit_keys), modeDrop],
-    ["Enter", saveOptions, "Save options"],
+    ["Enter", saveOptions],
     // disable item list and help
     [list_keys, ""],
     [help_keys, ""]

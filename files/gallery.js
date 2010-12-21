@@ -152,32 +152,26 @@ function createPathElements(dir_e, filename_e, ext_e, path) {//{{{
 }//}}}
 
 // disable/enable keyboard shortcuts//{{{
-var keysdisabled = false;
-var onescapekeysdisabled;
-
-function disableKeys (onescape)
-{
-    keysdisabled = true;
-    onescapekeysdisabled = onescape;
-}
-
-function enableKeys ()
-{
-    keysdisabled = false;
-    onescapekeysdisabled = null;
-}
+// this functions should be defined later
+function disableKeys (override_key_functions) {}
+function enableKeys () {}
+function overrideKeys (override_key_functions) {}
 //}}}
 
 //! \class Items
 //{{{
-var Items = function (ls, max_page_items) { this.init(ls, max_page_items); };
+var Items = function (list, max_page_items) {
+    this.items = [];
+    if (list) {
+        this.setItems(list, max_page_items);
+    }
+}
 
 Items.prototype = {
-init: function (ls, max_page_items)//{{{
+setItems: function(ls, max_page_items)//{{{
 {
-	var items, item, i, len, pg;
+	var item, i, len;
 
-    this.ls = [];
     this.pages = 1;
 	for(i=0, len=0; i<ls.length; i+=1) {
 		item = ls[i];
@@ -196,14 +190,13 @@ init: function (ls, max_page_items)//{{{
 		} else if (item.length < 2) {
 			item.push({});
 		}
-        this.add(item[0], item[1]);
+        this.append(item[0], item[1]);
 	}
-	this.len = len;
 },//}}}
 
 length: function()//{{{
 {
-	return this.ls.length;
+	return this.items.length;
 },//}}}
 
 get: function(i)//{{{
@@ -211,7 +204,7 @@ get: function(i)//{{{
     var res, key;
 
     if ( i < this.length() ) {
-        res = this.ls[i];
+        res = this.items[i];
         if ( storage && res[0].search(/^data:[a-z]+\/[a-z]+;/) === 0 ) {
             // get data URL from localStorage
             key = res[0].split(';:');
@@ -227,32 +220,37 @@ get: function(i)//{{{
 page: function(i)//{{{
 {
 	if ( i>=0 && i<this.length() ) {
-		return this.ls[i][1].page_;
+		return this.items[i][1].page_;
 	}
 	return -1;
 },//}}}
 
 shuffle: function ()//{{{
 {
-    var tmp, ls, i, j;
+    var items, tmp, i, j;
+    items = this.items;
 
     i = this.length();
-    ls = this.ls;
     while(i>0) {
         j = Math.floor( Math.random() * i );
         i -= 1;
-        tmp = ls[j];
-        ls[j] = ls[i];
-        ls[i] = tmp;
+        tmp = items[j];
+        items[j] = items[i];
+        items[i] = tmp;
     }
 },//}}}
 
-add: function (url, props)//{{{
+clear: function ()//{{{
+{
+    this.items = [];
+},//}}}
+
+append: function (url, props)//{{{
 {
     var p = props ? props : {};
     p.page_ = this.pages;
 
-    this.ls.push( [url, p] );
+    this.items.push( [url, p] );
 }//}}}
 
 };
@@ -299,15 +297,12 @@ add: function (url, props)//{{{
 //! \class ImageView
 //! \implements ItemView
 //{{{
-var ImageView = function (imgpath, parent) { this.init(imgpath, parent); };
-
-ImageView.prototype = {
-init: function (imgpath, parent)//{{{
-{
+var ImageView = function (imgpath, parent) {
     this.path = imgpath;
     this.parent = parent;
-},//}}}
+};
 
+ImageView.prototype = {
 type: function ()//{{{
 {
     return "image";
@@ -315,8 +310,7 @@ type: function ()//{{{
 
 show: function ()//{{{
 {
-    var view, e, use_canvas, use_embed;
-    view = this;
+    var self, e, use_canvas, use_embed;
 
     if ( this.e ) {
         return;
@@ -354,14 +348,15 @@ show: function ()//{{{
     if ( !this.img && !use_embed ) {
         e = this.img = $("<img>");
     }
+    self = this;
     if ( !use_embed ) {
         e.load( function () {
-            view.parent.onUpdateStatus(null);
+            self.parent.onUpdateStatus(null);
 
-            view.orig_width = view.width = this.width ? this.width : this.naturalWidth;
-            view.orig_height = view.height = this.height ? this.height : this.naturalHeight;
+            self.orig_width = self.width = this.width ? this.width : this.naturalWidth;
+            self.orig_height = self.height = this.height ? this.height : this.naturalHeight;
 
-            view.onLoad();
+            self.onLoad();
         } );
     }
     e.attr( "src", esc(this.path) );
@@ -434,16 +429,13 @@ thumbnailOnLoad: function (error){}
 //! \class VideoView
 //! \implements ItemView
 //{{{
-var VideoView = function (vidpath, parent) { this.init(vidpath, parent); };
-
-VideoView.prototype = {
-init: function (vidpath, parent)//{{{
-{
+var VideoView = function (vidpath, parent) {
     this.path = vidpath;
     this.parent = parent;
     this.zoom_factor = 1;
-},//}}}
+};
 
+VideoView.prototype = {
 type: function ()//{{{
 {
     return "video";
@@ -451,8 +443,7 @@ type: function ()//{{{
 
 show: function ()//{{{
 {
-    var view, e, p;
-    view = this;
+    var self, e, p;
     p = this.parent;
 
     if ( this.e ) {
@@ -478,20 +469,21 @@ show: function ()//{{{
 		e.bind( "ended", function () {p.onNext();} );
     }
 
+    self = this;
     e.bind('canplay', function () {
         var s, m;
 
-        view.parent.onUpdateStatus(null);
+        self.parent.onUpdateStatus(null);
 
-        view.orig_width  = view.width = this.videoWidth;
-        view.orig_height = view.height = this.videoHeight;
-		view.duration = this.duration/60;
+        self.orig_width  = self.width = this.videoWidth;
+        self.orig_height = self.height = this.videoHeight;
+		self.duration = this.duration/60;
 		s = Math.floor(this.duration);
 		m = Math.floor(s/60);
 		s = ""+(s-m*60);
-		view.duration = m+":"+(s.length === 1 ? "0" : "")+s;
+		self.duration = m+":"+(s.length === 1 ? "0" : "")+s;
 
-        view.onLoad();
+        self.onLoad();
     } );
     e.error( this.parent.onUpdateStatus.bind( this.parent, "Unsupported format!", ".error" ) );
 
@@ -608,18 +600,15 @@ thumbnailOnLoad: function (error){}
 //! \class FontView
 //! \implements ItemView
 //{{{
-var FontView = function (itempath, parent) { this.init(itempath, parent); };
-
-FontView.prototype = {
-init: function (itempath, parent)//{{{
-{
+var FontView = function (itempath, parent) {
     this.path = itempath;
     this.parent = parent;
     this.zoom_factor = 1;
     this.font = this.path.replace(/[^a-zA-Z0-9_]+/g,'_');
 	this.width = this.height = 0;
-},//}}}
+};
 
+FontView.prototype = {
 type: function ()//{{{
 {
     return "font";
@@ -627,7 +616,7 @@ type: function ()//{{{
 
 show: function ()//{{{
 {
-    var e, view;
+    var self, e;
 
     if (this.e) {
         return;
@@ -641,14 +630,14 @@ show: function ()//{{{
     e.css("font-family",this.font);
 
     // disable keyboard navigation when textarea focused
-    view = this;
     e.focus( function () {
-        disableKeys( e.blur.bind(e) );
+        disableKeys( [["ESCAPE", this.blur.bind(this)]] );
     } );
+    self = this;
     e.blur( function () {
-        view.parent.onFontTextChange(this.value);
+        self.parent.onFontTextChange(this.value);
         enableKeys();
-        view.updateHeight();
+        self.updateHeight();
     } );
 
     e.appendTo(this.parent.e);
@@ -721,17 +710,17 @@ zoom: function (how)//{{{
 
 updateHeight: function ()//{{{
 {
-    var view, e;
+    var self, e;
     // FIXME: better solution
-    view = this;
     e = this.e;
     e.hide();
     e.css("height","50%");
+    self = this;
     window.setTimeout(
         function (){
             e.show();
-            e.css("height",e[0].scrollHeight+"px");
-            view.parent.center(e.innerHeight());
+            e.css("height", e[0].scrollHeight + "px");
+            self.parent.center(e.innerHeight());
         },10);
 },//}}}
 
@@ -744,16 +733,13 @@ thumbnailOnLoad: function (error){}
 //! \class HTMLView
 //! \implements ItemView
 //{{{
-var HTMLView = function (itempath, parent) { this.init(itempath, parent); };
-
-HTMLView.prototype = {
-init: function (itempath, parent)//{{{
-{
+var HTMLView = function (itempath, parent) {
     this.path = itempath;
     this.parent = parent;
 	this.width = this.height = 0;
-},//}}}
+};
 
+HTMLView.prototype = {
 type: function ()//{{{
 {
     return "html";
@@ -761,8 +747,7 @@ type: function ()//{{{
 
 show: function ()//{{{
 {
-    var e, view;
-	view = this;
+    var self, e;
     p = this.parent;
 
     if (this.e) {
@@ -780,13 +765,14 @@ show: function ()//{{{
 
     e.appendTo(p.e);
 
+    self = this;
 	e.load( function () {
 		p.onUpdateStatus(null);
 
-		view.orig_width = view.width = this.width ? this.width : this.naturalWidth;
-		view.orig_height = view.height = this.height ? this.height : this.naturalHeight;
+		self.orig_width = self.width = this.width ? this.width : this.naturalWidth;
+		self.orig_height = self.height = this.height ? this.height : this.naturalHeight;
 
-		view.onLoad();
+		self.onLoad();
 	} );
 },//}}}
 
@@ -825,12 +811,8 @@ thumbnailOnLoad: function (error){}
 //! \class TagView
 //! \implements ItemView
 //{{{
-var TagView = function (tag, parent) { this.init(tag, parent); };
-
-TagView.prototype = {
-init: function (tag, parent)//{{{
-{
-    var e, m, props, i, tagname;
+var TagView = function (tag, parent) {
+    var e, m;
 
     // parse tagname and properties
     // format: $([.#]tagname)(['prop',val])*
@@ -848,8 +830,9 @@ init: function (tag, parent)//{{{
     }
 
     this.parent = parent;
-},//}}}
+};
 
+TagView.prototype = {
 type: function ()//{{{
 {
     return "tag";
@@ -912,14 +895,10 @@ thumbnailOnLoad: function (error){}
 //! \class ViewFactory
 //{{{
 var ViewFactory = function (parent) {
-    this.init(parent);
+    this.parent = parent;
 };
 
 ViewFactory.prototype = {
-init: function (parent) {//{{{
-      this.parent = parent;
-},//}}}
-
 newView: function (filepath) {//{{{
      var view;
 
@@ -944,29 +923,33 @@ newView: function (filepath) {//{{{
 //! \class Viewer
 //{{{
 var Viewer = function (e, preview, getConfig) {
-    this.init(e, preview, getConfig);
-};
+    var self, img, win, mousedown;
 
-Viewer.prototype = {
-init: function (e, preview, getConfig)//{{{
-{
-    var t, img, win, mousedown;
-
-    t = this;
     this.e = e;
+    self = this;
     e.mousedown( function (ev){
-                if (ev.button === 0 && t.view) {
-                    var fn = t.view.type()+'OnMouseDown';
-                    if ( t[fn] ) {
-                        t[fn]();
+                if (ev.button === 0 && self.view) {
+                    var fn = self.view.type()+'OnMouseDown';
+                    if ( self[fn] ) {
+                        self[fn]();
                         ev.preventDefault();
                     }
                 }
             } );
 
-    if (preview) {
-        this.preview = preview;
+    this.zoom_state = getConfig('zoom');
+    this.getConfig = getConfig;
+    this.viewFactory = new ViewFactory(this);
+    this.transparency = getConfig('transparency');
 
+    this.setPreview(preview);
+};
+
+Viewer.prototype = {
+setPreview: function(preview)//{{{
+{
+    this.preview = preview;
+    if (preview) {
 		img = this.preview_img = $('<img>');
 		img.appendTo(preview);
 
@@ -983,14 +966,6 @@ init: function (e, preview, getConfig)//{{{
         win.mousedown(mousedown);
         img.mousedown(mousedown);
     }
-
-    this.zoom_state = getConfig('zoom');
-
-    this.getConfig = getConfig;
-
-    this.viewFactory = new ViewFactory(this);
-
-    this.transparency = getConfig('transparency');
 },//}}}
 
 zoom: function (how)//{{{
@@ -1212,24 +1187,24 @@ center: function ()//{{{
 
 show: function (filepath)//{{{
 {
-    var v, t;
+    var self, v;
 
     if (this.view) {
         this.view.remove();
     }
 
     v = this.view = this.viewFactory.newView(filepath);
+    self = this;
     if ( v ) {
-        t = this;
         v.onLoad = function()
         {
             scrollTo(0,0);
-            t.createPreview(filepath);
-            t.zoom();
-            t.onLoad();
+            self.createPreview(filepath);
+            self.zoom();
+            self.onLoad();
 
-            if (t.transparency) {
-                v.e.css("background-color", t.transparency);
+            if (self.transparency) {
+                v.e.css("background-color", self.transparency);
             }
         };
         v.show();
@@ -1342,12 +1317,8 @@ onNext: function () {}
 
 //! \class ItemList
 //{{{
-var ItemList = function (e, items, getConfig) { this.init(e, ls, getConfig); };
-
-ItemList.prototype = {
-init: function (elem, ls, getConfig)//{{{
-{
-    var t, item, e;
+var ItemList = function (elem, items, getConfig) {
+    var self, item, e;
 
     // itemlist element
     if (!elem) {
@@ -1357,10 +1328,10 @@ init: function (elem, ls, getConfig)//{{{
     this.e = elem;
 
     // mouse down
-    t = this;
+    self = this;
     elem.mousedown( function (ev){
-                if (ev.button === 0 && t.onMouseDown) {
-                    t.onMouseDown();
+                if (ev.button === 0 && self.onMouseDown) {
+                    self.onMouseDown();
                     ev.preventDefault();
                 }
             } );
@@ -1400,8 +1371,9 @@ init: function (elem, ls, getConfig)//{{{
     this.viewFactory = new ViewFactory(this);
 
     this.getConfig = getConfig;
-},//}}}
+};
 
+ItemList.prototype = {
 length: function()//{{{
 {
 	return this.ls.length();
@@ -1414,7 +1386,7 @@ hidden: function ()//{{{
 
 addThumbnail: function (i)//{{{
 {
-    var page, item, thumb_e, filename, thumb, t;
+    var page, item, thumb_e, filename, thumb;
 
     item = this.items[i];
 	if( !item ) {
@@ -1427,7 +1399,6 @@ addThumbnail: function (i)//{{{
 
         thumb = this.viewFactory.newView(item[0]);
 
-        t = this;
         thumb.thumbnailOnLoad = function (error) {
 			if (error === true) {
 				thumb_e.remove();
@@ -1442,7 +1413,7 @@ addThumbnail: function (i)//{{{
 
 newItem: function (i,props)//{{{
 {
-    var e, item, itemname, tags, size, w, h, key, t;
+    var self, e, item, itemname, tags, size, w, h, key;
 
     // image identification
     e = this.e_ident;
@@ -1505,11 +1476,11 @@ newItem: function (i,props)//{{{
             });
 
     // mouse click event
-    t = this;
+    self = this;
     item.mouseup( function (ev) {
                 if (ev.button === 0 && !scrolling) {
-                    t.selectItem(i-1);
-                    t.submit(i);
+                    self.selectItem(i-1);
+                    self.submit(i);
                 }
             } );
 
@@ -1618,7 +1589,7 @@ createList: function()//{{{
 
 toggle: function ()//{{{
 {
-	var page, t;
+	var self, page;
 
     if ( !this.length() ) {
         return false; // no items in gallery
@@ -1632,11 +1603,11 @@ toggle: function ()//{{{
     this.e.toggleClass("focused");
 
     if ( !this.hidden() ) {
-		t = this;
+        self = this;
 		window.setTimeout(function (){
-			if ( t.selection_needs_update ) {
-				t.updateSelection();
-                t.ensureCurrentVisible();
+			if ( self.selection_needs_update ) {
+				self.updateSelection();
+                self.ensureCurrentVisible();
 			}
 		}, 100);
     }
@@ -1887,12 +1858,6 @@ onMouseDown: null
 //! \class Info
 //{{{
 var Info = function (e, getConfig) {
-    this.init(e, getConfig);
-};
-
-Info.prototype = {
-init: function (e, getConfig)//{{{
-{
     this.e = e;
     this.getConfig = getConfig;
 
@@ -1909,8 +1874,9 @@ init: function (e, getConfig)//{{{
     this.ext_e = e.find(".extension");
 
     this.props = [];
-},//}}}
+};
 
+Info.prototype = {
 updateProgress: function ()//{{{
 {
     var r, w1, w2, shadow, blur, ctx, pi, angle, x, y;
@@ -2126,7 +2092,14 @@ var keys = {};
 var keydesc;
 
 // modes
-var modes = {any:"Any", viewer:"Viewer", itemlist:"Item List", help:"Help", slideshow: "Slideshow", options: "Options"};
+var modes = {
+    any:"Any",
+    viewer:"Viewer",
+    itemlist:"Item List",
+    help:"Help",
+    slideshow:"Slideshow",
+    options:"Options"
+};
 var mode_stack = [modes.viewer];
 // mode scroll offset
 var mode_offset = {};
@@ -2174,7 +2147,8 @@ function mode (newmode)//{{{
         var pos, current_mode;
         current_mode = mode();
 
-        if (newmode in mode_stack) {
+        // newmode already on stack
+        if ( mode_stack.indexOf(newmode) >= 0 ) {
             return false;
         }
 
@@ -2689,7 +2663,38 @@ if ( userAgent() === userAgents.webkit ) {
     keycodes[109] = "Minus";
     keycodes[110] = ".";
     keycodes[111] = "/";
+    keycodes[112] = "F1";
+    keycodes[113] = "F2";
+    keycodes[114] = "F3";
+    keycodes[115] = "F4";
+    keycodes[116] = "F5";
+    keycodes[117] = "F6";
+    keycodes[118] = "F7";
+    keycodes[119] = "F8";
+    keycodes[120] = "F9";
+    keycodes[121] = "F10";
+    keycodes[122] = "F11";
+    keycodes[123] = "F12";
     keycodes[191] = "?";
+}//}}}
+
+function disableKeys (override_key_functions)//{{{
+{
+    addAllKeys( {0: override_key_functions} );
+}//}}}
+
+function enableKeys ()//{{{
+{
+    keys[0] = undefined;
+}//}}}
+
+function overrideKeys (override_key_functions)//{{{
+{
+    if (override_key_functions) {
+        addAllKeys( {1: override_key_functions} );
+    } else {
+        keys[1] = undefined;
+    }
 }//}}}
 
 function next ()//{{{
@@ -2737,15 +2742,23 @@ function keyPress (e)//{{{
         popInfo();
     }
 
-    if (keysdisabled) {
-        if ( keyname === "ESCAPE" && onescapekeysdisabled ) {
-            onescapekeysdisabled();
+    // override all keys? (see: disableKeys())
+    k = keys[0];
+    if (k) {
+        fn = k[keyname];
+        t = typeof(fn);
+        if (t === "string") {
+            eval(fn);
+            e.preventDefault();
+        } else if (t === "function") {
+            fn();
+            e.preventDefault();
         }
         return;
     }
 
     // try keys in this mode or modes.any
-    trymode_stack = [mode(), modes.any];
+    trymode_stack = [1, mode(), modes.any];
     for (i in trymode_stack) {
         k = keys[trymode_stack[i]];
         if (!k) {
@@ -2770,7 +2783,7 @@ function addKeys (newkeys, desc, fn, keymode, append)//{{{
 {
     var ekeys, k, tomod, i, modifiers, key, modekeydesc;
 
-    if (!keymode) {
+    if (keymode === undefined) {
         keymode = modes.any;
     }
 
@@ -2811,8 +2824,26 @@ function addKeys (newkeys, desc, fn, keymode, append)//{{{
     modekeydesc[desc] = k;
 }//}}}
 
+function addAllKeys (controls)//{{{
+{
+    for (m in controls) {
+        km = controls[m];
+        for (i in controls[m]) {
+            k = km[i];
+            addKeys(k[0], k[2], k[1], m);
+        }
+    }
+}//}}}
+
 function onMouseWheel (e) {//{{{
-    var delta = e.detail ? -e.detail*4 : e.wheelDelta/4;
+    var delta;
+
+    // if pointer over scrollable area
+    if (e.target.offsetHeight < e.target.scrollHeight) {
+        return;
+    }
+
+    delta = e.detail ? -e.detail*4 : e.wheelDelta/4;
     scroll(0,-delta);
     e.preventDefault();
 }//}}}
@@ -2924,14 +2955,11 @@ function stopDragScroll ()//{{{
 //}}}
 
 // GUI{{{
-function createLabel(text, e)//{{{
+function createLabel(text)//{{{
 {
-    var i;
+    var i, e;
 
-    if (!e) {
-        e = $('<div>');
-    }
-    e.addClass("label");
+    e = $("<div>", {'class':"widget label"});
 
     // replace &x with underlined character and assign x key
     i = text.indexOf('_');
@@ -2944,98 +2972,360 @@ function createLabel(text, e)//{{{
     }
 
     e.html(text);
+    e.css("cursor","pointer");
 
     return e;
 }//}}}
 
-//! \class Tabs
-//{{{
-var Tabs = function (parent) { this.init(parent); };
-
-Tabs.prototype = {
-init: function (parent)//{{{
+function createCheckBox(text, checked)//{{{
 {
-    var tabs;
+    var i, e, checkbox, label;
 
+    label = createLabel(text);
+
+    checkbox = $('<input>', {type:"checkbox", 'class':"value", checked:checked});
+
+    e = $("<div>", {'class':"widget checkbox"});
+    e.css("cursor","pointer");
+    checkbox.appendTo(e);
+    label.appendTo(e);
+
+    // clicking on option selects input text or toggles checkbox
+    label.click( function() {
+        if ( checkbox.attr('disabled') ) {
+            return;
+        }
+        checkbox.focus();
+        checkbox.attr( "checked", checkbox.is(':checked') ? 0 : 1 );
+    } );
+
+    checkbox.focus( function() {
+        overrideKeys( [
+            ["SPACE", function() {
+                checkbox.attr( "checked", checkbox.is(':checked') ? 0 : 1 );
+            }]
+        ] );
+        e.addClass('focused');
+        $(this).addClass('focused');
+    } );
+    checkbox.blur( function() {
+        overrideKeys();
+        e.removeClass('focused');
+        $(this).removeClass('focused');
+    } );
+
+    return e;
+}//}}}
+
+function createTextEdit(label_text, text, multiline)//{{{
+{
+    var i, e, edit, label;
+
+    label = createLabel(label_text);
+
+    if (multiline) {
+        edit = $("<textarea>", {"class":"textedit"});
+        // preferred size
+        edit.change( function () {
+            var i, j, l, cols, text;
+
+            text = edit.attr("value");
+            cols = 0;
+            l = text.length;
+            for(i=0,j=0; i<l; ++i) {
+                if (text[i]==='\n' || i===l-1) {
+                    if (i-j > cols) {
+                        cols = i-j;
+                    }
+                    j=i;
+                }
+            }
+            edit.attr( "cols", cols+1 );
+
+            if (this.scrollHeight) {
+                edit.height(0);
+                edit.css( "height", (this.scrollHeight + edit.outerHeight() - edit.height()) + "px" );
+            }
+        } );
+        // HACK: if element is hidden when appended *height attributes are 0
+        edit.appendTo($("body"));
+    } else {
+        edit = $("<input>", {"class":"lineedit"});
+        //edit.css( "width", Math.min(text.length+4, 20) + 'ex' );
+        // preferred size
+        edit.change( function () {
+                edit.attr( "size", edit.attr("value").length+1 );
+        } );
+    }
+    edit.attr("value", text);
+
+    edit.addClass("value");
+    edit.change();
+
+    e = $("<div>", {'class':"widget edit"});
+    e.css("cursor","pointer");
+    label.appendTo(e);
+
+    edit.appendTo(e);
+
+    // clicking on option selects input text or toggles checkbox
+    label.click( function() {
+        if ( edit.attr('disabled') ) {
+            return;
+        }
+        edit.focus();
+    } );
+
+    edit.focus( function() {
+        disableKeys( [["ESCAPE", this.blur.bind(this)]] );
+        e.addClass('focused');
+        $(this).addClass('focused');
+    } );
+    edit.blur( function() {
+        enableKeys();
+        e.removeClass('focused');
+        $(this).removeClass('focused');
+    } );
+
+    return e;
+}//}}}
+
+//! \class ButtonBox
+//{{{
+var ButtonBox = function (parent) {
     this.parent = parent;
-    this.tabs = tabs = $("<div>", {'class': 'tabs', 'tabindex':0});
-    tabs.appendTo(parent);
+    this.e = $("<div>", {'class': "widget buttonbox"}).appendTo(parent);
 
     this.pages = $();
+};
+
+ButtonBox.prototype = {
+next: function()//{{{
+{
+    var current, e, buttons;
+    buttons = this.e.children(".button");
+    current = buttons.filter(".focused");
+    e = current.next(".button");
+    if (!e.length) {
+        e = buttons.first();
+    };
+    current.blur();
+    e.focus();
 },//}}}
 
+prev: function()//{{{
+{
+    var current, e, buttons;
+    buttons = this.e.children(".button");
+    current = buttons.filter(".focused");
+    e = current.prev(".button");
+    if (!e.length) {
+        e = buttons.last();
+    };
+    current.blur();
+    e.focus();
+},//}}}
+
+append: function (label_text, onclick)//{{{
+{
+    var self, button, buttons, e;
+    e = this.e;
+
+    tab = createLabel(label_text);
+    tab.addClass("tab");
+    tab.appendTo(this.tabs);
+
+    button = createLabel(label_text);
+    button.addClass("button");
+    button.attr("tabindex",0);
+
+    // first & last
+    buttons = e.children(".button");
+    if ( !buttons.length ) {
+        button.addClass("first");
+    }
+    buttons.filter(".last").removeClass("last");
+    button.addClass("last");
+
+    button.click(onclick);
+    button.appendTo(e);
+
+    self = this;
+    button.focus( function() {
+        var $this = $(this);
+        disableKeys([
+            ["LEFT", self.prev.bind(self)],
+            ["RIGHT", self.next.bind(self)],
+            [["ENTER","SPACE"], $this.click.bind($this)],
+            ["ESCAPE", $this.blur.bind($this)]
+        ]);
+        $this.addClass("focused");
+    } );
+    button.blur( function() {
+        enableKeys();
+        $(this).removeClass("focused");
+    } );
+
+    return tab;
+}//}}}
+};
+//}}}
+
+//! \class WidgetList
+//{{{
+var WidgetList = function (parent) {
+    this.parent = parent;
+    this.e = $("<table>", {'class': "widget widgetlist"}).appendTo(parent);
+
+    this.pages = $();
+};
+
+WidgetList.prototype = {
+next: function()//{{{
+{
+    var i = 0;
+    widgets = this.e.find(".widget .value");
+    for (i=0; i<widgets.length; ++i) {
+        if ( widgets.eq(i).hasClass("focused") ) {
+            break;
+        }
+    }
+    widgets.eq(i).blur();
+    widgets.eq(i<widgets.length ? i+1 : 0).focus();
+},//}}}
+
+prev: function()//{{{
+{
+    var i, l;
+    l = widgets.length;
+    i = 0;
+    widgets = this.e.find(".widget .value");
+    for (i=0; i<l; ++i) {
+        if ( widgets.eq(i).hasClass("focused") ) {
+            break;
+        }
+    }
+    widgets.eq(i).blur();
+    widgets.eq(i>0 && i<l ? i-1 : l-1).focus();
+},//}}}
+
+append: function (widget)//{{{
+{
+    var self, widgets, e;
+    e = this.e;
+
+    // first & last
+    widgets = e.children();
+    if ( !widgets.length ) {
+        widget.addClass("first");
+    }
+    widgets.filter(".last").removeClass("last");
+    widget.addClass("last");
+
+    widget.appendTo( $("<td>").appendTo($("<tr>").appendTo(e)) );
+
+    self = this;
+    widget.children().focus( function() {
+        var $this = $(this);
+        overrideKeys([
+            ["UP", self.prev.bind(self)],
+            ["DOWN", self.next.bind(self)],
+        ]);
+        self.e.addClass("focused");
+        $this.addClass("focused");
+    } );
+    widget.children().blur( function() {
+        overrideKeys();
+        self.e.removeClass("focused");
+        $(this).removeClass("focused");
+    } );
+
+    return widget;
+}//}}}
+};
+//}}}
+
+//! \class Tabs
+//{{{
+var Tabs = function (parent) {
+    this.parent = parent;
+    this.e = $("<div>", {'class': "widget tabs", 'tabindex':0}).appendTo(parent);
+
+    this.pages = $();
+};
+
+Tabs.prototype = {
 next: function()//{{{
 {
     var current, e, tabs;
-    tabs = this.tabs.children(".tab");
+    tabs = this.e.children(".tab");
     current = tabs.filter(".current");
     e = current.next(".tab");
     if (!e.length) {
         e = tabs.first();
     };
+    current.blur();
     e.click();
 },//}}}
 
 prev: function()//{{{
 {
     var current, e, tabs;
-    tabs = this.tabs.children(".tab");
+    tabs = this.e.children(".tab");
     current = tabs.filter(".current");
     e = current.prev(".tab");
     if (!e.length) {
         e = tabs.last();
     };
+    current.blur();
     e.click();
 },//}}}
 
 append: function (tabname, page)//{{{
 {
-    var t, tab;
+    var self, tab;
 
     tab = createLabel(tabname);
     tab.addClass("tab");
-    tab.appendTo(this.tabs);
+    tab.appendTo(this.e);
 
     page.hide();
     this.pages = this.pages.add(page);
 
-    t = this;
+    self = this;
     tab.click( function(){
         var i, to_show, tabs;
-        tabs = t.tabs.children(".tab");
+        tabs = self.e.children(".tab");
         to_show = !page.is(":visible");
 
         tabs.removeClass("current");
-        t.pages.hide();
+        self.pages.hide();
 
         if (to_show) {
             page.show();
             tab.addClass("current");
         }
     } );
-    this.tabs.children(".tab").first().click();
+    this.e.children(".tab").first().click();
 
     return tab;
 }//}}}
-
 };
 //}}}
 
-//! \class Dialog
+//! \class Window
 //{{{
-var Dialog = function (e) { this.init(e); };
-
-Dialog.prototype = {
-init: function (e)//{{{
-{
+var Window = function (e) {
     this.e = e;
-    e.addClass("dialog");
+    e.addClass("window");
 
     // close button
     $("<div>", {'class':'close', 'html':'&#8855', 'tabindex':0}).css('cursor','pointer').click(modeDrop).appendTo(e);
 
     this.pages = $();
-},//}}}
+};
+
+Window.prototype = {
 };
 //}}}
 //}}}
@@ -3121,13 +3411,7 @@ function createNavigation ()//{{{
 
     // user controls
     if (controls) {
-        for (m in controls) {
-            km = controls[m];
-            for (i in controls[m]) {
-                k = km[i];
-                addKeys(k[0],k[2],k[1],m);
-            }
-        }
+        addAllKeys(controls);
         controls = {};
     }
 }//}}}
@@ -3208,7 +3492,6 @@ function toggleHelp_()//{{{
         if (!help.length) {
             return false;
         }
-        help = new Dialog(help).e;
         createHelp(help);
     }
 
@@ -3231,13 +3514,13 @@ function saveOptions ()//{{{
             var t, which, value, orig_value;
             t = $(this);
 
-            value = t.children('.value');
+            value = t.find('.value');
             if ( value.attr('type') === 'checkbox' ) {
                 value = value.is(':checked')?1:0;
             } else {
                 value = value.val();
             }
-            which = t.children('.which').text();
+            which = t.attr("title");
 
             delete vars[which];
             orig_value = getConfig(which);
@@ -3263,17 +3546,17 @@ function generateConfig ()//{{{
             var t, which, value;
             t = $(this);
 
-            value = t.children('.value');
-            if ( value.attr('type') === 'checkbox' ) {
-                value = value.is(':checked');
+            value = t.find(".value");
+            if ( value.attr("type") === "checkbox" ) {
+                value = value.is(":checked");
             } else {
                 value = value.val();
-                if ( typeof(value) === 'string' ) {
+                if ( typeof(value) === "string" ) {
                     // escape single quotes and backslash
                     value = "'" + value.replace(/(\\|')/g,"\\$1") + "'";
                 }
             }
-            which = t.children('.which').text();
+            which = t.attr("title");
 
             content += '  ' + which + ': ' + value + ',\n';
         } );
@@ -3297,6 +3580,11 @@ function createOptions(e)//{{{
 
     cats = {};
     for (i in configs) {
+        // don't change values in config_strict
+        if ( i in config_strict ) {
+            continue;
+        }
+
         conf = configs[i];
         if (conf.length != 3) {
             continue;
@@ -3306,59 +3594,26 @@ function createOptions(e)//{{{
             continue;
         }
 
-        if( !cats[catname] ) {
-            cats[catname] = cat = $("<div>", {'class': "category"});
-            cat.appendTo(e);
-            cat.hide();
-            tabs.append(catname, cat);
-        }
         cat = cats[catname];
-
-        opt = $("<div>", {'class': "option"});
-        opt.appendTo(cat);
+        if(!cat) {
+            cats[catname] = cat = new WidgetList(e);
+            cat.e.hide();
+            tabs.append(catname, cat.e);
+        }
 
         value = getConfig(i);
 
         // input: text edit OR checkbox
         if ( typeof(value) === "boolean" ) {
-            input = $('<input>', {type:'checkbox', 'class': "value", checked: value});
+            opt = createCheckBox(conf[2], value);
         } else {
             // use textarea when the text has more than 40 characters
-            if( typeof(value) === "string" && value.length > 40  ) {
-                input = $('<textarea>');
-            } else {
-                input = $('<input>');
-            }
-            input.attr({'class': "value", 'value': value});
-            input.width( Math.min((value+"  ").length, 20) + 'ex');
+            opt = createTextEdit(conf[2], value, typeof(value) === "string" && value.length > 40);
         }
-
-        // description
-        desc = createLabel(conf[2]);
-        desc.addClass("desc");
-        desc.click( (function(){
-                if ( this.attr('disabled') ) {
-                    return;
-                }
-                this.focus();
-                this.attr('checked', !this.attr('checked'));
-            }).bind(input) );
-        desc.appendTo(opt);
-
-        // don't change values in config_strict
-        if ( i in config_strict ) {
-            input.attr('disabled', 'yes');
-        }
-        input.appendTo(opt);
-
-        $('<div>', {'class': "which", text: i}).appendTo(opt);
+        opt.addClass("option");
+        opt.attr("title", i);
+        cat.append(opt);
     }
-
-    // clicking on option selects input text or toggles checkbox
-    $('.option').click( function() {
-        input = $(this).children('input');
-        input.focus();
-    } );
 
     // config.js contents
     cat = $('<p>', {'class': 'config'});
@@ -3373,44 +3628,17 @@ function createOptions(e)//{{{
         '<p>Each entry contains '+
         '<span class="emph">brief description</span>, '+
         '<span class="emph">current option value</span> and '+
-        '<span class="emph">keyword</span> used in URL or the configuration file to set the option.</p>'+
+        '<span class="emph">keyword</span> (hover mouse pointer over an option) used in URL or the configuration file to set the option.</p>'+
         '<p>To make changes permanent press <span class="emph">Copy</span> button and save the text in configuration file <span class="code">config.js</span>.</p>'
     }).hide().appendTo(e);
 
     // buttons
-    box = $('<div>', {'class':'buttonbox'});
-    box.appendTo(e);
+    box = new ButtonBox(e);
 
-    button = createLabel("_H", $('<input>', {type:'submit','class':'button','value':'Help'}));
-    button.addClass("button");
-    button.click( function(){desc.is(":visible") && desc.slideUp() || desc.slideDown()} );
-    button.appendTo(box);
-
-    button = createLabel("_C", $('<input>', {type:'submit','class':'button','value':'Cancel'}));
-    button.addClass("button");
-    button.click( function(){$(this).blur(); modeDrop();} );
-    button.appendTo(box);
-
-    button = createLabel("_p", $('<input>', {type:'submit','class':'button','value':'Copy'}));
-    button.addClass("button");
-    button.click( function(){$(this).blur(); generateConfig();} );
-    button.appendTo(box);
-
-    button = createLabel("_S", $('<input>', {type:'submit','class':'button','value':'Save'}));
-    button.addClass("button");
-    button.click( function(){$(this).blur(); saveOptions();} );
-    button.appendTo(box);
-
-	// disable keys when navigation element is focused
-	input = $('textarea, input, .button');
-    input.focus( function() {
-        disableKeys( this.blur.bind(this) );
-        $(this).parent().addClass('focused');
-    } );
-    input.blur( function() {
-        enableKeys();
-        $(this).parent().removeClass('focused');
-    } );
+    box.append( "_Save",   function(){$(this).blur(); saveOptions();} );
+    box.append( "_Cancel", function(){$(this).blur(); modeDrop();} );
+    box.append( "Co_py",   function(){$(this).blur(); generateConfig();} );
+    box.append( "_Help",   function(){desc.is(":visible") && desc.slideUp() || desc.slideDown()} );
 }//}}}
 
 function toggleOptions_()//{{{
@@ -3421,7 +3649,6 @@ function toggleOptions_()//{{{
         if (!options.length) {
             return false;
         }
-        options = new Dialog(options).e;
         createOptions(options);
     }
 
@@ -3554,10 +3781,10 @@ function onLoad()//{{{
 {
     var e, preview;
 
-	if ( ls.length === 0 ) {
+	//if ( ls.length === 0 ) {
 		//alert("No items in gallery!");
         //return;
-	}
+	//}
 
     b = $('body');
 
@@ -3573,8 +3800,9 @@ function onLoad()//{{{
         restoreItems();
     }
 
+    // shuffle items
     if ( getConfig('shuffle') ) {
-        ls.shuffle(); // shuffle items
+        ls.shuffle();
     }
 
     // viewer on nth item
@@ -3642,5 +3870,8 @@ function onLoad()//{{{
         });
         window.addEventListener('drop', fileDropped, false);
     }
+
+    // windows
+    $(".window").each( function() {new Window($(this))} );
 }//}}}
 

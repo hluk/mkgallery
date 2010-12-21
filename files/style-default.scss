@@ -36,10 +36,10 @@ $view_bg: white;
 $widget_fg: white;
 $widget_bg: rgba(0,0,0,0.5);
 // hover
-$widget_hover_bg: rgba(0,100,200,0.6);
+$widget_hover_bg: rgba(100,160,200,0.6);
 $widget_hover_fg: white;
 // selected
-$widget_selected_bg: rgba(100,160,200,0.6);
+$widget_selected_bg: rgba(0,100,200,0.6);
 $widget_selected_fg: black;
 
 $factor: 0.75;
@@ -111,7 +111,132 @@ body {
     overflow: hidden; /* no scrollbars */
 }
 
+input, .tabs, .button, .close {outline: 0}
 a {font-weight: inherit; color: inherit; font-size: inherit; font-family: inherit;}
+
+// widgets// {{{
+.label {
+    color: #ddd;
+    display: inline;
+    font-size: 0.8em;
+    margin-right: 1em;
+}
+.focused .label {color: white}
+.buttonbox {
+    width: 100%;
+    text-align: right;
+    margin-bottom: 20px;
+	background-color: rgba(160,160,160,0.1);
+}
+.button {
+    cursor: pointer;
+
+	display: inline;
+
+    font-size: 0.8em;
+	text-align: center;
+
+	margin-right: 1em;
+	padding-left: 1em;
+	padding-right: 1em;
+
+	background-color: #666;
+    text-shadow: black 1px 1px 2px;
+	border: 3px solid #333;
+	border-top: 3px solid #aaa;
+	border-left: 3px solid #aaa;
+    @include rounded(2px);
+}
+.button:hover,
+.button:focus {
+    background-color: #888;
+    text-shadow: #222 3px 3px 2px;
+	border: 3px solid #aaa;
+	border-top: 3px solid #333;
+	border-left: 3px solid #333;
+}
+.buttonbox .button.first {
+    @include rounded(1em, top, left);
+    @include rounded(1em, bottom, left);
+}
+.buttonbox .button.last {
+    @include rounded(1em, top, right);
+    @include rounded(1em, bottom, right);
+}
+.textedit, .lineedit {
+    font-family: $font_mono;
+    font-size: 11pt;
+}
+.lineedit {
+    min-width:6ex;
+    max-width:80ex;
+}
+.textedit {
+    display:block;
+    min-width:40ex;
+    max-width:80ex;
+    min-height:2em;
+    max-height:20em;
+}
+.tabs:focus .tab.current {
+    color: white;
+    background-color: $widget_selected_bg;
+}
+.tabs .label {
+    font-size: 12pt;
+    color: gray;
+}
+.tab {
+    display: inline;
+    padding: 0.3em;
+    margin: 0.2em;
+
+    border: 2px solid transparent;
+    border-bottom: 2px solid transparent;
+}
+.tab.current {
+    color: white;
+
+    border-bottom: 2px solid white;
+    background-color:rgba(255,255,255,0.2);
+
+    @include rounded(0.6em, top, left);
+    @include rounded(0.6em, top, right);
+
+    color: white;
+}
+.widgetlist {
+    margin:auto;
+    padding: 1em;
+}
+.widgetlist tr {
+    text-align: left;
+}
+.widgetlist tr:nth-child(even) {
+    background-color:rgba(255,255,255,0.1);
+}
+.window.focused {display: block;}
+.window {
+	color: white;
+    font-family: $font_help;
+	font-size: 14pt;
+
+	display: none;
+	z-index: 3; /* on top */
+
+	position: absolute;
+	top: 0;
+	left: 0;
+    width: 80%;
+	margin: 10%;
+	margin-top: 2%;
+
+	background: rgba(0,0,0,0.7);
+    @include rounded(20px);
+
+    text-align: center;
+}
+// }}}
 
 /* title page {{{*/
 #title_page {
@@ -417,26 +542,6 @@ a {font-weight: inherit; color: inherit; font-size: inherit; font-family: inheri
     color: white;
     text-shadow: #ddd 0 0 7px;
 }
-.dialog {
-	color: white;
-    font-family: $font_help;
-	font-size: 14pt;
-
-	display: none;
-	z-index: 3; /* on top */
-
-	position: absolute;
-	top: 0;
-	left: 0;
-    width: 80%;
-	margin: 10%;
-	margin-top: 2%;
-
-	background: rgba(0,0,0,0.7);
-    @include rounded(20px);
-
-    text-align: center;
-}
 .help p {text-align: left;}
 p {
     font-family: $font_text;
@@ -471,33 +576,18 @@ h3 {
 	border-bottom: 2px solid #bbb;
     margin-bottom: 0.5em;
 }
-.tab {
-    display: inline;
-    padding: 0.3em;
-    margin: 5px;
-    color: gray;
-
-    border-bottom: 2px solid transparent;
-}
-.tab.current {
-    color: white;
-
-    border-bottom: 2px solid white;
-    background-color:rgba(255,255,255,0.2);
-
-    @include rounded(0.6em, top, left);
-    @include rounded(0.6em, top, right);
-
-    color: white;
-}
-.dialog.focused {display: block;}
 .category {
-	text-align: left;
     display: inline-block;
+    vertical-align: top;
+	text-align: left;
 	padding: 1em;
 }
 .keyhint {text-decoration: underline;}
 .key {}
+.keys .desc {
+    display:inline;
+    font-size: 0.8em;
+}
 .keys .which {
 	display: inline;
 	display: inline-block;
@@ -525,18 +615,6 @@ h3 {
     border-top: 2px dashed rgba(255,255,255,0.1);
 }
 .logo {float: right; margin: 1em 2em;}
-.options .which {
-    display: inline;
-    float:right;
-	color: gray;
-
-    font-family: $font_mono;
-	font-size: 0.75em;
-	text-align: right;
-
-    margin-left: 1em;
-    padding: 0 0.1em;
-}
 .options .config {
     width: 70%;
     text-align: left;
@@ -547,13 +625,19 @@ h3 {
     width: 100%;
     height: 10em;
 }
+.options .value {
+    background-color: #444;
+    color: #ddd;
+    border: 1px solid black;
+    @include rounded(4px);
+}
+.options .option.focused .value {
+    background-color: #ddd;
+    color: black;
+}
 .about .category {margin: 1em;}
 .about .which {color: #ff8;}
-.desc {display: inline; font-size: 0.8em;}
 
-.option:nth-child(even) {
-    background-color:rgba(255,255,255,0.1);
-}
 .option {
     padding: 0 0.5em;
     margin-bottom: 4px;
@@ -561,45 +645,10 @@ h3 {
 }
 .option.focused {
     border-left: 10px solid white;
-    background-color:rgba(255,255,255,0.2);
+    background-color: $widget_selected_bg;
 }
 .value {
-    margin-left: 1em;
     border:2px solid transparent;
-}
-.buttonbox {
-    width: 100%;
-    text-align: right;
-    margin-bottom: 20px;
-	background-color: rgba(160,160,160,0.1);
-}
-.button {
-    cursor: pointer;
-
-	display: inline;
-
-    font-size: 0.8em;
-	text-align: right;
-
-	margin: 1em;
-	padding-left: 1em;
-	padding-right: 1em;
-	width: 12ex;
-	text-align: center;
-
-	background-color: #aaa;
-	color: black;
-    text-shadow: white 1px 1px 2px;
-	border: 2px solid gray;
-	border-top: 2px solid white;
-	border-left: 2px solid white;
-    @include rounded(4px);
-}
-.button:hover,
-.button:focus {
-	border: 2px solid white;
-	border-top: 2px solid gray;
-	border-left: 2px solid gray;
 }
 /*}}}*/
 
