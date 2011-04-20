@@ -39,7 +39,7 @@ $widget_bg: rgba(0,0,0,0.5);
 $widget_hover_bg: rgba(100,160,200,0.6);
 $widget_hover_fg: white;
 // selected
-$widget_selected_bg: rgba(0,100,200,0.6);
+$widget_selected_bg: rgba(50,150,255,0.7);
 $widget_selected_fg: black;
 
 $factor: 0.75;
@@ -102,6 +102,11 @@ $thumbnail_bg: $thumbnail_selected_bg*$factor;
     -moz-box-shadow: $shadow;
     -o-box-shadow: $shadow;
 }
+
+@mixin selection() {
+    /* animate cursor movement */
+    @include transitions("opacity .5s ease-in-out, background-color .5s ease-in-out, left .06s ease-in-out, top .06s ease-in-out, width .06s ease-in-out, height .06s ease-in-out");
+}
 // }}}
 
 body {
@@ -111,17 +116,21 @@ body {
     overflow: hidden; /* no scrollbars */
 }
 
-input, .tabs, .button, .close {outline: 0}
+.tabs, .button, .close {outline: 0}
+input, textarea {outline-color: white}
 a {font-weight: inherit; color: inherit; font-size: inherit; font-family: inherit;}
+pre {
+    display:inline;
+    font-size:0.85em;
+    color: $fg + #006;
+}
 
 // widgets// {{{
 .label {
     color: #ddd;
     display: inline;
     font-size: 0.8em;
-    margin-right: 1em;
 }
-.focused .label {color: white}
 .buttonbox {
     width: 100%;
     text-align: right;
@@ -150,6 +159,7 @@ a {font-weight: inherit; color: inherit; font-size: inherit; font-family: inheri
 .button:hover,
 .button:focus {
     background-color: #888;
+    color: white;
     text-shadow: #222 3px 3px 2px;
 	border: 3px solid #aaa;
 	border-top: 3px solid #333;
@@ -163,24 +173,23 @@ a {font-weight: inherit; color: inherit; font-size: inherit; font-family: inheri
     @include rounded(1em, top, right);
     @include rounded(1em, bottom, right);
 }
-.textedit, .lineedit {
+.multilineedit, .lineedit {
     font-family: $font_mono;
     font-size: 11pt;
 }
 .lineedit {
     min-width:6ex;
-    max-width:80ex;
+    max-width:100%;
 }
-.textedit {
+.multilineedit {
     display:block;
     min-width:40ex;
-    max-width:80ex;
+    max-width:100%;
     min-height:2em;
-    max-height:20em;
+    max-height:40em;
 }
 .tabs:focus .tab.current {
     color: white;
-    background-color: $widget_selected_bg;
 }
 .tabs .label {
     font-size: 12pt;
@@ -188,53 +197,71 @@ a {font-weight: inherit; color: inherit; font-size: inherit; font-family: inheri
 }
 .tab {
     display: inline;
+
+    /* don't put tab on multiple lines */
+    display: inline-block;
+    white-space: nowrap;
+
     padding: 0.3em;
     margin: 0.2em;
-
-    border: 2px solid transparent;
-    border-bottom: 2px solid transparent;
 }
 .tab.current {
     color: white;
-
-    border-bottom: 2px solid white;
-    background-color:rgba(255,255,255,0.2);
+}
+.tabs .selection {
+    @include selection();
 
     @include rounded(0.6em, top, left);
     @include rounded(0.6em, top, right);
 
-    color: white;
+    border-bottom: 2px solid white;
+    background-color:rgba(255,255,255,0.2);
+}
+.tabs:focus .selection {
+    background-color: $widget_selected_bg;
 }
 .widgetlist {
     margin:auto;
     padding: 1em;
-}
-.widgetlist tr {
     text-align: left;
 }
-.widgetlist tr:nth-child(even) {
+.widgetlist .widgetlistitem:nth-child(even) {
     background-color:rgba(255,255,255,0.1);
 }
-.window.focused {display: block;}
+.widgetlistitem {
+    padding:0 0.5em;
+    margin: 0.3em;
+}
+.widgetlistitem.focused .label {
+    color: white;
+}
+.widgetlist .selection {
+    @include selection();
+
+    opacity: 0;
+    background-color: $widget_selected_bg;
+}
+.widgetlist.focused .selection {
+    opacity: 1;
+}
 .window {
 	color: white;
     font-family: $font_help;
 	font-size: 14pt;
 
-	display: none;
 	z-index: 3; /* on top */
 
-	position: absolute;
-	top: 0;
-	left: 0;
+    position: absolute;
     width: 80%;
-	margin: 10%;
-	margin-top: 2%;
+    margin: 10%;
+    margin-top: 2%;
 
 	background: rgba(0,0,0,0.7);
     @include rounded(20px);
 
     text-align: center;
+
+    @include transitions("opacity .5s ease-in-out");
 }
 // }}}
 
@@ -309,7 +336,7 @@ a {font-weight: inherit; color: inherit; font-size: inherit; font-family: inheri
 .modeSlideshow .preview:hover {opacity: 1;}
 
 /* preview viewed area */
-.preview .window {
+.preview .preview_window {
     border: 2px dashed red;
     background-color: rgba(255,255,255,0.2);
 
@@ -427,18 +454,17 @@ a {font-weight: inherit; color: inherit; font-size: inherit; font-family: inheri
 
 	min-width: 150px;
 }
-.item, .selection, .pagenav {
+.item, #itemlist .selection, .pagenav {
     @include rounded(8px);
 }
 .item:hover, .pagenav:hover {
     background-color: $widget_hover_bg;
 }
-.selection {
+#itemlist .selection {
+    @include selection();
+
 	z-index: -2;
 	background-color: $widget_selected_bg;
-
-    /* animate cursor movement */
-    @include transitions("left .1s ease-in-out, top .1s ease-in-out, width .1s ease-in-out, height .1s ease-in-out");
 }
 
 .itemident {
@@ -559,6 +585,7 @@ p {
 
 h1, h2, h3 {
     font-family: $font_header;
+    text-shadow: black 0px 0px 1px;
 }
 h1 {
 	font-size: 2.5em;
@@ -621,9 +648,16 @@ h3 {
     padding-left: 0;
     margin: 2em auto;
 }
-.options .config textarea {
+.info, #copybox {
+    @include transitions("height 1s ease-in-out");
+}
+#copybox {
     width: 100%;
-    height: 10em;
+    text-align: left;
+}
+#copybox textarea {
+    width: 100%;
+    max-width: 100%;
 }
 .options .value {
     background-color: #444;
@@ -638,15 +672,6 @@ h3 {
 .about .category {margin: 1em;}
 .about .which {color: #ff8;}
 
-.option {
-    padding: 0 0.5em;
-    margin-bottom: 4px;
-    border-left: 10px solid transparent;
-}
-.option.focused {
-    border-left: 10px solid white;
-    background-color: $widget_selected_bg;
-}
 .value {
     border:2px solid transparent;
 }

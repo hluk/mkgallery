@@ -1,24 +1,8 @@
-/*
- * \section caching Caching
- * \par
- * When opened (on any item) the gallery browser should use cache only to store the currently viewed item (i.e. item list is not created and no items are preloaded).
- *
- * \par
- * Navigating to another image will preload images. The number of preloaded images is at most the value of config['preload_images'] (user defined; zero if not defined).
- *
- * \see preloadImages
- *
- *\par
- * When the item list is opened for the first time, it starts to load thumbnails. User needs to reopen the item list to refresh thumbnails which weren't loaded yet.
- *
- * see: ItemList::toggle
- *
- */
-
 /*jslint evil: true, forin: true, onevar: true, undef: true, nomen: true, eqeqeq: true, plusplus: true, bitwise: true, newcap: true, immed: true, strict: true */
 /*global $, jQuery, window, document, navigator, location, history, escape, alert, Image*/
 
 "use strict";
+// a_function.bind(object, arg1, ...)
 Function.prototype.bind = function(thisObj, var_args) {
   var self = this;
   var staticArgs = Array.prototype.splice.call(arguments, 1, arguments.length);
@@ -31,9 +15,70 @@ Function.prototype.bind = function(thisObj, var_args) {
     return self.apply(thisObj, args);
   };
 }
+
+// console logging
 if ( window.console ) {
     var log = window.console.log.bind(window.console);
 }
+
+// class and interface construct //{{{
+// var ClassName = Class(InheritFrom1, InheritFrom2, ..., new_prototype)
+// NOTE: arguments in new_prototype.init must be variable
+function newClass(var_args) {//{{{
+    var new_class, init, proto, i, cls, cls_proto, cls_member, args;
+
+    args = arguments;
+
+    // constructor
+    init = arguments[arguments.length-1].init;
+    new_class = init ?
+        function (var_args) {init.apply(this, arguments)} :
+        function (var_args) {};
+
+    // resulting prototype
+    new_class.prototype = proto = {};
+
+    // InheritFrom
+    for(i=0; i<args.length-1; ++i) {
+        cls_proto = args[i].prototype;
+        for(cls_member in cls_proto) {
+            proto[cls_member] = cls_proto[cls_member];
+        }
+    }
+
+    // new prototype
+    cls_proto = arguments[i];
+    for(cls_member in cls_proto) {
+        proto[cls_member] = cls_proto[cls_member];
+    }
+
+    return new_class;
+}//}}}
+
+function Interface(var_args) {//{{{
+    return newClass.apply(this, arguments);
+}//}}}
+
+function Class(var_args) {//{{{
+    var cls, proto, member;
+
+    cls = newClass.apply(this, arguments);
+
+    // no members of class are undefined
+    // only interface can have undefined members
+    proto = cls.prototype;
+    for(member in proto) {
+        if ( proto[member] === undefined ) {
+            log("ERROR: a prototype has undefined members!");
+            log(proto);
+            throw "Undefined member";
+            return null;
+        }
+    }
+
+    return cls;
+}//}}}
+//}}}
 
 // DEFAULT CONFIGURATION {{{
 // option: [default value, category, description]
@@ -55,14 +100,13 @@ var configs = {
 
 	'zoom': ['1', "_Images", "Default _zoom level"],
 	'zoom_step': [0.125, "_Images", "Z_oom multiplier"],
-	'preload_images': [2, "_Images", "Number of images to pr_eload"],
     'image_on_canvas': [false, "_Images", "Use HTML5 _canvas element to draw images"],
     'max_preview_width': [15, "_Images", "Maximal preview _width in percent of window width"],
     'max_preview_height': [80, "_Images", "Maximal preview _height in percent of window height"],
 	'pop_preview_delay': [1000, "_Images", "Preview pop up delay (in milliseconds)"],
 
-    'slideshow': [false, "_Slideshow", "Slideshow mode"],
-	'slideshow_delay': [8000, "_Slideshow", "Slideshow delay"],
+    'slideshow': [false, "_Slideshow", "_Slideshow mode"],
+	'slideshow_delay': [8000, "_Slideshow", "Slideshow _delay"],
 
 	'progress_fg': ["rgba(255,200,0,0.8)", "_Progress bar appearance", "foreground color"],
 	'progress_bg': ["rgba(200,200,200,0.4)", "_Progress bar appearance", "background color"],
@@ -80,8 +124,10 @@ var configs = {
 	'autonext': [false, "_Audio/Video", "Go to _next item whed playback ends"],
 	'loop': [false, "_Audio/Video", "_Replay when playback ends"],
 
-    'reload_every': [0, "_Debug", "N_umber of items to view after the gallery if refreshed"],
-	'show_keys': [false, "_Debug", "Show pressed keys in info"],
+	'preload_views': [2, "_Debug", "Number of views to pr_eload"],
+	'preloaded_views': [2, "_Debug", "Number of preloaded views to leave in cache"],
+    'reload_every': [0, "_Debug", "N_umber of items to view after the gallery is refreshed"],
+	'show_keys': [false, "_Debug", "Show pressed keys in info (<pre>last\\_keypress\\_event</pre>, <pre>last\\_keyname</pre> variables)"],
 	'show_events': [false, "_Debug", "Show events in info"],
 
 	'n': [1, ""]
@@ -151,23 +197,16 @@ function createPathElements(dir_e, filename_e, ext_e, path) {//{{{
     }
 }//}}}
 
-// disable/enable keyboard shortcuts//{{{
-// this functions should be defined later
-function disableKeys (override_key_functions) {}
-function enableKeys () {}
-function overrideKeys (override_key_functions) {}
-//}}}
-
 //! \class Items
 //{{{
-var Items = function (list, max_page_items) {
+var Items = Class({
+init: function (list, max_page_items) {//{{{
     this.items = [];
     if (list) {
         this.setItems(list, max_page_items);
     }
-}
+},//}}}
 
-Items.prototype = {
 setItems: function(ls, max_page_items)//{{{
 {
 	var item, i, len;
@@ -252,71 +291,114 @@ append: function (url, props)//{{{
 
     this.items.push( [url, p] );
 }//}}}
-
-};
+});
 //}}}
 
 //! \interface ItemView
 //{{{
+var ItemView = Interface({
 /**
  * \fn init(itempath, parent)
  * \param itempath item filename
  * \param parent item parent (Viewer)
- *
- * \fn type()
+ */
+
+/** \fn type()
  * \return an identifier of type (e.g. "image", "font")
- *
- * \fn show()
+ */
+type: undefined,
+
+/** \fn element()
+ * \return HTML element for view (used for view preloading)
+ */
+//element: undefined,
+
+/** \fn show()
  * \return shows view in parent
- *
+ */
+show: undefined,
+
+/** \fn hide()
+ * \return hides view in parent
+ */
+hide: function()//{{{
+{
+    this.visible = false;
+    if (this.e) {
+        this.e.hide();
+    }
+},//}}}
+
+/**
  * \fn remove()
  * \return removes view from parent
- *
- * \fn thumbnail()
+ */
+remove: function ()//{{{
+{
+    var e = this.e;
+    if (e) {
+        e.remove();
+    }
+},//}}}
+
+/** \fn thumbnail()
  * \brief triggers event thumbnailOnLoad() after thumbnail loaded
  * \return an element representing the thumbnail of item
- *
- * \fn zoom(how)
+ */
+thumbnail: function ()//{{{
+{
+    var thumb = this.thumb;
+
+    if ( !thumb ) {
+        thumb = this.thumb = $('<div>', {'class': 'thumbnail ' + this.type()});
+        this.thumbnailOnLoad();
+    }
+
+    return thumb;
+},//}}}
+
+/** \fn zoom(how)
  * \param how "fit" (fit to window), "fill" (fill window), float (zoom factor), other (do nothing)
  * \return current zoom factor
- *
- * EVENTS
- *
- * \fn onZoomChange()
- * \brief event
- *
- * \fn thumbnailOnLoad()
+ */
+zoom: function(how) {return 1},
+
+/** EVENTS */
+/** \fn onLoad()
  * \brief event is triggered after view is loaded
- *
- * \fn thumbnailOnLoad()
+ */
+onLoad: function (){},
+
+/** \fn thumbnailOnLoad()
  * \brief event is triggered after thumbnail is loaded
  * \param error true if error occured
  */
+thumbnailOnLoad: function (error){}
+});
 //}}}
 
 //! \class ImageView
 //! \implements ItemView
 //{{{
-var ImageView = function (imgpath, parent) {
+var ImageView = Class(ItemView, {
+init: function (imgpath, parent) {
     this.path = imgpath;
     this.parent = parent;
-};
+},
 
-ImageView.prototype = {
 type: function ()//{{{
 {
     return "image";
 },//}}}
 
-show: function ()//{{{
+element: function()//{{{
 {
-    var self, e, use_canvas, use_embed;
+    var self, e, use_canvas;
 
-    if ( this.e ) {
-        return;
+    e = this.e
+    if (e) {
+        return e;
     }
-
-    this.parent.onUpdateStatus("loading");
 
     // don't use canvas in some cases:
     //  - user configuration
@@ -324,7 +406,11 @@ show: function ()//{{{
     use_canvas = this.parent.getConfig('image_on_canvas') &&
         this.path.search(/\.gif$/i) === -1;
 
-    if ( !use_canvas ) {
+    if ( use_canvas ) {
+        e = this.e = $("<canvas>");
+        this.img = $("<img>");
+        this.ctx = this.e[0].getContext('2d');
+    } else {
         e = this.e = this.img = $("<img>");
         this.ctx = {
             drawImage: function (img,x,y,width,height) {
@@ -335,38 +421,41 @@ show: function ()//{{{
                            e.height = height;
                        }
         };
-    } else {
-        e = this.e = $("<canvas>");
-        this.ctx = this.e[0].getContext('2d');
     }
 
-    e.css("display","block");
-    e.addClass("imageview");
-    e.appendTo(this.parent.e);
+    e.css("display","block")
+     .hide()
+     .addClass("imageview")
+     .appendTo(this.parent.e);
 
-    // image element
-    if ( !this.img && !use_embed ) {
-        e = this.img = $("<img>");
-    }
     self = this;
-    if ( !use_embed ) {
-        e.load( function () {
+    this.img.load( function () {
+        self.orig_width = self.width = this.width ? this.width : this.naturalWidth;
+        self.orig_height = self.height = this.height ? this.height : this.naturalHeight;
+        self.loaded = true;
+
+        if ( self.visible ) {
             self.parent.onUpdateStatus(null);
-
-            self.orig_width = self.width = this.width ? this.width : this.naturalWidth;
-            self.orig_height = self.height = this.height ? this.height : this.naturalHeight;
-
             self.onLoad();
-        } );
-    }
-    e.attr( "src", esc(this.path) );
+        }
+    } ).attr( "src", esc(this.path) );
+
+    return e;
 },//}}}
 
-remove: function ()//{{{
+
+show: function ()//{{{
 {
-    var e = this.e;
-    if (e) {
-        e.remove();
+    var self, e;
+
+    this.parent.onUpdateStatus("loading");
+
+    e = this.element().show();
+    this.visible = true;
+
+    if (this.loaded) {
+        this.parent.onUpdateStatus(null);
+        this.onLoad();
     }
 },//}}}
 
@@ -419,45 +508,81 @@ zoom: function (z)//{{{
 
     return this.width/this.w;
 },//}}}
-
-/* events */
-onLoad: function (){},
-thumbnailOnLoad: function (error){}
-};
+});
 //}}}
 
 //! \class VideoView
 //! \implements ItemView
 //{{{
-var VideoView = function (vidpath, parent) {
+var VideoView = Class(ItemView, {
+init: function (vidpath, parent) {
     this.path = vidpath;
     this.parent = parent;
     this.zoom_factor = 1;
-};
+},
 
-VideoView.prototype = {
 type: function ()//{{{
 {
     return "video";
 },//}}}
 
-show: function ()//{{{
+element: function()//{{{
 {
-    var self, e, p;
-    p = this.parent;
+    var self, e;
 
     if ( this.e ) {
-        return;
+        return this.e;
     }
 
+	e = this.e = $('<video>')
+        .hide()
+        .html("Your browser does not support the video tag.")
+        .attr("controls","controls")
+        .css("display","block")
+        .addClass("videoview")
+        .attr("id","video");
+
+    self = this;
+    e.bind('canplay', function () {
+        var s, m;
+
+        self.orig_width  = self.width = this.videoWidth;
+        self.orig_height = self.height = this.videoHeight;
+		self.duration = this.duration/60;
+		s = Math.floor(this.duration);
+		m = Math.floor(s/60);
+		s = ""+(s-m*60);
+		self.duration = m+":"+(s.length === 1 ? "0" : "")+s;
+        self.loaded = true;
+
+        if (self.visible) {
+            self.parent.onUpdateStatus(null);
+            self.onLoad();
+        }
+    } );
+    e.error( this.parent.onUpdateStatus.bind( this.parent, "Unsupported format!", ".error" ) );
+
+    e.attr( "src", esc(this.path) );
+    e.appendTo(this.parent.e);
+
+    return e;
+},//}}}
+
+
+show: function ()//{{{
+{
+    var e, p;
+
+    p = this.parent;
     p.onUpdateStatus("loading");
 
-	e = this.e = $('<video>');
-	e.html("Your browser does not support the video tag.");
-    e.attr("controls","controls");
-    e.css("display","block");
-    e.addClass("videoview");
-    e.attr("id","video");
+    e = this.element().show();
+    this.visible = true;
+
+    if (this.loaded) {
+        this.parent.onUpdateStatus(null);
+        this.onLoad();
+    }
 
 	if ( p.getConfig('autoplay') ) {
 		e.attr("autoplay","autoplay");
@@ -468,49 +593,6 @@ show: function ()//{{{
 	if ( p.getConfig('autonext') ) {
 		e.bind( "ended", function () {p.onNext();} );
     }
-
-    self = this;
-    e.bind('canplay', function () {
-        var s, m;
-
-        self.parent.onUpdateStatus(null);
-
-        self.orig_width  = self.width = this.videoWidth;
-        self.orig_height = self.height = this.videoHeight;
-		self.duration = this.duration/60;
-		s = Math.floor(this.duration);
-		m = Math.floor(s/60);
-		s = ""+(s-m*60);
-		self.duration = m+":"+(s.length === 1 ? "0" : "")+s;
-
-        self.onLoad();
-    } );
-    e.error( this.parent.onUpdateStatus.bind( this.parent, "Unsupported format!", ".error" ) );
-
-    e.attr( "src", esc(this.path) );
-    e.appendTo(this.parent.e);
-},//}}}
-
-remove: function ()//{{{
-{
-    var e = this.e;
-    if ( e ) {
-        e.remove();
-    }
-},//}}}
-
-thumbnail: function ()//{{{
-{
-    var thumb = this.thumb;
-
-    if ( !thumb ) {
-        thumb = this.thumb = $( document.createElement("div") );
-        thumb.addClass("thumbnail " + this.type());
-
-        this.thumbnailOnLoad();
-    }
-
-    return thumb;
 },//}}}
 
 zoom: function (z)//{{{
@@ -590,67 +672,52 @@ togglePlay: function ()//{{{
 seek: function (how) {//{{{
     this.e[0].currentTime += how;
 },//}}}
-
-/* events */
-onLoad: function (){},
-thumbnailOnLoad: function (error){}
-};
+});
 //}}}
 
 //! \class FontView
 //! \implements ItemView
 //{{{
-var FontView = function (itempath, parent) {
+var FontView = Class(ItemView, {
+init: function (itempath, parent) {
     this.path = itempath;
     this.parent = parent;
     this.zoom_factor = 1;
     this.font = this.path.replace(/[^a-zA-Z0-9_]+/g,'_');
 	this.width = this.height = 0;
-};
+},
 
-FontView.prototype = {
 type: function ()//{{{
 {
     return "font";
 },//}}}
 
-show: function ()//{{{
+element: function()//{{{
 {
-    var self, e;
+    var e, self;
 
     if (this.e) {
-        return;
+        return this.e;
     }
 
-    e = this.e = $( document.createElement("textarea") );
-    e.attr( "src", esc(this.path) );
-    e.addClass("fontview");
+    //e = this.e = $( document.createElement("textarea") );
+    e = this.e = new TextEdit("",this.parent.getConfig('font_test'),true).edit;
+    e.attr( "src", esc(this.path) )
+     .hide()
+     .addClass("fontview")
+     .css("font-family", this.font)
+     .appendTo(this.parent.e)
+     .change();
 
-    e.attr( "value", this.parent.getConfig('font_test') );
-    e.css("font-family",this.font);
-
-    // disable keyboard navigation when textarea focused
-    e.focus( function () {
-        disableKeys( [["ESCAPE", this.blur.bind(this)]] );
-    } );
-    self = this;
-    e.blur( function () {
-        self.parent.onFontTextChange(this.value);
-        enableKeys();
-        self.updateHeight();
-    } );
-
-    e.appendTo(this.parent.e);
-
-    this.onLoad();
+    return e;
 },//}}}
 
-remove: function ()//{{{
+
+show: function ()//{{{
 {
-    var e = this.e;
-    if (e) {
-        e.remove();
-    }
+    this.element();
+    this.visible = true;
+    this.onLoad();
 },//}}}
 
 thumbnail: function ()//{{{
@@ -669,11 +736,17 @@ thumbnail: function ()//{{{
 
 zoom: function (how)//{{{
 {
+    // FIXME: better font zooming
     var orig, z, zz;
     orig = this.parent.getConfig('font_size');
 
-    if (!this.orig_height) {
-        this.orig_height = this.e.offsetHeight;
+    if (!this.height) {
+        this.height = this.orig_height = this.e.height();
+        this.width = this.orig_width = this.e.width();
+    }
+
+    if(!how) {
+        return this.width/this.orig_width;
     }
 
     z = this.zoom_factor;
@@ -702,10 +775,12 @@ zoom: function (how)//{{{
 
     this.zoom_factor = z;
 
-    this.parent.center();
+    //this.parent.center();
 
     // for firefox this.e.css("font-size") is "...px" not "pt"
     this.parent.onUpdateStatus( this.e[0].style.fontSize, ".fontsize" );
+
+    return this.width/this.orig_width;
 },//}}}
 
 updateHeight: function ()//{{{
@@ -718,100 +793,128 @@ updateHeight: function ()//{{{
     self = this;
     window.setTimeout(
         function (){
+            self.height = e.height();
+            self.width = e.width();
             e.show();
             e.css("height", e[0].scrollHeight + "px");
             self.parent.center(e.innerHeight());
         },10);
 },//}}}
-
-/* events */
-onLoad: function (){},
-thumbnailOnLoad: function (error){}
-};
+});
 //}}}
 
 //! \class HTMLView
 //! \implements ItemView
 //{{{
-var HTMLView = function (itempath, parent) {
+var HTMLView = Class(ItemView, {
+init: function (itempath, parent) {
     this.path = itempath;
     this.parent = parent;
 	this.width = this.height = 0;
-};
+},
 
-HTMLView.prototype = {
 type: function ()//{{{
 {
     return "html";
 },//}}}
 
+element: function()//{{{
+{
+    var e, self;
+
+    if (this.e) return this.e;
+
+    self = this;
+    if ( this.path.match(/\.pdf$/i) ) {
+        this.e = e = $('<embed>', {
+            'class': 'htmlview',
+            'seamless': 'yes',
+            'name': 'plugin',
+            'type': 'application/pdf'
+        });
+    } else {
+        this.e = e = $('<iframe>', {
+            'class': 'htmlview',
+            'seamless': 'yes'
+        });
+    }
+    e.load( function () {
+		//self.orig_width = self.width = this.width ? this.width : this.naturalWidth;
+		//self.orig_height = self.height = this.height ? this.height : this.naturalHeight;
+        e[0].contentWindow.document.body.style.margin = 0;
+		self.orig_width = self.width = e[0].contentWindow.document.body.scrollWidth;
+		self.orig_height = self.height = e[0].contentWindow.document.body.scrollHeight;
+		e.width(self.width);
+		e.height(self.height);
+        self.loaded = true;
+
+        if (self.visible) {
+            self.parent.onUpdateStatus(null);
+            self.onLoad();
+        }
+	} )
+    .hide()
+    .appendTo(this.parent.e)
+    .attr( 'src', esc(this.path) );
+
+    return e;
+},//}}}
+
 show: function ()//{{{
 {
     var self, e;
+
+    this.parent.onUpdateStatus("loading");
+
+    e = this.element().show();
+    this.visible = true;
+
+    if (this.loaded) {
+        this.parent.onUpdateStatus(null);
+        this.onLoad();
+    }
+},//}}}
+
+zoom: function (z)//{{{
+{
+    var w, h, p, t, cssline;
+
+    if (!z) {
+        return this.width/this.orig_width;
+    }
+
+    w = this.orig_width;
+    h = this.orig_height;
+    this.width = w*z;
+    this.height = h*z;
+
+    t = -(1-z)*100/(z*2);
+    cssline = "scale("+z+", "+z+") translate("+t+"%, "+t+"%)";
+    this.e
+        .css({
+            '-moz-transform': cssline,
+            '-webkit-transform': cssline,
+            '-o-transform': cssline,
+            'transform': cssline
+        });
+
+    this.zoom_factor = z;
+
     p = this.parent;
+    p.onUpdateStatus( w+"x"+h, ".resolution" );
+    p.onUpdateStatus( z===1 ? null : Math.floor(z*100), ".zoom" );
+    p.center();
 
-    if (this.e) {
-        return;
-    }
-
-    p.onUpdateStatus("loading");
-
-    e = this.e = $('<iframe>', {
-      'class': 'htmlview',
-      'seamless': 'yes',
-      //'scrolling': 'no',
-      'src': esc(this.path)
-    });
-
-    e.appendTo(p.e);
-
-    self = this;
-	e.load( function () {
-		p.onUpdateStatus(null);
-
-		self.orig_width = self.width = this.width ? this.width : this.naturalWidth;
-		self.orig_height = self.height = this.height ? this.height : this.naturalHeight;
-
-		self.onLoad();
-	} );
+    return this.width/this.orig_width;
 },//}}}
-
-remove: function ()//{{{
-{
-    var e = this.e;
-    if (e) {
-        e.remove();
-    }
-},//}}}
-
-thumbnail: function ()//{{{
-{
-    var thumb = this.thumb;
-
-    if ( !thumb ) {
-        thumb = this.thumb = $( document.createElement("div") );
-        thumb.addClass("thumbnail " + this.type());
-
-        this.thumbnailOnLoad();
-    }
-
-    return thumb;
-},//}}}
-
-zoom: function (how)//{{{
-{
-},//}}}
-
-/* events */
-onLoad: function (){},
-thumbnailOnLoad: function (error){}
-};
+});
 //}}}
 
 //! \class TagView
 //! \implements ItemView
 //{{{
-var TagView = function (tag, parent) {
+var TagView = Class(ItemView, {
+init: function (tag, parent) {
     var e, m;
 
     // parse tagname and properties
@@ -830,9 +933,8 @@ var TagView = function (tag, parent) {
     }
 
     this.parent = parent;
-};
+},
 
-TagView.prototype = {
 type: function ()//{{{
 {
     return "tag";
@@ -859,46 +961,16 @@ show: function ()//{{{
 
     this.onLoad();
 },//}}}
-
-remove: function ()//{{{
-{
-    var e, props;
-
-    e = this.e;
-    if (e) {
-        e.remove();
-    }
-},//}}}
-
-thumbnail: function ()//{{{
-{
-    var thumb = this.thumb;
-
-    if ( !thumb ) {
-        thumb = this.thumb = $('<div>', {'class': 'thumbnail ' + this.type()});
-        this.thumbnailOnLoad();
-    }
-
-    return thumb;
-},//}}}
-
-zoom: function (how)//{{{
-{
-},//}}}
-
-/* events */
-onLoad: function (){},
-thumbnailOnLoad: function (error){}
-};
+});
 //}}}
 
 //! \class ViewFactory
 //{{{
-var ViewFactory = function (parent) {
+var ViewFactory = Class({
+init: function (parent) {
     this.parent = parent;
-};
+},
 
-ViewFactory.prototype = {
 newView: function (filepath) {//{{{
      var view;
 
@@ -908,7 +980,7 @@ newView: function (filepath) {//{{{
         view = new FontView(filepath, this.parent);
     } else if (filepath.search(/\.(mp4|mov|flv|ogg|mp3|wav)$/i) > -1) {
         view = new VideoView(filepath, this.parent);
-    } else if (filepath.search(/\.html$/i) > -1) {
+    } else if (filepath.search(/\.(html|pdf)$/i) > -1) {
         view = new HTMLView(filepath, this.parent);
     } else if (filepath.search(/^\$\(<.*\)$/) > -1) {
         view = new TagView(filepath, this.parent);
@@ -917,12 +989,13 @@ newView: function (filepath) {//{{{
     }
     return view.error ? null : view;
 }//}}}
-};
+});
 //}}}
 
 //! \class Viewer
 //{{{
-var Viewer = function (e, preview, getConfig) {
+var Viewer = Class({
+init: function (e, preview, getConfig) {
     var self, img, win, mousedown;
 
     this.e = e;
@@ -943,11 +1016,14 @@ var Viewer = function (e, preview, getConfig) {
     this.transparency = getConfig('transparency');
 
     this.setPreview(preview);
-};
 
-Viewer.prototype = {
+    this.cache_age = 0;
+},
+
 setPreview: function(preview)//{{{
 {
+    var self, img, win, mousedown;
+
     this.preview = preview;
     if (preview) {
 		img = this.preview_img = $('<img>');
@@ -957,9 +1033,10 @@ setPreview: function(preview)//{{{
         win.css("position", "absolute");
 		win.appendTo(preview);
 
+        self = this;
 		mousedown = function (ev){
-			if (ev.button === 0 && t.previewOnMouseDown) {
-				t.previewOnMouseDown();
+			if (ev.button === 0 && self.previewOnMouseDown) {
+				self.previewOnMouseDown();
 				ev.preventDefault();
 			}
 		};
@@ -984,7 +1061,7 @@ zoom: function (how)//{{{
 
     // treat font/html zoom differently
 	type = v.type();
-    if( type === 'font' || type === 'html' ) {
+    if( type === 'font' ) {
         v.zoom(how);
         return;
     }
@@ -1040,8 +1117,8 @@ zoom: function (how)//{{{
     this.updatePreview();
 
     // if image doesn't fit in the window
-    if ( window.innerHeight < this.view.e.innerHeight() ||
-         window.innerWidth < this.view.e.innerWidth() ) {
+    if ( window.innerHeight < this.view.height ||
+         window.innerWidth < this.view.width ) {
         this.onTooBig();
     } else {
         // image fits the window -- preview is not necessary
@@ -1178,24 +1255,35 @@ hidePreview: function ()//{{{
 
 center: function ()//{{{
 {
-    var h, newtop;
-    // center item in window
-    h = this.view.e.innerHeight();
-    newtop = h ? ( window.innerHeight - this.view.e.innerHeight() )/2 : 0;
-    this.view.e.css("margin-top",(newtop > 0 ? newtop : 0) + "px");
+    var w, h, x, y;
+
+    w = this.view.width;
+    x = w ? ( window.innerWidth - w )/2 : 0;
+
+    h = this.view.height;
+    y = h ? ( window.innerHeight - h )/2 : 0;
+
+    this.view.e.css({
+        'margin-left': (x > 0 ? x : 0) + "px",
+        'margin-top': (y > 0 ? y : 0) + "px"
+    });
 },//}}}
 
 show: function (filepath)//{{{
 {
-    var self, v;
+    var self, v, c;
 
     if (this.view) {
-        this.view.remove();
+        this.view.hide();
     }
 
-    v = this.view = this.viewFactory.newView(filepath);
-    self = this;
-    if ( v ) {
+    // retrieve view from cache (or create view)
+    c = this.preload(filepath);
+	if (c) {
+		this.view = v = c.view;
+		c.age = this.cache_age;
+		self = this;
+
         v.onLoad = function()
         {
             scrollTo(0,0);
@@ -1208,10 +1296,45 @@ show: function (filepath)//{{{
             }
         };
         v.show();
-    }
-    else if (this.onError) {
+    } else if (this.onError) {
         this.onError("Unknown format: \""+filepath+"\"");
     }
+},//}}}
+
+preload: function(filepath)//{{{
+{
+    var cache, age, c, v, f, min_age;
+
+    cache = this.cache;
+    if (cache === undefined) {
+        cache = this.cache = {};
+    }
+
+    c = cache[filepath];
+    if (!c) {
+        age = ++this.cache_age;
+        min_age = age - this.getConfig('preloaded_views') - 1;
+
+        /* discard old cache */
+        for (f in cache) {
+            c = cache[f];
+            if (c.age < min_age) {
+                c.view.remove();
+                delete cache[f];
+            }
+        }
+
+        v = this.viewFactory.newView(filepath);
+		if (v) {
+			c = cache[filepath] = {view: v, age: age};
+
+			if (v.element) {
+				v.element();
+			}
+        }
+    }
+
+    return c;
 },//}}}
 
 width: function ()//{{{
@@ -1312,12 +1435,13 @@ onTooBig: function () {},
 onFontTextChange: function (text) {},
 
 onNext: function () {}
-};
+});
 //}}}
 
 //! \class ItemList
 //{{{
-var ItemList = function (elem, items, getConfig) {
+var ItemList = Class ({
+init: function (elem, items, getConfig) {
     var self, item, e;
 
     // itemlist element
@@ -1371,9 +1495,8 @@ var ItemList = function (elem, items, getConfig) {
     this.viewFactory = new ViewFactory(this);
 
     this.getConfig = getConfig;
-};
+},
 
-ItemList.prototype = {
 length: function()//{{{
 {
 	return this.ls.length();
@@ -1852,12 +1975,13 @@ submit: function()//{{{
 onSubmit: function (n){},
 
 onMouseDown: null
-};
+});
 //}}}
 
 //! \class Info
 //{{{
-var Info = function (e, getConfig) {
+var Info = Class ({
+init: function (e, getConfig) {
     this.e = e;
     this.getConfig = getConfig;
 
@@ -1874,9 +1998,8 @@ var Info = function (e, getConfig) {
     this.ext_e = e.find(".extension");
 
     this.props = [];
-};
+},
 
-Info.prototype = {
 updateProgress: function ()//{{{
 {
     var r, w1, w2, shadow, blur, ctx, pi, angle, x, y;
@@ -2046,7 +2169,7 @@ hidden: function ()//{{{
 {
     return !this.e.hasClass("focused");
 }//}}}
-};
+});
 //}}}
 //}}}
 
@@ -2073,6 +2196,12 @@ var b;
 
 // mouse position
 var mouseX, mouseY;
+
+// last keypress event (if getConfig('show_keys'))
+var last_keypress_event;
+// cache last keyname
+var last_keyname_timestamp;
+var last_keyname;
 
 // objects (created if appropriate HTML element is available)
 var itemlist, info, viewer, help, options;
@@ -2110,10 +2239,10 @@ var userAgents = {unknown:0, webkit:1, opera:2};
 
 function userAgent ()//{{{
 {
-    if ( navigator.userAgent.indexOf("WebKit") !== -1 ) {
+    if ( navigator.userAgent.indexOf("WebKit") >= 0 ) {
         return userAgents.webkit;
     }
-    if ( navigator.userAgent.indexOf("Opera") !== -1 ) {
+    if ( navigator.userAgent.indexOf("Opera") >= 0 ) {
         return userAgents.opera;
     } else {
         return userAgents.unknown;
@@ -2343,47 +2472,22 @@ function updateUrl (timeout)//{{{
     }
 }//}}}
 
-function preloadImages()//{{{
+function preloadViews()//{{{
 {
-    var maxnum, num, new_preloaded, begin, end, i, im, item, filename, view;
-    if (preloaded === null) {
-        // don't preload images when started
-        preloaded = {};
+    var to_preload, num, end, i, item, filename;
+    if (!preloaded) {
+        // don't preload views when started
+        preloaded = true;
         return;
     }
 
-    maxnum = getConfig('preload_images');
-    num = maxnum - (n+2) % maxnum;
-
-    new_preloaded = {};
-    end = Math.min( n+num, ls.length() );
-    begin = Math.max(n-maxnum+num+1,0);
-    for(i = begin; i < n; i+=1) {
-        new_preloaded[i] = preloaded[i];
-    }
+    to_preload = getConfig('preload_views');
+    end = Math.min( n+to_preload, ls.length() );
     for(i = n; i < end; i+=1) {
-        // try to use already preloaded image
-        im = preloaded[i];
-        if ( !im ) {
-            // type of item must be image
-			item = this.ls.get(i);
-            filename = item[0];
-            view = ViewFactory.prototype.newView(filename);
-            if (!view || view.type() !== "image") {
-                continue;
-            }
-
-            // create image
-            im = new Image();
-            im.src = filename;
-
-            // since we access the disk (read the image) we can also
-            // change the url - browser saves history
-            updateUrl(1000);
-        }
-        new_preloaded[i] = im;
+        item = ls.get(i);
+        filename = item[0];
+        viewer.preload(filename);
     }
-    preloaded = new_preloaded;
 }//}}}
 
 function toggleList_()//{{{
@@ -2400,7 +2504,6 @@ function scroll (x,y,absolute)//{{{
 {
     return viewer ? viewer.scroll(x, y, absolute) : false;
 }//}}}
-
 
 function scrollDown(how)//{{{
 {
@@ -2592,7 +2695,7 @@ function popPreview ()//{{{
 }//}}}
 
 function rotate (degrees, absolute) {//{{{
-    var i, rotate_styles, rotate_style, deg, style, newstyle;
+    var i, m, rotate_styles, rotate_style, deg, style, newstyle;
 
     if (!viewer) {
         return;
@@ -2632,22 +2735,45 @@ function rotate (degrees, absolute) {//{{{
         break;
     }
 }//}}}
+
+function showLastPosition ()//{{{
+{
+    var e;
+
+    $('#read_area').remove();
+    e = $('<div id="read_area">').css({
+        position:'absolute',
+        'left': window.pageXOffset-2+'px',
+        'top': window.pageYOffset+'px',
+        width: window.innerWidth+'px',
+        height: window.innerHeight+'px',
+        border: '2px solid red',
+        'background-color': 'rgba(255,0,0,0.2)',
+        'opacity': 0.5
+    }).appendTo(b);
+    e.fadeOut(1500, function(){e.remove()});
+
+    return true;
+}//}}}
 //}}}
 
 // INTERACTION//{{{
-var keycodes = [];//{{{
-keycodes[13] = "Enter";
-keycodes[27] = "Escape";
-keycodes[32] = "Space";
-keycodes[37] = "Left";
-keycodes[38] = "Up";
-keycodes[39] = "Right";
-keycodes[40] = "Down";
-keycodes[33] = "PageUp";
-keycodes[34] = "PageDown";
-keycodes[35] = "End";
-keycodes[36] = "Home";
-if ( userAgent() === userAgents.webkit ) {
+var keycodes = {};//{{{
+keycodes[9] = "TAB";
+keycodes[13] = "ENTER";
+keycodes[27] = "ESCAPE";
+keycodes[32] = "SPACE";
+keycodes[37] = "LEFT";
+keycodes[38] = "UP";
+keycodes[39] = "RIGHT";
+keycodes[40] = "DOWN";
+keycodes[46] = "DELETE";
+keycodes[33] = "PAGEUP";
+keycodes[34] = "PAGEDOWN";
+keycodes[35] = "END";
+keycodes[36] = "HOME";
+//if ( userAgent() === userAgents.webkit ) {
+if ( userAgent() !== userAgents.opera ) {
     keycodes[96] =  "KP0";
     keycodes[97] =  "KP1";
     keycodes[98] =  "KP2";
@@ -2660,7 +2786,7 @@ if ( userAgent() === userAgents.webkit ) {
     keycodes[105] = "KP9";
     keycodes[106] = "*";
     keycodes[107] = "+";
-    keycodes[109] = "Minus";
+    keycodes[109] = "MINUS";
     keycodes[110] = ".";
     keycodes[111] = "/";
     keycodes[112] = "F1";
@@ -2676,25 +2802,6 @@ if ( userAgent() === userAgents.webkit ) {
     keycodes[122] = "F11";
     keycodes[123] = "F12";
     keycodes[191] = "?";
-}//}}}
-
-function disableKeys (override_key_functions)//{{{
-{
-    addAllKeys( {0: override_key_functions} );
-}//}}}
-
-function enableKeys ()//{{{
-{
-    keys[0] = undefined;
-}//}}}
-
-function overrideKeys (override_key_functions)//{{{
-{
-    if (override_key_functions) {
-        addAllKeys( {1: override_key_functions} );
-    } else {
-        keys[1] = undefined;
-    }
 }//}}}
 
 function next ()//{{{
@@ -2719,42 +2826,46 @@ function prev ()//{{{
     return true;
 }//}}}
 
-function keyPress (e)//{{{
+function getKeyName (ev)//{{{
 {
-    var keycode, keyname, trymode_stack, i, k, fn, t;
+    var keycode, keyname;
 
-	keycode = e.keyCode ? e.keyCode : e.which;
+    if (ev.timeStamp == last_keyname_timestamp) {
+        return last_keyname;
+    }
+
+	keycode = ev.which;
 
     keyname = keycodes[keycode];
     if ( !keyname ) {
 		keyname = String.fromCharCode(keycode);
     }
 
-    keyname = (e.altKey ? "A-" : "") +
-              (e.ctrlKey ? "C-" : "") +
-              (e.metaKey ? "M-" : "") +
-              (e.shiftKey ? "S-" : "") +
+    keyname = (ev.altKey ? "A-" : "") +
+              (ev.ctrlKey ? "C-" : "") +
+              (ev.metaKey ? "M-" : "") +
+              (ev.shiftKey ? "S-" : "") +
               keyname.toUpperCase();
 
 	if ( getConfig('show_keys') ) {
 		info.updateProperty("key: " + keyname + " ("+keycode+")");
-        log(e);
+        last_keypress_event = ev;
         popInfo();
     }
 
-    // override all keys? (see: disableKeys())
-    k = keys[0];
-    if (k) {
-        fn = k[keyname];
-        t = typeof(fn);
-        if (t === "string") {
-            eval(fn);
-            e.preventDefault();
-        } else if (t === "function") {
-            fn();
-            e.preventDefault();
-        }
-        return;
+    last_keyname = keyname;
+    last_keyname_timestamp = ev.timeStamp;
+    return keyname;
+}//}}}
+
+function keyPress (ev)//{{{
+{
+    var e, keyname, trymode_stack, i, k, fn, t;
+
+    keyname = getKeyName(ev);
+
+    e = $(".value.focused");
+    if (e.length) {
     }
 
     // try keys in this mode or modes.any
@@ -2774,7 +2885,7 @@ function keyPress (e)//{{{
         } else {
             continue;
         }
-        e.preventDefault();
+        ev.preventDefault();
         break;
     }
 }//}}}
@@ -2826,6 +2937,8 @@ function addKeys (newkeys, desc, fn, keymode, append)//{{{
 
 function addAllKeys (controls)//{{{
 {
+    var m, k, km, i;
+
     for (m in controls) {
         km = controls[m];
         for (i in controls[m]) {
@@ -2869,7 +2982,7 @@ function dragScroll (target, preview)
     var preview_scale, from_mouseX, from_mouseY, ww2, wh2, w, start, dx, dy, dt;
 
     function continueDragScroll(e) {
-        var t, pos, x, y;
+        var t, pos, pos2, x, y;
 
         scrolling = true;
         if(e) {
@@ -2955,15 +3068,74 @@ function stopDragScroll ()//{{{
 //}}}
 
 // GUI{{{
+/*
+ * GUI ELEMENT CLASSES
+ *
+ * CORE CLASSES
+ * .widget: element is widget
+ * .input: element is focusable
+ * .value: element has a user-defined value
+ *
+ * BASIC WIDGETS
+ * .label: widget has label (with key hint)
+ * .textedit: widget is input (text) or textarea (.lineedit OR .multilineedit)
+ * .button
+ *
+ * WIDGET CONTAINERS
+ * .buttonbox
+ * .widgetlist
+ * .tabs
+ *
+ * VARIOUS
+ * .selection: cursor for buttonbox, widgetlist or tabs
+ *
+ */
+
+var focused_widget;
+
+function init_GUI ()//{{{
+{
+    // init widgets
+    $(".widget, .widget .value").live("focus", function() {
+        focused_widget = $(this);
+        $(this)
+               .addClass("focused")
+               .parents(".widget").addClass("focused");
+    } );
+    $(".widget, .widget .value").live("blur", function() {
+        focused_widget = undefined;
+        $(this)
+               .removeClass("focused")
+               .parents(".widget").removeClass("focused");
+    } );
+}//}}}
+
+//! \interface Widget
+//{{{
+var Widget = Interface ({
+    show: undefined,
+    hide: undefined,
+    update: undefined
+})
+//}}}
+
 function createLabel(text)//{{{
 {
-    var i, e;
+    var i, c, e, key;
 
     e = $("<div>", {'class':"widget label"});
 
-    // replace &x with underlined character and assign x key
-    i = text.indexOf('_');
-    if (i !== -1 && i+1 < text.length) {
+    // replace _x with underlined character and assign x key
+    for(i=0; i<text.length; ++i) {
+        c = text[i];
+        if ( c === '_') {
+            break;
+        } else if (c === '\\') {
+            text = text.slice(0,i) + text.slice(i+1)
+            ++i;
+        }
+    }
+    if (i+1 < text.length) {
         key = text[i+1];
         text = text.substr(0,i) +
             '<span class="keyhint">'+key+'</span>' +
@@ -2983,11 +3155,18 @@ function createCheckBox(text, checked)//{{{
 
     label = createLabel(text);
 
-    checkbox = $('<input>', {type:"checkbox", 'class':"value", checked:checked});
-
     e = $("<div>", {'class':"widget checkbox"});
     e.css("cursor","pointer");
-    checkbox.appendTo(e);
+    e.keydown( function(ev){
+        if ( getKeyName(ev) == 'SPACE' ) {
+            ev.stopPropagation();
+        }
+    } );
+
+    checkbox = $('<input>', {type:"checkbox", 'class':"input value", checked:checked});
+    checkbox.prependTo(label);
+    checkbox.click( function(ev) {ev.stopPropagation()} );
+
     label.appendTo(e);
 
     // clicking on option selects input text or toggles checkbox
@@ -2999,317 +3178,597 @@ function createCheckBox(text, checked)//{{{
         checkbox.attr( "checked", checkbox.is(':checked') ? 0 : 1 );
     } );
 
-    checkbox.focus( function() {
-        overrideKeys( [
-            ["SPACE", function() {
-                checkbox.attr( "checked", checkbox.is(':checked') ? 0 : 1 );
-            }]
-        ] );
-        e.addClass('focused');
-        $(this).addClass('focused');
-    } );
-    checkbox.blur( function() {
-        overrideKeys();
-        e.removeClass('focused');
-        $(this).removeClass('focused');
-    } );
-
     return e;
 }//}}}
 
-function createTextEdit(label_text, text, multiline)//{{{
+function keyHintFocus (keyname, root)//{{{
 {
-    var i, e, edit, label;
+    var keyhint, e;
+    if (keyname.length === 1) {
+        keyhint = keyname;
+    } else {
+        // digit (1, KP1, S-1, ...)
+        n = keyname[keyname.length-1];
+        if (n >= "0" && n <= "9") {
+            keyhint = n;
+        }
+    }
 
-    label = createLabel(label_text);
-
-    if (multiline) {
-        edit = $("<textarea>", {"class":"textedit"});
-        // preferred size
-        edit.change( function () {
-            var i, j, l, cols, text;
-
-            text = edit.attr("value");
-            cols = 0;
-            l = text.length;
-            for(i=0,j=0; i<l; ++i) {
-                if (text[i]==='\n' || i===l-1) {
-                    if (i-j > cols) {
-                        cols = i-j;
+    if (keyhint !== undefined) {
+        root.find(".keyhint").each( function() {
+            var $this, parent;
+            $this = $(this);
+            if ( $this.is(":visible") && keyhint === $this.text().toUpperCase() ) {
+                parent = $this.parent();
+                if ( !parent.hasClass("focused") ) {
+                    if ( parent.hasClass("tab") ) {
+                        e = parent;
+                        e.click();
                     }
-                    j=i;
+                    else if ( parent.hasClass("input") ) {
+                        e = parent;
+                        e[0].focus();
+                    } else {
+                        e = parent.find(".input").first();
+                        e[0].focus();
+                    }
+
+                    if (e.length) {
+                        return false; //break
+                    }
                 }
             }
-            edit.attr( "cols", cols+1 );
-
-            if (this.scrollHeight) {
-                edit.height(0);
-                edit.css( "height", (this.scrollHeight + edit.outerHeight() - edit.height()) + "px" );
-            }
         } );
-        // HACK: if element is hidden when appended *height attributes are 0
-        edit.appendTo($("body"));
+    }
+
+    return e && e.length;
+}//}}}
+
+//! \class Selection
+//{{{
+var Selection = Class(Widget, {
+init: function (parent) {//{{{
+    this.parent = parent;
+},//}}}
+
+show: function()//{{{
+{
+},//}}}
+
+hide: function()//{{{
+{
+},//}}}
+
+update: function()//{{{
+{
+    if (current) {
+        this.select(current);
+    }
+},//}}}
+
+select: function(e)//{{{
+{
+    var ee, pos, current;
+
+    pos = e.offset();
+
+    ee = this.e;
+    if (!ee) {
+        this.e = ee = $("<div>")
+            .css({position:"absolute", 'z-index':-2,
+                  top:pos.top, left:pos.left})
+            .addClass("selection")
+            .appendTo(this.parent);
+    }
+
+    ee
+        .width( e.outerWidth() )
+        .height( e.outerHeight() )
+        .offset({top:pos.top, left:pos.left})
+        //.css({
+            //top:pos.top+"px", left:pos.left+"px"
+        //})
+    ;
+
+    current = this.current;
+    if (current) {
+        current.removeClass("current");
+    }
+    current = e.addClass("current");
+}//}}}
+});
+//}}}
+
+//! \class TextEdit
+//{{{
+var TextEdit = Class(Widget, {
+init: function (label_text, text, multiline) {//{{{
+    var i, e, edit, label;
+
+    if (multiline) {
+        edit = $("<textarea>", {"class":"multilineedit"});
     } else {
         edit = $("<input>", {"class":"lineedit"});
-        //edit.css( "width", Math.min(text.length+4, 20) + 'ex' );
-        // preferred size
-        edit.change( function () {
-                edit.attr( "size", edit.attr("value").length+1 );
-        } );
     }
     edit.attr("value", text);
+    edit.addClass("input value");
 
-    edit.addClass("value");
-    edit.change();
+    edit.keydown( this.keyPress.bind(this) );
+    edit.blur( this.blur.bind(this) );
 
-    e = $("<div>", {'class':"widget edit"});
+    // update size
+    edit.resize( this.update.bind(this) );
+    edit.keyup( this.update.bind(this) );
+
+    e = $("<div>", {'class':"widget textedit"});
     e.css("cursor","pointer");
-    label.appendTo(e);
 
-    edit.appendTo(e);
-
-    // clicking on option selects input text or toggles checkbox
-    label.click( function() {
-        if ( edit.attr('disabled') ) {
-            return;
-        }
-        edit.focus();
-    } );
-
-    edit.focus( function() {
-        disableKeys( [["ESCAPE", this.blur.bind(this)]] );
-        e.addClass('focused');
-        $(this).addClass('focused');
-    } );
-    edit.blur( function() {
-        enableKeys();
-        e.removeClass('focused');
-        $(this).removeClass('focused');
-    } );
-
-    return e;
-}//}}}
-
-//! \class ButtonBox
-//{{{
-var ButtonBox = function (parent) {
-    this.parent = parent;
-    this.e = $("<div>", {'class': "widget buttonbox"}).appendTo(parent);
-
-    this.pages = $();
-};
-
-ButtonBox.prototype = {
-next: function()//{{{
-{
-    var current, e, buttons;
-    buttons = this.e.children(".button");
-    current = buttons.filter(".focused");
-    e = current.next(".button");
-    if (!e.length) {
-        e = buttons.first();
-    };
-    current.blur();
-    e.focus();
-},//}}}
-
-prev: function()//{{{
-{
-    var current, e, buttons;
-    buttons = this.e.children(".button");
-    current = buttons.filter(".focused");
-    e = current.prev(".button");
-    if (!e.length) {
-        e = buttons.last();
-    };
-    current.blur();
-    e.focus();
-},//}}}
-
-append: function (label_text, onclick)//{{{
-{
-    var self, button, buttons, e;
-    e = this.e;
-
-    tab = createLabel(label_text);
-    tab.addClass("tab");
-    tab.appendTo(this.tabs);
-
-    button = createLabel(label_text);
-    button.addClass("button");
-    button.attr("tabindex",0);
-
-    // first & last
-    buttons = e.children(".button");
-    if ( !buttons.length ) {
-        button.addClass("first");
+    if (label_text) {
+        label = createLabel(label_text);
+        // clicking on option selects input text or toggles checkbox
+        label.click( function() {
+            if ( !edit.attr('disabled') ) {
+                edit[0].focus();
+            }
+        } );
+        label.appendTo(e);
     }
-    buttons.filter(".last").removeClass("last");
-    button.addClass("last");
 
-    button.click(onclick);
-    button.appendTo(e);
+    edit.appendTo(label);
 
-    self = this;
-    button.focus( function() {
-        var $this = $(this);
-        disableKeys([
-            ["LEFT", self.prev.bind(self)],
-            ["RIGHT", self.next.bind(self)],
-            [["ENTER","SPACE"], $this.click.bind($this)],
-            ["ESCAPE", $this.blur.bind($this)]
-        ]);
-        $this.addClass("focused");
-    } );
-    button.blur( function() {
-        enableKeys();
-        $(this).removeClass("focused");
-    } );
+    this.multiline = multiline;
+    this.label = label;
+    this.edit = edit;
+    this.e = e;
+},//}}}
 
-    return tab;
-}//}}}
-};
+show: function()//{{{
+{
+    this.e.show();
+    this.update();
+},//}}}
+
+hide: function()//{{{
+{
+    this.e.hide();
+},//}}}
+
+update: function()//{{{
+{
+    var edit, i, j, l, cols, text;
+    edit = this.edit;
+
+    if (!this.multiline) {
+        // update lineedit
+        edit.attr( "size", edit.attr("value").length+2 );
+        return;
+    }
+
+    // update multilineedit
+    text = edit.attr("value");
+    cols = 0;
+    l = text.length;
+    for(i=0,j=0; i<l; ++i) {
+        if (text[i]==='\n' || i===l-1) {
+            if (i-j > cols) {
+                cols = i-j;
+            }
+            j=i;
+        }
+    }
+    edit.attr( "cols", cols+1 );
+
+    // HACK: set textarea height
+    edit.height(0);
+    edit[0].scrollTop = 999999;
+    edit.height( edit[0].scrollTop + edit.height() );
+},//}}}
+
+blur: function()//{{{
+{
+    this.e.removeClass('focused');
+    this.edit.removeClass('focused');
+},//}}}
+
+keyPress: function(ev)//{{{
+{
+    var keyname, k, i;
+
+    keyname = getKeyName(ev);
+    k = keyname.split('-');
+    k = k[k.length-1];
+
+    // stop propagation only if
+    if (
+            // a character typed
+            k.length === 1 ||
+            // textedit keys
+            ["LEFT", "RIGHT", "BACKSPACE", "DELETE", "MINUS", "SPACE"].indexOf(k)>=0 ||
+            // multilineedit keys
+            ( this.multiline && ["UP", "DOWN", "ENTER"].indexOf(k)>=0 )
+       )
+    {
+        ev.stopPropagation();
+    }
+},//}}}
+});
+//}}}
+
+//! \class Button
+//{{{
+// TODO: add button icon
+var Button = Class(Widget, {
+init: function (label_text, onclick) {//{{{
+    var e;
+
+    this.e = e = createLabel(label_text);
+    e.addClass("widget input button").attr("tabindex", 0);
+    e.click(onclick);
+    e.keydown( this.keyPress.bind(this) );
+},//}}}
+
+show: function()//{{{
+{
+    this.e.show();
+    this.update();
+},//}}}
+
+hide: function()//{{{
+{
+    this.e.hide();
+},//}}}
+
+update: function()//{{{
+{
+},//}}}
+
+keyPress: function(ev)//{{{
+{
+    var keyname;
+    keyname = getKeyName(ev);
+
+    if ( keyname === "ENTER" || keyname === "SPACE" ) {
+        this.e.click();
+        return false;
+    }
+},//}}}
+});
 //}}}
 
 //! \class WidgetList
 //{{{
-var WidgetList = function (parent) {
-    this.parent = parent;
-    this.e = $("<table>", {'class': "widget widgetlist"}).appendTo(parent);
+var WidgetList = Class(Widget, {
+init: function () {//{{{
+    this.e = $("<div>", {'class': "widget widgetlist"})
+             .keydown( this.keyPress.bind(this) );
+    this.widgets = [];
+    this.items = [];
+    this.selection = new Selection(this.e);
+    this.current = -1;
+},//}}}
 
-    this.pages = $();
-};
+show: function()//{{{
+{
+    this.e.show();
+    this.update();
+},//}}}
 
-WidgetList.prototype = {
+hide: function()//{{{
+{
+    this.e.hide();
+},//}}}
+
+update: function()//{{{
+{
+    var widgets = this.widgets;
+    $.each( widgets, function(i){
+        var w = widgets[i];
+        if ( w.update ) {
+            w.update();
+        }
+    } );
+    this.updateSelection();
+},//}}}
+
 next: function()//{{{
 {
-    var i = 0;
-    widgets = this.e.find(".widget .value");
-    for (i=0; i<widgets.length; ++i) {
-        if ( widgets.eq(i).hasClass("focused") ) {
-            break;
-        }
+    var id = this.current;
+    if (id >= 0 && id < this.items.length-1) {
+        this.select(id+1);
+    } else {
+        this.select(0);
     }
-    widgets.eq(i).blur();
-    widgets.eq(i<widgets.length ? i+1 : 0).focus();
 },//}}}
 
 prev: function()//{{{
 {
-    var i, l;
-    l = widgets.length;
-    i = 0;
-    widgets = this.e.find(".widget .value");
-    for (i=0; i<l; ++i) {
-        if ( widgets.eq(i).hasClass("focused") ) {
-            break;
-        }
+    var id, l;
+    id = this.current;
+    l = this.items.length;
+    if (id >= 1 && id < l) {
+        this.select(id-1);
+    } else {
+        this.select(l-1);
     }
-    widgets.eq(i).blur();
-    widgets.eq(i>0 && i<l ? i-1 : l-1).focus();
+},//}}}
+
+select: function(id)//{{{
+{
+    var items, old_id, e;
+
+    items = this.items;
+
+    old_id = this.current;
+    if (old_id != id) {
+        this.current = id;
+        e = items[id];
+        e = e.filter(".input")[0];
+        if (!e) {
+            e = items[id].find(".input")[0];
+        }
+        if (e) {
+            e.focus()
+        }
+        this.updateSelection();
+    }
 },//}}}
 
 append: function (widget)//{{{
 {
-    var self, widgets, e;
+    var widgets, e, ee, id;
     e = this.e;
 
+    if (widget.e) {
+        ee = widget.e;
+        this.widgets.push(widget);
+    } else {
+        ee = widget;
+    }
+    id = this.items.length;
+    this.items.push(ee);
+
     // first & last
-    widgets = e.children();
+    widgets = e.find(".widgetlistitem");
     if ( !widgets.length ) {
-        widget.addClass("first");
+        ee.addClass("first");
     }
     widgets.filter(".last").removeClass("last");
-    widget.addClass("last");
 
-    widget.appendTo( $("<td>").appendTo($("<tr>").appendTo(e)) );
+    ee.addClass("widget widgetlistitem last");
+    ee.filter(".input").focus( (function() {
+        this.current = id;
+        this.updateSelection();
+    } ).bind(this) );
+    ee.find(".input").focus( (function() {
+        this.current = id;
+        this.updateSelection();
+    } ).bind(this) );
 
-    self = this;
-    widget.children().focus( function() {
-        var $this = $(this);
-        overrideKeys([
-            ["UP", self.prev.bind(self)],
-            ["DOWN", self.next.bind(self)],
-        ]);
-        self.e.addClass("focused");
-        $this.addClass("focused");
-    } );
-    widget.children().blur( function() {
-        overrideKeys();
-        self.e.removeClass("focused");
-        $(this).removeClass("focused");
-    } );
+    ee.appendTo(e);
+    ee.children().focus( this.updateSelection.bind(this) );
+},//}}}
 
-    return widget;
-}//}}}
-};
+updateSelection: function()//{{{
+{
+    if (this.current >= 0) {
+        this.selection.select( this.items[this.current] );
+    }
+},//}}}
+
+keyPress: function(ev)//{{{
+{
+    var e, keyname, k, i;
+    e = this.e;
+
+    keyname = getKeyName(ev);
+
+    if ( e.hasClass("horizontal") ) {
+        if (keyname === "LEFT") {
+            this.prev();
+        } else if (keyname === "RIGHT") {
+            this.next();
+        } else if ( !keyHintFocus(keyname, e) ) {
+            return;
+        }
+    } else {
+        if (keyname === "UP") {
+            this.prev();
+        } else if (keyname === "DOWN") {
+            this.next();
+        } else if ( !keyHintFocus(keyname, e) ) {
+            return;
+        }
+    }
+
+    return false;
+},//}}}
+});
+//}}}
+
+//! \class ButtonBox
+//{{{
+var ButtonBox = Class (WidgetList, {
+    init: function()//{{{
+    {
+        (WidgetList.bind(this))();
+
+        this.e.addClass("buttonbox horizontal");
+        this.e.removeClass("widgetlist");
+    },//}}}
+
+    updateSelection: function()//{{{
+    {
+    },//}}}
+})
 //}}}
 
 //! \class Tabs
 //{{{
-var Tabs = function (parent) {
-    this.parent = parent;
-    this.e = $("<div>", {'class': "widget tabs", 'tabindex':0}).appendTo(parent);
+var Tabs = function () {
+    var e, tabs_e;
 
-    this.pages = $();
+    this.e = e = $("<div>", {'class':"widget tabs_widget"});
+    e.keydown( this.keyPress.bind(this) );
+
+    this.tabs_e = tabs_e = $("<div>", {'class':"tabs", 'tabindex':0})
+        .appendTo(e);
+    this.pages_e = $("<div>", {'class':"pages"})
+        .appendTo(e);
+
+    this.pages = [];
+    this.current = -1;
+    this.selection = new Selection(this.tabs_e);
 };
 
 Tabs.prototype = {
+show: function()//{{{
+{
+    this.e.show();
+    this.update();
+},//}}}
+
+hide: function()//{{{
+{
+    this.e.hide();
+},//}}}
+
+update: function()//{{{
+{
+    if (this.current >= 0) {
+        this.pages[this.current].update();
+    }
+    this.updateSelection();
+},//}}}
+
 next: function()//{{{
 {
-    var current, e, tabs;
-    tabs = this.e.children(".tab");
-    current = tabs.filter(".current");
-    e = current.next(".tab");
-    if (!e.length) {
-        e = tabs.first();
-    };
-    current.blur();
-    e.click();
+    var id = this.current;
+    if (id >= 0 && id < this.pages.length-1) {
+        this.toggle(id+1);
+    } else {
+        this.toggle(0);
+    }
 },//}}}
 
 prev: function()//{{{
 {
-    var current, e, tabs;
-    tabs = this.e.children(".tab");
-    current = tabs.filter(".current");
-    e = current.prev(".tab");
-    if (!e.length) {
-        e = tabs.last();
-    };
-    current.blur();
-    e.click();
+    var id, l;
+    id = this.current;
+    l = this.pages.length;
+    if (id >= 1 && id < l) {
+        this.toggle(id-1);
+    } else {
+        this.toggle(l-1);
+    }
 },//}}}
 
-append: function (tabname, page)//{{{
+toggle: function(id)//{{{
 {
-    var self, tab;
+    var pages, page, pos, old_id;
+
+    pages = this.pages;
+
+    old_id = this.current;
+    if (old_id >= 0) {
+        pages[old_id].hide();
+        this.tabs_e.children(".tab").eq(old_id).removeClass("focused");
+    }
+
+    if (old_id != id) {
+        page = pages[id];
+        page.show();
+
+        // ensure visible
+        page = page.e ? page.e : page;
+        pos = page.offset();
+        window.scrollTo(pos.left, pos.top);
+        pos = this.tabs_e.offset();
+        window.scrollTo(pos.left, pos.top);
+
+        this.tabs_e.children(".tab").eq(id).addClass("focused");
+        this.current = id;
+    } else {
+        this.current = -1;
+    }
+
+    this.updateSelection();
+},//}}}
+
+updateSelection: function()//{{{
+{
+    var id, tab, pos, sel;
+    if( !this.e.is(":visible") ) {
+        return;
+    }
+
+    id = this.current;
+    if(id >= 0) {
+        tab = this.tabs_e.children(".tab").eq(id);
+        sel = this.selection;
+        sel.select(tab);
+    }
+},//}}}
+
+append: function (tabname, widget)//{{{
+{
+    var self, tab, id, page;
+
+    this.pages.push(widget);
+    page = widget.e ? widget.e : widget;
 
     tab = createLabel(tabname);
     tab.addClass("tab");
-    tab.appendTo(this.e);
+    tab.appendTo(this.tabs_e);
 
-    page.hide();
-    this.pages = this.pages.add(page);
+    widget.hide();
+    page.addClass("widget page");
+    page.appendTo(this.pages_e);
 
-    self = this;
-    tab.click( function(){
-        var i, to_show, tabs;
-        tabs = self.e.children(".tab");
-        to_show = !page.is(":visible");
+    id = this.pages.length-1;
+    tab.click( this.toggle.bind(this, id) );
 
-        tabs.removeClass("current");
-        self.pages.hide();
-
-        if (to_show) {
-            page.show();
-            tab.addClass("current");
-        }
-    } );
-    this.e.children(".tab").first().click();
+    if(id===0) {
+        this.toggle(0);
+    }
 
     return tab;
-}//}}}
+},//}}}
+
+keyPress: function(ev)//{{{
+{
+    var e, page, keyname, k, i;
+    e = this.e;
+
+    keyname = getKeyName(ev);
+
+    // focus next/previous tab
+    if ( e.hasClass("vertical") && keyname === "UP" || keyname === "LEFT" ) {
+        this.tabs_e[0].focus();
+        this.prev();
+        return false;
+    } else if ( e.hasClass("vertical") && keyname === "DOWN" || keyname === "RIGHT" ) {
+        this.tabs_e[0].focus();
+        this.next();
+        return false;
+    }
+
+    // send key press event to active page
+    if (this.current >= 0) {
+        page = this.pages[this.current];
+        if (page.e) {
+            if ( page.keyPress(ev) === false ) {
+                return false;
+            } else if ( ev.isPropagationStopped() ) {
+                return;
+            }
+        }
+    }
+
+    // keyhints
+    if ( keyHintFocus(keyname, e) ) {
+        return false;
+    }
+},//}}}
 };
 //}}}
 
@@ -3318,24 +3777,81 @@ append: function (tabname, page)//{{{
 var Window = function (e) {
     this.e = e;
     e.addClass("window");
+    e.keydown( this.keyPress.bind(this) );
+    $(window).resize( this.update.bind(this) );
+    e.hide();
 
     // close button
-    $("<div>", {'class':'close', 'html':'&#8855', 'tabindex':0}).css('cursor','pointer').click(modeDrop).appendTo(e);
+    $("<div>", {'class':"close", 'html':"&#8855"}).css('cursor','pointer').click(modeDrop).appendTo(e);
 
-    this.pages = $();
+    this.widgets = [];
 };
 
 Window.prototype = {
+toggleShow: function()//{{{
+{
+    if ( this.e.hasClass("focused") ) {
+        this.hide();
+    }
+    else {
+        this.show();
+    }
+},//}}}
+
+show: function()//{{{
+{
+    this.e.show().addClass("focused");
+    this.update();
+},//}}}
+
+update: function()//{{{
+{
+    var widgets = this.widgets;
+    $.each( widgets, function(i){widgets[i].update()} );
+},//}}}
+
+hide: function()//{{{
+{
+    this.e.find("#focused").blur();
+    this.e.removeClass("focused").hide();
+},//}}}
+
+append: function(widget)//{{{
+{
+    if ( widget.e && widget.e.hasClass("widget") ) {
+        this.widgets.push(widget);
+        widget.e.appendTo(this.e);
+    } else {
+        widget.appendTo(this.e);
+    }
+},//}}}
+
+keyPress: function(ev)//{{{
+{
+    var keyname;
+    keyname = getKeyName(ev);
+
+    // keyhints
+    if ( !keyHintFocus(keyname, this.e) ) {
+        keyPress(ev);
+    }
+
+    ev.stopPropagation();
+},//}}}
 };
 //}}}
 //}}}
 
 function viewerOnLoad()//{{{
 {
-    if ( mode() === modes.slideshow ) {
+    if ( !viewer.e.is(":visible") ) {
         viewer.e.fadeIn(1000);
     }
-    preloadImages();
+    if ( mode() === modes.slideshow ) {
+        window.clearTimeout(slideshow_t);
+        slideshow_t = slideshow();
+    }
+    preloadViews();
 }//}}}
 
 function createItemList()//{{{
@@ -3398,11 +3914,6 @@ function createNavigation ()//{{{
     var m, i, k, km;
 
     // keyboard
-    //if ( userAgent() === userAgents.webkit ) {
-        //window.onkeydown = keyPress;
-    //} else {
-        //window.onkeypress = keyPress;
-    //}
     $(window).keydown(keyPress);
 
     // mouse
@@ -3473,6 +3984,8 @@ function createHelp(e)//{{{
 {
     var ekeys, econf, eother;
 
+    help = new Window(e);
+
     ekeys = e.find(".keys");
     if (ekeys.length) {
         createKeyHelp(ekeys);
@@ -3486,35 +3999,31 @@ function createHelp(e)//{{{
 
 function toggleHelp_()//{{{
 {
-    // key bindings
+    var e;
+
     if (!help) {
-        help = $(".help");
-        if (!help.length) {
+        e = $(".help");
+        if (e.length) {
+            createHelp(e);
+        }
+        if (!help) {
             return false;
         }
-        createHelp(help);
     }
 
-    if ( help.length ) {
-        if ( help.hasClass("focused") ) {
-            help.removeClass("focused");
-        }
-        else {
-            help.addClass("focused");
-        }
-    }
+    help.toggleShow();
 
     return true;
 }//}}}
 
 function saveOptions ()//{{{
 {
-    options.find('.option').each(
+    options.e.find('.pages .widgetlistitem').each(
         function(){
             var t, which, value, orig_value;
             t = $(this);
 
-            value = t.find('.value');
+            value = t.find(".value").first();
             if ( value.attr('type') === 'checkbox' ) {
                 value = value.is(':checked')?1:0;
             } else {
@@ -3535,18 +4044,17 @@ function saveOptions ()//{{{
 
 function generateConfig ()//{{{
 {
-    var ee, e, content;
-
-    ee = options.children('.config');
-    e = ee.children('textarea');
+    var ee, e, content, pos;
+    ee = $("#copybox");
+    e = ee.find(".value");
 
     content = "config = {\n";
-    options.find('.option').each(
+    options.e.find('.pages .widgetlistitem').each(
         function(){
             var t, which, value;
             t = $(this);
 
-            value = t.find(".value");
+            value = t.find(".value").first();
             if ( value.attr("type") === "checkbox" ) {
                 value = value.is(":checked");
             } else {
@@ -3562,6 +4070,10 @@ function generateConfig ()//{{{
         } );
     content += '};'
 
+    ee.css({width:"auto", height:"auto"});
+    pos = ee.offset();
+    window.scrollTo(pos.left, pos.top);
+
     ee.slideDown();
     e.text(content);
     e.focus();
@@ -3573,10 +4085,10 @@ function createOptions(e)//{{{
 {
     var i, j, cats, cat, tabs, tab, catname, conf, desc, key, opt, value, input, box, button;
 
-    tabs = new Tabs(e);
-    // horizontal movement
-    addKeys( "Right", null, tabs.next.bind(tabs), modes.any, true );
-    addKeys( "Left", null, tabs.prev.bind(tabs), modes.any, true );
+    options = new Window(e);
+
+    tabs = new Tabs();
+    options.append(tabs);
 
     cats = {};
     for (i in configs) {
@@ -3596,9 +4108,8 @@ function createOptions(e)//{{{
 
         cat = cats[catname];
         if(!cat) {
-            cats[catname] = cat = new WidgetList(e);
-            cat.e.hide();
-            tabs.append(catname, cat.e);
+            cats[catname] = cat = new WidgetList();
+            tabs.append(catname, cat);
         }
 
         value = getConfig(i);
@@ -3606,60 +4117,68 @@ function createOptions(e)//{{{
         // input: text edit OR checkbox
         if ( typeof(value) === "boolean" ) {
             opt = createCheckBox(conf[2], value);
+            opt.attr("title", i);
         } else {
             // use textarea when the text has more than 40 characters
-            opt = createTextEdit(conf[2], value, typeof(value) === "string" && value.length > 40);
+            opt = new TextEdit(conf[2], value, typeof(value) === "string" && value.length > 40);
+            opt.e.attr("title", i);
         }
-        opt.addClass("option");
-        opt.attr("title", i);
         cat.append(opt);
     }
 
     // config.js contents
-    cat = $('<p>', {'class': 'config'});
-    cat.html('Add this to your <span class="code">config.js</span>:');
-    cat.hide().appendTo(e);
-    input = $('<textarea>');
-    input.appendTo(cat);
+    input = new TextEdit("_Add this to your <span class=\"code\">config.js</span>:","",true);
+    input.e.attr("id", "copybox").css({width:0, height:0, overflow:"hidden"}).appendTo(e);
+    options.append(input);
 
     // information
-    desc = $("<div>", {'class': 'information',
+    desc = $("<div>", {'class': 'info',
         html:
         '<p>Each entry contains '+
         '<span class="emph">brief description</span>, '+
         '<span class="emph">current option value</span> and '+
         '<span class="emph">keyword</span> (hover mouse pointer over an option) used in URL or the configuration file to set the option.</p>'+
         '<p>To make changes permanent press <span class="emph">Copy</span> button and save the text in configuration file <span class="code">config.js</span>.</p>'
-    }).hide().appendTo(e);
+    }).css({width:0, height:0, overflow:"hidden"}).appendTo(e);
 
     // buttons
-    box = new ButtonBox(e);
+    box = new ButtonBox();
 
-    box.append( "_Save",   function(){$(this).blur(); saveOptions();} );
-    box.append( "_Cancel", function(){$(this).blur(); modeDrop();} );
-    box.append( "Co_py",   function(){$(this).blur(); generateConfig();} );
-    box.append( "_Help",   function(){desc.is(":visible") && desc.slideUp() || desc.slideDown()} );
+    box.append( new Button("_Save",   function(){$(this).blur(); saveOptions();}) );
+    box.append( new Button("_Cancel", function(){$(this).blur(); modeDrop();}) );
+    box.append( new Button("Co_py",   function(){$(this).blur(); generateConfig();}) );
+    box.append( new Button("_Help",   function(){
+        var pos;
+        if ( desc.height() === 0 ) {
+            desc.css({width:"auto", height:"auto"});
+            pos = desc.offset();
+            window.scrollTo(pos.left, pos.top);
+        } else {
+            desc.css({width:0, height:0});
+        };
+    }) );
+
+    options.append(box);
 }//}}}
 
 function toggleOptions_()//{{{
 {
-    // key bindings
+    var e;
+
     if (!options) {
-        options = $(".options");
-        if (!options.length) {
+        e = $(".options");
+        if (e.length) {
+            createOptions(e);
+        }
+        if (!options) {
             return false;
         }
-        createOptions(options);
     }
 
-    if ( options.length ) {
-        if ( options.hasClass("focused") ) {
-            options.removeClass("focused");
-        }
-        else {
-            options.addClass("focused");
-        }
-    }
+    options.toggleShow();
+
+    // focus tabs
+    $(".tabs")[0].focus();
 
     return true;
 }//}}}
@@ -3679,15 +4198,22 @@ function toggleSlideshow_()//{{{
 {
     if ( mode() !== modes.slideshow ) {
         zoom('fit');
-        slideshow_t = window.setTimeout( function (){
-                    viewer.e.fadeOut(1000, next);
-                    slideshow();
-                }, getConfig('slideshow_delay') );
+        slideshow_t = slideshow();
     } else {
         window.clearTimeout(slideshow_t);
     }
 
     return true;
+}//}}}
+
+function slideshow ()//{{{
+{
+    var t;
+    t = window.setTimeout( function (){
+        viewer.e.fadeOut(1000, next);
+    }, getConfig('slideshow_delay') );
+
+    return t;
 }//}}}
 
 function fileDropped (e) {//{{{
@@ -3740,7 +4266,7 @@ function fileDropped (e) {//{{{
                 }
 
                 // add file to list
-                ls.add(key ? key : e.target.result, {'.link': files[i].name});
+                ls.append(key ? key : e.target.result, {'.link': files[i].name});
                 // refresh
                 go();
                 // next file
@@ -3772,12 +4298,12 @@ function restoreItems () {//{{{
         key = items[item];
         if (key) {
             log("Restoring gallery item \""+key+'"');
-            ls.add( key, {'.link': key.split(';:')[2]} );
+            ls.append( key, {'.link': key.split(';:')[2]} );
         }
     }
 }//}}}
 
-function onLoad()//{{{
+function onLoad ()//{{{
 {
     var e, preview;
 
@@ -3856,7 +4382,7 @@ function onLoad()//{{{
     go(n);
 
     if ( getConfig('slideshow') ) {
-        slideshow();
+        mode(modes.slideshow);
     }
 
     // drop files
@@ -3871,7 +4397,15 @@ function onLoad()//{{{
         window.addEventListener('drop', fileDropped, false);
     }
 
-    // windows
-    $(".window").each( function() {new Window($(this))} );
+    init_GUI();
 }//}}}
+
+function onReady ()//{{{
+{
+    // window elements are hidden before inicialization
+    $(".window").hide();
+}//}}}
+
+// onLoad & onReady functions initialises gallery
+$(document).ready(onReady);
 

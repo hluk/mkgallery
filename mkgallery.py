@@ -14,7 +14,7 @@ Supported file types (and extensions) are:
 	* fonts (otf, ttf),
 	* audio/movies (mp4, mov, flv, ogg, mp3, wav).
 	* HTML
-	* PDF - only with pdf2svg, http://www.cityinthesky.co.uk/pdf2svg.html
+	* PDF
 
 Function create_gallery() returns list of items. The list format is:
 	{
@@ -104,6 +104,7 @@ local = False
 page = 0
 title_page = False
 empty = False
+pdfto = "pdf"
 
 def from_locale(string):#{{{
 	global Locale
@@ -169,6 +170,7 @@ options:
                             (default: 0 (unlimited))
                           NOTE: Use empty filename (i.e. "") to break
                           page in specific place.
+  -P, --PDF=<format>      convert PDF to <format> (can be HTML, PNG or SVG)
   -T, --title-page        create title page
   -e, --empty             create empty gallery
 
@@ -231,15 +233,15 @@ def parse_args(argv):#{{{
 		e.g. [ [item1_on_page1, item2_on_page1, ...], [item1_on_page2, ...], ... ]
 	"""
 	global title, resolution, gdir, url, d, cp, force, local, page, \
-			font_render, font_size, font_text, title_page, empty
+			font_render, font_size, font_text, title_page, empty, pdfto
 
 	allfiles = []
 
 	try:
-		opts, args = getopt.gnu_getopt(argv, "ht:r:d:u:cflx:p:Te",
+		opts, args = getopt.gnu_getopt(argv, "ht:r:d:u:cflx:p:TeP:",
 				["help", "title=", "resolution=", "directory=", "url=",
 					"template=", "copy", "force", "local", "render=", "page=",
-					"title-page", "empty"])
+					"title-page", "empty", "PDF="])
 	except getopt.GetoptError:
 		usage()
 		sys.exit(2)
@@ -289,6 +291,11 @@ def parse_args(argv):#{{{
 			title_page = True
 		elif opt in ("-e", "--empty"):
 			empty = True
+		elif opt in ("-P", "--PDF"):
+			pdfto = arg.lower()
+			if pdfto not in ["pdf", "html", "png", "svg"]:
+				print("ERROR: PDF can be converted only to HTML, PNG or SVG!")
+				sys.exit(1)
 
 	# no PIL: warnings, errors
 	if not has_pil:
@@ -473,18 +480,47 @@ def renderPDF(pdffile):#{{{
 	os.makedirs(itemdir +S+ outdir)
 
 	pages = []
-	outfile = outdir +S+ "%04d.svg"
-	try:
-		res = subprocess.call(["pdf2svg", pdffile, itemdir +S+ outfile, "all"])
-		if res == 0:
-			pages.append(outfile)
-			print("DONE")
-			pages = [outdir +S+ f for f in os.listdir(itemdir +S+ outdir)]
-		else:
-			print("ERROR")
-			exit(1)
-	except:
-		print("NOT CONVERTED\nNOTE: To convert PDF pages to SVG pdf2svg application must be installed (more info at: http://www.cityinthesky.co.uk/pdf2svg.html).")
+	if pdfto == "pdf":
+		pages = [pdffile]
+	elif pdfto == "html":
+		outfile = outdir +S+ "p.html"
+		try:
+			res = subprocess.call(["pdftohtml", "-p", "-c", pdffile, itemdir +S+ outfile])
+			if res == 0:
+				pages.append(outfile)
+				print("DONE")
+				pages = [outdir +S+ f for f in os.listdir(itemdir +S+ outdir) if f.startswith("p-")]
+			else:
+				print("ERROR")
+				exit(1)
+		except:
+			print("NOT CONVERTED\nNOTE: To convert PDF pages to HTML pdftohtml application must be installed.")
+	elif pdfto == "svg":
+		outfile = outdir +S+ "%04d.svg"
+		try:
+			res = subprocess.call(["pdf2svg", pdffile, itemdir +S+ outfile, "all"])
+			if res == 0:
+				pages.append(outfile)
+				print("DONE")
+				pages = [outdir +S+ f for f in os.listdir(itemdir +S+ outdir)]
+			else:
+				print("ERROR")
+				exit(1)
+		except:
+			print("NOT CONVERTED\nNOTE: To convert PDF pages to SVG pdf2svg application must be installed (more info at: http://www.cityinthesky.co.uk/pdf2svg.html).")
+	elif pdfto == "png":
+		outfile = outdir +S+ "p.html"
+		try:
+			res = subprocess.call(["pdftoppm", "-png", pdffile, itemdir +S+ outfile])
+			if res == 0:
+				pages.append(outfile)
+				print("DONE")
+				pages = [outdir +S+ f for f in os.listdir(itemdir +S+ outdir)]
+			else:
+				print("ERROR")
+				exit(1)
+		except:
+			print("NOT CONVERTED\nNOTE: To convert PDF pages to images pdftoppm application must be installed.")
 
 	return pages;
 #}}}
@@ -567,7 +603,6 @@ def gallery_items(files, allitems):#{{{
 				if t == Type.PDF:
 					for page in renderPDF(f):
 						items["items" +S+ page] = {'.link':f}
-					continue
 
 				# file is local and not viewed locally
 				if not local and is_local(f):
@@ -727,9 +762,20 @@ def add_sorted(items, allitems):#{{{
 	""" create pages of sorted items """
 	global page
 
+	def try_int(s):
+		"Convert to integer if possible."
+		try: return int(s)
+		except: return s
+
+	def natsort_key(s):
+		"Used internally to get a tuple by which s is sorted."
+		import re
+		return map(try_int, re.findall(r'(\d+|\D+)', s))
+
 	i = 0
 	# maximal number of items per page
-	for item in sorted( items, key=lambda x: x.lower() ):
+	#for item in sorted( items, key=lambda x: x.lower() ):
+	for item in sorted( items, key=lambda x: list(natsort_key(x)) ):
 		allitems.append([item, items[item]])
 		if page > 0:
 			i=i+1

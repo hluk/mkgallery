@@ -53,7 +53,7 @@ slide_scroll: 200,
 }
 
 config_strict = { // -- these can't be overridden in URL
-//preload_images: 3,
+//preload_views: 3,
 }
 //}}}
 
@@ -120,11 +120,11 @@ Viewer: [
     [["KP2","2","Down","s"], scrollDown, "Move window down"],
     ["PageUp", "scrollUp(window.innerHeight*9/10) || prev()"],
     ["PageDown", "scrollDown(window.innerHeight*9/10) || next()"],
-    ["End", "scrollDown(b.scrollHeight)"],
+    ["End", "scrollDown(b.height())"],
     ["Home", "scrollTo(0,0)"],
-    ["Space", "videoTogglePlay() || scrollDown(window.innerHeight*9/10) || next()",
+    ["Space", "videoTogglePlay() || (showLastPosition() && scrollDown(window.innerHeight*9/10)) || next()",
             "Play or pause/Move window down/Next gallery item"],
-    ["Shift-Space", "scrollUp(window.innerHeight*9/10) || prev()",
+    ["Shift-Space", "showLastPosition() && scrollUp(window.innerHeight*9/10) || prev()",
             "Move window up/Previous gallery item"],
     ["x", editText, "Edit font text"],
     [["KP1","1"], "go(ls.length())", "Browse to last gallery item"],
