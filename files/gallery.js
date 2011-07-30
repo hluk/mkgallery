@@ -1,5 +1,5 @@
 /*jslint evil: true, forin: true, onevar: true, undef: true, nomen: true, eqeqeq: true, plusplus: true, bitwise: true, newcap: true, immed: true, strict: true */
-/*global $, jQuery, window, document, navigator, location, history, escape, alert, Image*/
+/*global $, window, document, navigator, location, history, escape, alert, Image*/
 
 "use strict";
 // a_function.bind(object, arg1, ...)
@@ -101,6 +101,7 @@ var configs = {
 	'zoom': ['1', "_Images", "Default _zoom level"],
 	'zoom_step': [0.125, "_Images", "Z_oom multiplier"],
     'image_on_canvas': [false, "_Images", "Use HTML5 _canvas element to draw images"],
+    'sharpen': [0, "_Images", "Amount used to s_harpen images (slow)"],
     'max_preview_width': [15, "_Images", "Maximal preview _width in percent of window width"],
     'max_preview_height': [80, "_Images", "Maximal preview _height in percent of window height"],
 	'pop_preview_delay': [1000, "_Images", "Preview pop up delay (in milliseconds)"],
@@ -142,7 +143,7 @@ var storage;
 
 function esc (str) {//{{{
 	// escape hash and question mark in filenames
-	// (jQuery won't escape them)
+	// ($ won't escape them)
 	return str.replace(/#/g,'%23').replace(/\?/g,'%3F');
 }//}}}
 
@@ -337,6 +338,7 @@ remove: function ()//{{{
 {
     var e = this.e;
     if (e) {
+        e.attr("src", "");
         e.remove();
     }
 },//}}}
@@ -403,7 +405,7 @@ element: function()//{{{
     // don't use canvas in some cases:
     //  - user configuration
     //  - GIF: redraw animated images in intervals
-    use_canvas = this.parent.getConfig('image_on_canvas') &&
+    this.use_canvas = use_canvas = this.parent.getConfig('image_on_canvas') &&
         this.path.search(/\.gif$/i) === -1;
 
     if ( use_canvas ) {
@@ -480,7 +482,7 @@ thumbnail: function ()//{{{
 
 zoom: function (z)//{{{
 {
-    var w, h;
+    var w, h, sharpen;
 
     if (!z) {
         return this.width/this.orig_width;
@@ -499,6 +501,18 @@ zoom: function (z)//{{{
 
     // redraw image
     this.ctx.drawImage(this.img[0],0,0,this.width,this.height);
+
+    if (this.use_canvas) {
+        // apply filters
+        // get other filters: http://www.pixastic.com/lib/download/
+        sharpen = this.parent.getConfig('sharpen');
+        if ( sharpen > 0 ) {
+            this.e = $(Pixastic.process(this.e[0], "sharpen", {amount: sharpen}));
+        }
+
+        this.ctx = this.e[0].getContext('2d');
+    }
+
     this.zoom_factor = z;
 
     this.parent.onUpdateStatus( w+"x"+h, ".resolution" );
@@ -828,14 +842,16 @@ element: function()//{{{
     if ( this.path.match(/\.pdf$/i) ) {
         this.e = e = $('<embed>', {
             'class': 'htmlview',
-            'seamless': 'yes',
-            'name': 'plugin',
-            'type': 'application/pdf'
+            seamless: 'yes',
+            name: 'plugin',
+            type: 'application/pdf',
+            width: '100%',
+            height: '100%'
         });
     } else {
         this.e = e = $('<iframe>', {
             'class': 'htmlview',
-            'seamless': 'yes'
+            seamless: 'yes'
         });
     }
     e.load( function () {
@@ -2743,10 +2759,10 @@ function showLastPosition ()//{{{
     $('#read_area').remove();
     e = $('<div id="read_area">').css({
         position:'absolute',
-        'left': window.pageXOffset-2+'px',
+        'left': window.pageXOffset+'px',
         'top': window.pageYOffset+'px',
-        width: window.innerWidth+'px',
-        height: window.innerHeight+'px',
+        width: window.innerWidth-4+'px',
+        height: window.innerHeight-4+'px',
         border: '2px solid red',
         'background-color': 'rgba(255,0,0,0.2)',
         'opacity': 0.5
@@ -2963,7 +2979,7 @@ function onMouseWheel (e) {//{{{
 
 // dragScroll () {{{
 var tt = 0;
-jQuery.extend( jQuery.easing,
+$.extend( $.easing,
 {
 easeOutCubic: function (x, t, b, c, d) {
         // refresh preview every 30ms

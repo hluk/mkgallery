@@ -104,7 +104,7 @@ local = False
 page = 0
 title_page = False
 empty = False
-pdfto = "pdf"
+pdfto = "html"
 
 def from_locale(string):#{{{
 	global Locale
@@ -170,7 +170,7 @@ options:
                             (default: 0 (unlimited))
                           NOTE: Use empty filename (i.e. "") to break
                           page in specific place.
-  -P, --PDF=<format>      convert PDF to <format> (can be HTML, PNG or SVG)
+  -P, --PDF=<format>      convert PDF to <format> (can be HTML, PNG, SVG or PDF)
   -T, --title-page        create title page
   -e, --empty             create empty gallery
 
@@ -217,7 +217,7 @@ def launch_browser(url):#{{{
 	try:
 		import webbrowser
 		# open browser in background
-		w = webbrowser.BackgroundBrowser( webbrowser.get().basename )
+		w = webbrowser.BackgroundBrowser( webbrowser.get().name )
 		if w.open(url):
 			ok = True;
 	except:
@@ -599,11 +599,6 @@ def gallery_items(files, allitems):#{{{
 			t = item_type(f)
 
 			if t>0:
-				# TODO: fetch remote PDF before rendering
-				if t == Type.PDF:
-					for page in renderPDF(f):
-						items["items" +S+ page] = {'.link':f}
-
 				# file is local and not viewed locally
 				if not local and is_local(f):
 					destdir = dirname(f)
@@ -612,9 +607,15 @@ def gallery_items(files, allitems):#{{{
 					if not os.path.isdir(fdir):
 						os.makedirs(fdir)
 					cp( os.path.abspath(f), fdir +S+ basename )
-					f = "items" +S+ (destdir and destdir+S or "") + os.path.basename(f)
 
-				items[f] = {}
+				# TODO: fetch remote PDF before rendering
+				if t == Type.PDF:
+					for page in renderPDF(f):
+						items["items" +S+ page] = {'.link':"items" +S+ f}
+				else:
+					f = "items" +S+ (destdir and destdir+S or "") + os.path.basename(f)
+					items[f] = {}
+
 		add_sorted(items, allitems)
 #}}}
 
