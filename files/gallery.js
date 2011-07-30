@@ -480,6 +480,114 @@ thumbnail: function ()//{{{
     return this.thumb;
 },//}}}
 
+sharpen: function(strength)//{{{
+{
+    if (this.use_canvas) {
+		if (strength < 0) strength = 0;
+        else if (strength > 1) strength = 1;
+
+        var dataDesc = this.ctx.getImageData(0, 0, this.width, this.height);
+        var data = dataDesc.data;
+        var dataCopy = this.ctx.getImageData(0, 0, this.width, this.height).data;
+
+        var mul = 15;
+        var mulOther = 1 + 3*strength;
+
+        var kernel = [
+            [0, 	-mulOther, 	0],
+            [-mulOther, 	mul, 	-mulOther],
+            [0, 	-mulOther, 	0]
+                ];
+
+        var weight = 0;
+        for (var i=0;i<3;i++) {
+            for (var j=0;j<3;j++) {
+                weight += kernel[i][j];
+            }
+        }
+
+        weight = 1 / weight;
+
+        var w = this.width;
+        var h = this.height;
+
+        mul *= weight;
+        mulOther *= weight;
+
+        var w4 = w*4;
+        var y = 0;
+
+        var filter = function(miny){
+            var filter_batch = function(){
+                do {
+                    var offsetY = (y-1)*w4;
+
+                    var nextY = (y == h) ? y - 1 : y;
+                    var prevY = (y == 1) ? 0 : y-2;
+
+                    var offsetYPrev = prevY*w4;
+                    var offsetYNext = nextY*w4;
+
+                    var x = w;
+                    do {
+                        var offset = offsetY + (x*4-4);
+
+                        var offsetPrev = offsetYPrev + ((x == 1) ? 0 : x-2) * 4;
+                        var offsetNext = offsetYNext + ((x == w) ? x-1 : x) * 4;
+
+                        var r = ((
+                                    - dataCopy[offsetPrev]
+                                    - dataCopy[offset-4]
+                                    - dataCopy[offset+4]
+                                    - dataCopy[offsetNext])		* mulOther
+                                + dataCopy[offset] 	* mul
+                                );
+
+                        var g = ((
+                                    - dataCopy[offsetPrev+1]
+                                    - dataCopy[offset-3]
+                                    - dataCopy[offset+5]
+                                    - dataCopy[offsetNext+1])	* mulOther
+                                + dataCopy[offset+1] 	* mul
+                                );
+
+                        var b = ((
+                                    - dataCopy[offsetPrev+2]
+                                    - dataCopy[offset-2]
+                                    - dataCopy[offset+6]
+                                    - dataCopy[offsetNext+2])	* mulOther
+                                + dataCopy[offset+2] 	* mul
+                                );
+
+
+                        if (r < 0 ) r = 0;
+                        if (g < 0 ) g = 0;
+                        if (b < 0 ) b = 0;
+                        if (r > 255 ) r = 255;
+                        if (g > 255 ) g = 255;
+                        if (b > 255 ) b = 255;
+
+                        data[offset] = r;
+                        data[offset+1] = g;
+                        data[offset+2] = b;
+                    } while (--x);
+                } while (++y < miny);
+            }
+            filter_batch();
+            this.ctx.putImageData(dataDesc, 0, 0);
+            if (y < h) {
+                miny = Math.min(y+50, h);
+                window.setTimeout(filter.bind(this, miny), 0);
+            }
+        }
+        window.setTimeout(filter.bind(this, 50), 0);
+    }
+
+    return this;
+},//}}}
+
+
+
 zoom: function (z)//{{{
 {
     var w, h, sharpen;
@@ -491,26 +599,26 @@ zoom: function (z)//{{{
     w = this.orig_width;
     h = this.orig_height;
 
-    // clear canvas
-    if(this.width && this.ctx.clearRect) {
-        this.ctx.clearRect(0,0,this.width,this.height);
-    }
-
-    this.width = this.e[0].width = w*z;
-    this.height = this.e[0].height = h*z;
-
-    // redraw image
-    this.ctx.drawImage(this.img[0],0,0,this.width,this.height);
-
-    if (this.use_canvas) {
-        // apply filters
-        // get other filters: http://www.pixastic.com/lib/download/
-        sharpen = this.parent.getConfig('sharpen');
-        if ( sharpen > 0 ) {
-            this.e = $(Pixastic.process(this.e[0], "sharpen", {amount: sharpen}));
+    if (this.zoom_factor !== z) {
+        // clear canvas
+        if(this.width && this.ctx.clearRect) {
+            this.ctx.clearRect(0,0,this.width,this.height);
         }
 
-        this.ctx = this.e[0].getContext('2d');
+        this.width = this.e[0].width = Math.ceil(w*z);
+        this.height = this.e[0].height = Math.ceil(h*z);
+
+        // redraw image
+        this.ctx.drawImage(this.img[0],0,0,this.width,this.height);
+
+        if (this.use_canvas) {
+            // apply filters
+            // get other filters: http://www.pixastic.com/lib/download/
+            sharpen = this.parent.getConfig('sharpen');
+            if ( sharpen > 0 ) {
+                this.sharpen(sharpen);
+            }
+        }
     }
 
     this.zoom_factor = z;
@@ -2544,6 +2652,8 @@ function scrollRight(how)//{{{
 function go (i)//{{{
 {
     var newn, r, item, itemname, props;
+
+    $('#read_area').remove();
 
     if (i === undefined) {
         i = n;
